@@ -428,7 +428,6 @@ function renderModalContent() {
         <section class="modal-details">
           <div class="modal-product-kicker">
             <span class="modal-condition-badge ${String(product.condition).toLowerCase() === "nuevo" ? "is-new" : "is-used"}">${escapeHTML(product.badge || product.condition || "Disponible")}</span>
-            <span class="modal-product-code">Ref. ${escapeHTML(String(product.id).slice(0, 8).toUpperCase())}</span>
           </div>
           <span class="product-brand">${escapeHTML(product.brand || "")}</span>
           <h1 class="modal-title">${escapeHTML(product.title || "Producto")}</h1>
