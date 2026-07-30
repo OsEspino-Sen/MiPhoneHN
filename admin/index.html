@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#eef3fb">
+  <meta name="theme-color" content="#f5f5f7">
   <title>Panel de Control Admin | Mi Phone HN</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
   <link rel="stylesheet" href="admin.css">
@@ -22,7 +22,7 @@
 
     .form-hint {
       margin-top: 5px;
-      color: var(--ink-3, #758397);
+      color: var(--ink-3, #a1a1a6);
       font-size: .625rem;
       line-height: 1.45;
     }
@@ -39,9 +39,9 @@
       position: absolute;
       top: 50%;
       right: 13px;
-      color: var(--ink-3, #758397);
+      color: var(--ink-3, #a1a1a6);
       font-size: .72rem;
-      font-weight: 800;
+      font-weight: 700;
       transform: translateY(-50%);
       pointer-events: none;
     }
@@ -55,18 +55,18 @@
     }
 
     .media-preview-header strong {
-      color: var(--ink-2, #4b5b70);
+      color: var(--ink-2, #6e6e73);
       font-size: .7rem;
     }
 
     .media-count-chip {
       padding: 4px 8px;
-      color: var(--brand-700, #285c9f);
-      background: var(--brand-50, #eef5ff);
-      border: 1px solid var(--brand-100, #dbe9fb);
+      color: var(--brand-700, #0071e3);
+      background: var(--brand-50, #f0f7ff);
+      border: 1px solid var(--brand-100, #e8f3ff);
       border-radius: 999px;
       font-size: .58rem;
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .media-preview-grid {
@@ -75,8 +75,8 @@
       gap: 9px;
       min-height: 88px;
       padding: 10px;
-      background: var(--surface-soft, #f8fafd);
-      border: 1px solid var(--line, #e2e9f2);
+      background: var(--bg-secondary, #f5f5f7);
+      border: 1px solid var(--border-light, #d2d2d7);
       border-radius: 13px;
     }
 
@@ -87,7 +87,7 @@
       justify-content: center;
       gap: 7px;
       min-height: 66px;
-      color: var(--ink-4, #a7b3c2);
+      color: var(--ink-3, #a1a1a6);
       font-size: .65rem;
       text-align: center;
     }
@@ -97,14 +97,14 @@
       aspect-ratio: 1;
       overflow: hidden;
       background: #fff;
-      border: 1px solid var(--line, #e2e9f2);
+      border: 1px solid var(--border-light, #d2d2d7);
       border-radius: 11px;
-      box-shadow: 0 5px 14px rgba(30, 60, 97, .05);
+      box-shadow: 0 5px 14px rgba(0, 0, 0, .04);
     }
 
     .media-preview-item.is-primary {
-      border-color: var(--brand-600, #3470bb);
-      box-shadow: 0 0 0 2px rgba(52, 112, 187, .12);
+      border-color: var(--brand-700, #0071e3);
+      box-shadow: 0 0 0 2px rgba(0, 113, 227, .12);
     }
 
     .media-preview-item.is-pending::after {
@@ -136,10 +136,10 @@
       gap: 3px;
       padding: 3px 5px;
       color: #fff;
-      background: var(--brand-800, #1d477e);
+      background: var(--brand-700, #0071e3);
       border-radius: 5px;
       font-size: .48rem;
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .media-primary-btn {
@@ -152,17 +152,17 @@
       align-items: center;
       justify-content: center;
       padding: 0;
-      color: var(--brand-700, #285c9f);
+      color: var(--brand-700, #0071e3);
       background: rgba(255, 255, 255, .92);
-      border: 1px solid var(--brand-100, #dbe9fb);
+      border: 1px solid var(--brand-100, #e8f3ff);
       border-radius: 7px;
       cursor: pointer;
-      box-shadow: 0 4px 10px rgba(30, 60, 97, .12);
+      box-shadow: 0 4px 10px rgba(0, 113, 227, .1);
     }
 
     .media-primary-btn:hover {
       color: #fff;
-      background: var(--brand-700, #285c9f);
+      background: var(--brand-700, #0071e3);
     }
 
     .media-remove-btn {
@@ -176,11 +176,11 @@
       justify-content: center;
       padding: 0;
       color: #fff;
-      background: rgba(184, 54, 65, .9);
+      background: var(--danger, #c84650);
       border: 0;
       border-radius: 7px;
       cursor: pointer;
-      box-shadow: 0 4px 10px rgba(100, 20, 30, .18);
+      box-shadow: 0 4px 10px rgba(200, 70, 80, .18);
     }
 
     .media-remove-btn:hover {
@@ -196,9 +196,9 @@
 
     .variant-field > span,
     .compact-field-label {
-      color: var(--ink-3, #758397);
+      color: var(--ink-2, #6e6e73);
       font-size: .58rem;
-      font-weight: 800;
+      font-weight: 700;
       letter-spacing: .045em;
       text-transform: uppercase;
     }
@@ -224,8 +224,8 @@
     .dynamic-row.color-row {
       display: block;
       padding: 12px;
-      background: linear-gradient(145deg, #fbfdff, #f4f8fc);
-      border-color: var(--line, #e2e9f2);
+      background: var(--bg-secondary, #f5f5f7);
+      border-color: var(--border-light, #d2d2d7);
     }
 
     .color-row-summary {
@@ -249,14 +249,14 @@
       grid-template-columns: 42px minmax(0, 1fr);
       overflow: hidden;
       background: #fff;
-      border: 1px solid var(--line-strong, #d3dde9);
+      border: 1px solid var(--border-color, #d2d2d7);
       border-radius: 10px;
       transition: border-color .16s ease, box-shadow .16s ease;
     }
 
     .color-compact-control:focus-within {
-      border-color: var(--brand-600, #3470bb);
-      box-shadow: 0 0 0 4px rgba(52, 112, 187, .1);
+      border-color: var(--brand-700, #0071e3);
+      box-shadow: 0 0 0 4px rgba(0, 113, 227, .1);
     }
 
     .color-compact-control input[type="color"] {
@@ -264,9 +264,9 @@
       min-width: 42px;
       height: 40px;
       padding: 4px;
-      background: var(--surface-soft, #f8fafd);
+      background: var(--bg-secondary, #f5f5f7);
       border: 0;
-      border-right: 1px solid var(--line, #e2e9f2);
+      border-right: 1px solid var(--border-light, #d2d2d7);
       border-radius: 0;
       cursor: pointer;
     }
@@ -279,7 +279,7 @@
       border: 0;
       border-radius: 0;
       box-shadow: none;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'Inter', monospace;
       font-size: .72rem;
       font-weight: 700;
       text-transform: uppercase;
@@ -292,8 +292,8 @@
     .color-advanced {
       margin-top: 9px;
       overflow: hidden;
-      background: rgba(238, 245, 253, .7);
-      border: 1px solid var(--line, #e2e9f2);
+      background: var(--bg-secondary, #f5f5f7);
+      border: 1px solid var(--border-light, #d2d2d7);
       border-radius: 10px;
     }
 
@@ -303,11 +303,11 @@
       align-items: center;
       gap: 8px;
       padding: 8px 11px;
-      color: var(--brand-700, #285c9f);
+      color: var(--brand-700, #0071e3);
       cursor: pointer;
       list-style: none;
       font-size: .63rem;
-      font-weight: 800;
+      font-weight: 700;
       user-select: none;
     }
 
@@ -323,7 +323,7 @@
     }
 
     .color-advanced-hint {
-      color: var(--ink-4, #a7b3c2);
+      color: var(--ink-3, #a1a1a6);
       font-weight: 600;
     }
 
@@ -332,11 +332,11 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 9px;
       padding: 10px;
-      border-top: 1px solid var(--line, #e2e9f2);
+      border-top: 1px solid var(--border-light, #d2d2d7);
     }
 
     .color-advanced-grid input {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'Inter', monospace;
       font-size: .66rem;
     }
 
@@ -359,16 +359,16 @@
       align-items: center;
       justify-content: center;
       padding: 0;
-      color: var(--brand-700, #285c9f);
-      background: var(--brand-50, #eef5ff);
-      border: 1px solid var(--brand-100, #dbe9fb);
+      color: var(--brand-700, #0071e3);
+      background: var(--brand-50, #f0f7ff);
+      border: 1px solid var(--brand-100, #e8f3ff);
       border-radius: 9px;
       cursor: pointer;
     }
 
     .move-row-btn:hover:not(:disabled) {
       color: #fff;
-      background: var(--brand-700, #285c9f);
+      background: var(--brand-700, #0071e3);
     }
 
     .move-row-btn:disabled {
@@ -438,7 +438,7 @@
           <span class="login-brand-mark">
             <i class="ph ph-device-mobile-camera" aria-hidden="true"></i>
           </span>
-          <span class="login-brand-text">Mi Phone <b>Admin</b></span>
+          <span class="login-brand-text">Mi Phone <b>HN</b></span>
         </div>
 
         <div class="login-heading">
@@ -504,10 +504,9 @@
           <i class="ph ph-device-mobile-camera" aria-hidden="true"></i>
         </span>
         <span class="sidebar-brand-copy">
-          <strong>Mi Phone</strong>
-          <small>Admin console</small>
+          <strong>Mi Phone <span style="color: var(--brand-700)">HN</span></strong>
+          <small>Panel administrativo</small>
         </span>
-        <span class="sidebar-brand-badge">HN</span>
       </div>
 
       <nav class="sidebar-nav" aria-label="Navegación administrativa">

@@ -8,14 +8,14 @@
    1. TOKENS
    -------------------------------------------------------------------------- */
 :root {
-  --brand-950: #11294b;
-  --brand-900: #173661;
-  --brand-800: #1d477e;
-  --brand-700: #285c9f;
-  --brand-600: #3470bb;
-  --brand-500: #4b83cc;
-  --brand-100: #dbe9fb;
-  --brand-50: #eef5ff;
+  --brand-950: #0a2d5e;
+  --brand-900: #0041a3;
+  --brand-800: #0057c7;
+  --brand-700: #0071e3;
+  --brand-600: #0077ed;
+  --brand-500: #2997ff;
+  --brand-100: #e8f3ff;
+  --brand-50: #f0f7ff;
 
   --cyan-600: #168bb2;
   --cyan-100: #d9f1f8;
@@ -36,22 +36,22 @@
   --danger-bg: #fff0f1;
   --danger-border: #f1c6ca;
 
-  --page: #e9eff8;
-  --page-deep: #dfe8f5;
-  --canvas: #f4f7fc;
-  --canvas-2: #edf3fa;
+  --page: #f5f5f7;
+  --page-deep: #ededf0;
+  --canvas: #f5f5f7;
+  --canvas-2: #ededf0;
   --surface: #ffffff;
-  --surface-soft: #f8fafd;
-  --surface-muted: #f1f5fa;
-  --surface-blue: #f3f7fd;
+  --surface-soft: #fafafa;
+  --surface-muted: #f5f5f7;
+  --surface-blue: #f0f7ff;
 
-  --ink: #182334;
-  --ink-2: #4b5b70;
-  --ink-3: #758397;
-  --ink-4: #a7b3c2;
-  --line: #e2e9f2;
-  --line-strong: #d3dde9;
-  --focus: rgba(52, 112, 187, 0.18);
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --ink-3: #a1a1a6;
+  --ink-4: #d2d2d7;
+  --line: #d2d2d7;
+  --line-strong: #86868b;
+  --focus: rgba(0, 113, 227, 0.25);
 
   --radius-xs: 7px;
   --radius-sm: 10px;
@@ -96,12 +96,9 @@ html {
 
 body {
   min-height: 100vh;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--ink);
-  background:
-    radial-gradient(circle at 12% 5%, rgba(255, 255, 255, 0.92), transparent 27%),
-    radial-gradient(circle at 92% 100%, rgba(199, 216, 239, 0.6), transparent 34%),
-    var(--page);
+  background: var(--bg-secondary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -138,8 +135,8 @@ label[for]:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 
 h1,
@@ -148,9 +145,9 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: 'Outfit', 'Inter', sans-serif;
   color: var(--ink);
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
 }
 
 ::selection {
@@ -168,14 +165,14 @@ h6 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c5d1df;
+  background: var(--border-color);
   border: 3px solid transparent;
   border-radius: var(--radius-round);
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #aab8c9;
+  background: var(--text-secondary);
   border: 3px solid transparent;
   background-clip: padding-box;
 }
@@ -268,28 +265,28 @@ h6 {
 
 .btn-primary {
   color: #fff;
-  background: linear-gradient(145deg, var(--brand-700), var(--brand-900));
-  border-color: rgba(15, 45, 80, 0.2);
-  box-shadow: 0 7px 16px rgba(29, 71, 126, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  background: var(--brand-700);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(145deg, var(--brand-600), var(--brand-800));
-  box-shadow: 0 10px 22px rgba(29, 71, 126, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: var(--brand-600);
+  box-shadow: 0 6px 20px rgba(0, 113, 227, 0.35);
 }
 
 .btn-secondary {
-  color: var(--ink-2);
-  background: rgba(255, 255, 255, 0.9);
-  border-color: var(--line);
-  box-shadow: var(--shadow-xs);
+  color: var(--ink);
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  box-shadow: none;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  color: var(--brand-800);
-  background: var(--surface);
-  border-color: #c8d7e9;
-  box-shadow: 0 5px 14px rgba(32, 61, 99, 0.07);
+  color: var(--ink);
+  background: var(--border-light);
+  border-color: var(--text-secondary);
+  box-shadow: none;
 }
 
 .btn-danger {
@@ -560,7 +557,7 @@ textarea {
   padding: 0 22px;
   color: rgba(255, 255, 255, 0.62);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Inter', monospace;
   font-size: 0.625rem;
   letter-spacing: 0.06em;
 }
@@ -576,9 +573,9 @@ textarea {
 .login-device__status {
   margin-left: auto;
   padding: 3px 8px;
-  color: #9ce7cb;
-  background: rgba(80, 194, 153, 0.1);
-  border: 1px solid rgba(117, 225, 185, 0.17);
+  color: var(--success);
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
   border-radius: var(--radius-round);
 }
 
@@ -598,10 +595,10 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #173b68;
+  color: var(--brand-700);
   background: #fff;
   border-radius: 18px;
-  box-shadow: 0 12px 24px rgba(3, 19, 40, 0.25);
+  box-shadow: 0 12px 24px rgba(0, 113, 227, 0.15);
 }
 
 .login-device__brand div {
@@ -610,9 +607,10 @@ textarea {
 }
 
 .login-device__brand strong {
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Outfit', sans-serif;
   font-size: clamp(1.5rem, 2.3vw, 2.25rem);
-  letter-spacing: -0.045em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .login-device__brand div span {
@@ -669,14 +667,17 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 48px clamp(28px, 5vw, 82px);
-  background:
-    radial-gradient(circle at 90% 5%, rgba(130, 163, 207, 0.14), transparent 22%),
-    var(--surface-soft);
+  background: var(--bg-secondary);
 }
 
 .login-card {
   width: 100%;
   max-width: 430px;
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
   animation: loginRise 500ms var(--ease) both;
 }
 
@@ -699,22 +700,22 @@ textarea {
   align-items: center;
   justify-content: center;
   color: #fff;
-  background: linear-gradient(145deg, var(--brand-600), var(--brand-950));
+  background: var(--brand-700);
   border-radius: 12px;
-  box-shadow: 0 9px 20px rgba(29, 71, 126, 0.24);
+  box-shadow: 0 9px 20px rgba(0, 113, 227, 0.24);
 }
 
 .login-brand-text {
   color: var(--ink);
-  font-family: 'Manrope', sans-serif;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.035em;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .login-brand-text b {
   margin-left: 3px;
-  color: var(--brand-600);
+  color: var(--brand-700);
 }
 
 .login-heading {
@@ -728,7 +729,7 @@ textarea {
   gap: 8px;
   color: var(--brand-700);
   font-size: 0.675rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -743,7 +744,7 @@ textarea {
 .login-heading h1 {
   margin-top: 10px;
   font-size: clamp(2rem, 3vw, 2.55rem);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.1;
 }
 
@@ -850,12 +851,12 @@ textarea {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgba(248, 251, 255, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-2xl);
-  box-shadow: 0 24px 60px rgba(37, 66, 104, 0.1), inset 0 0 0 1px rgba(212, 224, 239, 0.55);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .sidebar-brand {
@@ -864,7 +865,7 @@ textarea {
   align-items: center;
   gap: 10px;
   padding: 17px 18px;
-  border-bottom: 1px solid rgba(218, 227, 238, 0.75);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .sidebar-brand-mark {
@@ -875,10 +876,9 @@ textarea {
   align-items: center;
   justify-content: center;
   color: #fff;
-  background: linear-gradient(145deg, #3d76bd, var(--brand-950));
-  border: 1px solid rgba(12, 42, 76, 0.18);
+  background: var(--brand-700);
   border-radius: 12px;
-  box-shadow: 0 8px 17px rgba(29, 71, 126, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 17px rgba(0, 113, 227, 0.22);
 }
 
 .sidebar-brand-copy {
@@ -890,9 +890,9 @@ textarea {
 
 .sidebar-brand-copy strong {
   color: var(--ink);
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
   letter-spacing: -0.03em;
 }
 
@@ -912,8 +912,8 @@ textarea {
   background: var(--brand-50);
   border: 1px solid var(--brand-100);
   border-radius: 6px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.56rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6rem;
   font-weight: 700;
 }
 
@@ -961,28 +961,28 @@ textarea {
   gap: 11px;
   margin: 2px 0;
   padding: 9px 10px;
-  color: #5c6a7e;
+  color: var(--ink-2);
   border: 1px solid transparent;
   border-radius: 11px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
   transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .sidebar-link:hover {
-  color: var(--brand-800);
-  background: rgba(255, 255, 255, 0.74);
-  border-color: rgba(216, 226, 239, 0.8);
+  color: var(--ink);
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
   transform: translateX(2px);
 }
 
 .sidebar-link.active {
-  color: var(--brand-900);
-  background: linear-gradient(100deg, #e4eefb, rgba(238, 245, 253, 0.84));
-  border-color: #d4e2f4;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 14px rgba(38, 79, 128, 0.07);
-  font-weight: 800;
+  color: var(--brand-700);
+  background: var(--brand-50);
+  border-color: var(--brand-100);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 14px rgba(0, 113, 227, 0.07);
+  font-weight: 600;
 }
 
 .sidebar-link.active::before {
@@ -994,7 +994,7 @@ textarea {
   width: 3px;
   background: var(--brand-700);
   border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 12px rgba(52, 112, 187, 0.35);
+  box-shadow: 0 0 12px rgba(0, 113, 227, 0.35);
 }
 
 .link-icon {
@@ -1029,12 +1029,10 @@ textarea {
   margin: 0 13px 12px;
   padding: 14px;
   color: #fff;
-  background:
-    radial-gradient(circle at 90% 5%, rgba(123, 180, 243, 0.45), transparent 28%),
-    linear-gradient(145deg, #285d9e, #173963 72%);
-  border: 1px solid rgba(16, 50, 88, 0.2);
+  background: var(--brand-700);
+  border: 1px solid transparent;
   border-radius: 16px;
-  box-shadow: 0 14px 26px rgba(27, 66, 112, 0.21), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  box-shadow: 0 14px 26px rgba(0, 113, 227, 0.2);
 }
 
 .system-card-top {
@@ -1063,7 +1061,7 @@ textarea {
 .sidebar-system-card strong {
   display: block;
   color: #fff;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Outfit', sans-serif;
   font-size: 0.75rem;
   font-weight: 800;
 }
@@ -1152,7 +1150,7 @@ textarea {
 .version-chip {
   margin-left: auto;
   color: var(--ink-4);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Inter', monospace;
   font-size: 0.52rem;
 }
 
@@ -1314,7 +1312,7 @@ textarea {
   background: var(--surface-muted);
   border: 1px solid var(--line);
   border-radius: 7px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Inter', monospace;
   font-size: 0.56rem;
   font-weight: 600;
   text-align: center;
@@ -1416,7 +1414,7 @@ textarea {
   margin-top: 6px;
   color: var(--ink);
   font-size: clamp(1.5rem, 2.15vw, 2rem);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.14;
 }
 
@@ -2235,9 +2233,9 @@ textarea {
 
 .drawer-eyebrow,
 .confirm-eyebrow {
-  color: var(--brand-600);
+  color: var(--brand-700);
   font-size: 0.56rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -2245,7 +2243,7 @@ textarea {
 .drawer-header h2 {
   margin-top: 2px;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .drawer-subtitle {
@@ -2333,7 +2331,7 @@ textarea {
   background: var(--brand-50);
   border: 1px solid var(--brand-100);
   border-radius: 9px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Inter', monospace;
   font-size: 0.57rem;
   font-weight: 800;
 }
