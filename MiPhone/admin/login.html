@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso Administrador | Mi Phone HN</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS del Panel Admin -->
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="login-body">
+
+  <div class="login-ambient-glow"></div>
+
+  <section class="login-screen">
+    <div class="login-card-wrapper">
+      <div class="login-card">
+        
+        <div class="login-header">
+          <div class="brand-logo">
+            <span class="logo-icon">📱</span>
+            <span class="logo-text">Mi Phone <span class="accent">Admin</span></span>
+          </div>
+          <p class="login-subtitle">Acceso Exclusivo al Panel de Control</p>
+        </div>
+
+        <form id="admin-login-form" class="login-form">
+          <div class="form-group">
+            <label for="email">Correo Administrador</label>
+            <div class="input-with-icon">
+              <span class="input-icon">✉️</span>
+              <input type="email" id="email" autocomplete="username" required placeholder="admin@miphonehn.com">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Contraseña de Acceso</label>
+            <div class="input-with-icon">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••">
+            </div>
+          </div>
+
+          <p id="error-message" class="form-error" role="alert" hidden></p>
+
+          <button type="submit" class="btn btn-primary btn-block">
+            <span>Ingresar al Panel Admin</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </form>
+
+        <div class="login-footer">
+          <a href="../index.html" class="back-link">
+            <span>←</span> Volver a la Tienda Principal
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, syncUserToFirestore } from './firebase-config.js';
+
+    document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('error-message');
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+
+      try {
+        errorEl.hidden = true;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = "<span>Verificando credenciales...</span>";
+        
+        let userCred;
+        try {
+          userCred = await signInWithEmailAndPassword(auth, email, password);
+        } catch (err) {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            try {
+              userCred = await createUserWithEmailAndPassword(auth, email, password);
+            } catch (createErr) {
+              if (createErr.code === 'auth/email-already-in-use') {
+                throw new Error("La contraseña ingresada es incorrecta.");
+              }
+              throw createErr;
+            }
+          } else {
+            throw err;
+          }
+        }
+
+        const user = userCred.user;
+        await syncUserToFirestore(user);
+
+        sessionStorage.setItem('miphone_admin_session', JSON.stringify({ authenticated: true, email: user.email, uid: user.uid }));
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        errorEl.innerText = err.message || 'Credenciales no válidas.';
+        errorEl.hidden = false;
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "<span>Ingresar al Panel Admin</span><span class='btn-arrow'>→</span>";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "miphone-app",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MiPhone HN - Cliente y Admin",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently -k -n \"CLIENT,ADMIN\" -c \"cyan.bold,magenta.bold\" \"vite --config vite.client.config.js\" \"vite --config vite.admin.config.js\"",
+    "dev:all": "npm run dev",
+    "dev:client": "vite --config vite.client.config.js",
+    "dev:admin": "vite --config vite.admin.config.js",
+    "preview:client": "vite preview --config vite.client.config.js",
+    "preview:admin": "vite preview --config vite.admin.config.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "vite": "^5.4.1"
+  }
+}

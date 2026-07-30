@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Catálogo de celulares iPhones, Samsung y accesorios en Honduras.">
+  <title>Tienda | Mi Phone HN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-container">
+      <a href="../index.html" class="logo">Mi Phone <span>HN</span></a>
+      <nav class="nav-menu">
+        <a href="../index.html" class="nav-link">Inicio</a>
+        <a href="tienda.html" class="nav-link active">Tienda</a>
+        <a href="nosotros.html" class="nav-link">Nosotros</a>
+        <a href="soporte.html" class="nav-link">Soporte</a>
+      </nav>
+      <div class="header-actions">
+        <button type="button" id="cart-toggle" class="icon-btn cart-btn" aria-label="Ver carrito">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+          <span class="cart-badge" id="cart-badge">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main style="padding-top: 100px;">
+    <section id="catalog-section" class="catalog-section">
+      <div class="section-container">
+        <div class="section-header">
+          <h1 class="section-title">Catálogo de Productos</h1>
+          <p class="section-subtitle">Explora nuestra selección de celulares, iPads y accesorios garantizados.</p>
+        </div>
+
+        <div class="catalog-controls">
+          <div class="search-box">
+            <input type="search" id="search-input" placeholder="Buscar por modelo (ej. iPhone 14)...">
+          </div>
+          <div class="filter-groups">
+            <div class="filter-group">
+              <button type="button" class="filter-tab active" data-category="all">Todos</button>
+              <button type="button" class="filter-tab" data-category="iphones">iPhones</button>
+              <button type="button" class="filter-tab" data-category="samsung">Samsung</button>
+              <button type="button" class="filter-tab" data-category="ipads">iPads</button>
+              <button type="button" class="filter-tab" data-category="accessories">Accesorios</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="products-grid" id="products-grid"></div>
+        <div class="no-results" id="no-results" style="display: none;">
+          <h3>No encontramos productos</h3>
+          <p>Intenta cambiar la búsqueda o categoría.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="cart-drawer" class="cart-drawer">
+    <div class="cart-drawer-overlay" id="cart-drawer-overlay"></div>
+    <aside class="cart-drawer-content">
+      <div class="cart-drawer-header">
+        <h2>Tu carrito</h2>
+        <button type="button" id="cart-close" class="icon-btn">✕</button>
+      </div>
+      <div class="cart-items-container" id="cart-items-container"></div>
+      <div class="cart-drawer-footer">
+        <div class="cart-summary-row"><span>Subtotal:</span><span id="cart-subtotal">L. 0</span></div>
+        <button type="button" id="checkout-whatsapp-btn" class="btn btn-primary btn-block checkout-btn" style="display: none;">Pedir por WhatsApp</button>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="site-footer" style="margin-top: 50px;">
+    <div class="section-container" style="text-align: center; padding: 20px;">
+      <p>&copy; 2026 Mi Phone HN. Todos los derechos reservados. | <a href="../admin/login.html" style="color: var(--color-accent); text-decoration: none;">Acceso Administrador</a></p>
+    </div>
+  </footer>
+</body>
+</html>

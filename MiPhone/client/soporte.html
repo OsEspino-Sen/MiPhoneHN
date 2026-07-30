@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soporte y FAQ | Mi Phone HN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-container">
+      <a href="../index.html" class="logo">Mi Phone <span>HN</span></a>
+      <nav class="nav-menu">
+        <a href="../index.html" class="nav-link">Inicio</a>
+        <a href="tienda.html" class="nav-link">Tienda</a>
+        <a href="nosotros.html" class="nav-link">Nosotros</a>
+        <a href="soporte.html" class="nav-link active">Soporte</a>
+      </nav>
+    </div>
+  </header>
+
+  <main style="padding-top: 100px;">
+    <section class="financing-section">
+      <div class="section-container">
+        <div class="financing-card">
+          <div class="financing-info">
+            <h2>Calculadora de extrafinanciamiento</h2>
+            <p>Estrena hoy pagando en cómodas cuotas de 3, 6, 9 o 12 meses sin intereses con tarjetas BAC o Ficohsa.</p>
+          </div>
+          <div class="financing-calculator">
+            <div class="form-group">
+              <label for="calc-amount">Monto del producto (Lempiras):</label>
+              <input type="number" id="calc-amount" value="15000" min="1000" max="100000" step="500">
+            </div>
+            <div class="form-group">
+              <label for="calc-months">Plazo de cuotas:</label>
+              <select id="calc-months">
+                <option value="3">3 meses</option>
+                <option value="6" selected>6 meses</option>
+                <option value="9">9 meses</option>
+                <option value="12">12 meses</option>
+              </select>
+            </div>
+            <div class="calc-result">
+              <span class="calc-label">Cuota mensual estimada:</span>
+              <span class="calc-value" id="calc-value">L. 2,500 / mes</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" style="margin-top: 50px;">
+    <div class="section-container" style="text-align: center; padding: 20px;">
+      <p>&copy; 2026 Mi Phone HN. Todos los derechos reservados. | <a href="../admin/login.html" style="color: var(--color-accent); text-decoration: none;">Acceso Administrador</a></p>
+    </div>
+  </footer>
+</body>
+</html>
