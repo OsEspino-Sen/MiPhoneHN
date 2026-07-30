@@ -218,9 +218,22 @@ if (document.readyState === "loading") {
 }
 
 function init() {
-  // Autenticación con Firebase Auth
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        if (!userData || userData.role !== 'admin') {
+          showLoginError("Tu cuenta no tiene permisos de administrador. Contacta al administrador del sistema.");
+          await signOut(auth);
+          return;
+        }
+      } catch (err) {
+        showLoginError("Error al verificar credenciales: " + err.message);
+        await signOut(auth);
+        return;
+      }
+
       showAdmin();
       listenToProducts();
       listenToCategories();

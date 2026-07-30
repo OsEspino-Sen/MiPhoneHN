@@ -67,7 +67,7 @@ async function loadProducts() {
   showCatalogLoading();
 
   try {
-    const { db, collection, onSnapshot, getDocs } = await import("../firebase-config.js");
+    const { db, collection, onSnapshot, getDocs } = await import("./firebase-config.js");
     const productsRef = collection(db, "products");
 
     onSnapshot(productsRef, (snapshot) => {
