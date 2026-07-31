@@ -15,12 +15,6 @@ import {
   orderBy 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { 
-  getStorage, 
-  ref, 
-  uploadBytes, 
-  getDownloadURL 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
-import { 
   getAuth, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -45,13 +39,11 @@ const db = initializeFirestore(app, {
   experimentalForceLongPolling: true
 });
 
-const storage = getStorage(app);
 const auth = getAuth(app);
 
 export { 
   app, 
   db, 
-  storage, 
   auth, 
   collection, 
   doc, 
@@ -64,9 +56,6 @@ export {
   onSnapshot, 
   query, 
   orderBy,
-  ref, 
-  uploadBytes, 
-  getDownloadURL,
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   onAuthStateChanged, 

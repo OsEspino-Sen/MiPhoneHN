@@ -3,67 +3,149 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Acceso Administrador | Mi Phone HN</title>
-  
-  <!-- Fonts -->
+  <meta name="theme-color" content="#EDEEF0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Acceso — Mi Phone HN | Panel Administrativo</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- CSS del Panel Admin -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/duotone/style.css">
   <link rel="stylesheet" href="admin.css">
 </head>
-<body class="login-body">
+<body>
 
-  <div class="login-ambient-glow"></div>
-
-  <section class="login-screen">
-    <div class="login-card-wrapper">
-      <div class="login-card">
-        
-        <div class="login-header">
-          <div class="brand-logo">
-            <span class="logo-icon">📱</span>
-            <span class="logo-text">Mi Phone <span class="accent">Admin</span></span>
+  <section id="login-screen" class="login-screen">
+    <div class="login-outer">
+      <!-- Left: Image -->
+      <div class="login-visual" aria-hidden="true">
+        <div class="login-image-wrapper" id="login-image-wrapper">
+          <img id="login-custom-image" src="imagen-login.jpg" alt="Visual administracion" loading="eager">
+          <div class="login-image-placeholder" id="login-image-placeholder">
+            <span class="placeholder-icon"><i class="ph ph-image" aria-hidden="true"></i></span>
+            <strong>Tu imagen 3D aquí</strong>
+            <span>Coloca un archivo llamado <code>imagen-login.jpg</code> en la carpeta principal</span>
           </div>
-          <p class="login-subtitle">Acceso Exclusivo al Panel de Control</p>
         </div>
+      </div>
 
-        <form id="admin-login-form" class="login-form">
-          <div class="form-group">
-            <label for="email">Correo Administrador</label>
-            <div class="input-with-icon">
-              <span class="input-icon">✉️</span>
-              <input type="email" id="email" autocomplete="username" required placeholder="admin@miphonehn.com">
-            </div>
+      <!-- Right: Form -->
+      <div class="login-shell">
+        <div class="login-card">
+          <div class="login-brand">
+            <span class="login-brand-mark"><i class="ph ph-device-mobile" aria-hidden="true"></i></span>
+            <span class="login-brand-text">Mi Phone <b>HN</b></span>
           </div>
 
-          <div class="form-group">
-            <label for="password">Contraseña de Acceso</label>
-            <div class="input-with-icon">
-              <span class="input-icon">🔒</span>
-              <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••">
-            </div>
+          <div class="login-heading">
+            <span class="eyebrow"><i></i> Panel administrativo — acceso seguro</span>
+            <h1>Bienvenido de nuevo</h1>
+            <p>Ingresa para administrar tu catálogo centralizado.</p>
           </div>
 
-          <p id="error-message" class="form-error" role="alert" hidden></p>
+          <form id="admin-login-form" class="login-form">
+            <div class="form-group">
+              <label for="email">Correo administrativo</label>
+              <div class="input-with-icon">
+                <span class="input-icon"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span>
+                <input type="email" id="email" autocomplete="username" required placeholder="admin@miphonehn.com">
+              </div>
+            </div>
 
-          <button type="submit" class="btn btn-primary btn-block">
-            <span>Ingresar al Panel Admin</span>
-            <span class="btn-arrow">→</span>
-          </button>
-        </form>
+            <div class="form-group">
+              <label for="password">Contraseña</label>
+              <div class="input-with-icon">
+                <span class="input-icon"><i class="ph ph-lock" aria-hidden="true"></i></span>
+                <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••">
+              </div>
+            </div>
 
-        <div class="login-footer">
-          <a href="../index.html" class="back-link">
-            <span>←</span> Volver a la Tienda Principal
-          </a>
+            <p id="error-message" class="form-error" role="alert" hidden></p>
+
+            <button type="submit" class="btn btn-primary btn-block">
+              <span>Entrar al panel</span>
+              <i class="ph ph-arrow-right" aria-hidden="true"></i>
+            </button>
+          </form>
+
+          <div class="login-footer">
+            <span class="secure-note"><i class="ph ph-shield-check" aria-hidden="true"></i> Sesión protegida</span>
+            <a href="../index.html" class="back-link">Ver tienda <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+          </div>
         </div>
-
       </div>
     </div>
   </section>
 
+  <script>
+    (() => {
+      const wrapper = document.getElementById('login-image-wrapper');
+      const img = document.getElementById('login-custom-image');
+      const placeholder = document.getElementById('login-image-placeholder');
+      if (!wrapper || !img) return;
+
+      // Primer intento: leer desde Firestore
+      import('./firebase-config.js').then(async ({ db, collection, getDocs, getDoc, doc }) => {
+        try {
+          const docSnap = await getDoc(doc(db, 'imagenes', 'login'));
+          const docData = docSnap.exists() ? docSnap.data() : null;
+          const loginSrc = docData ? (docData.data || docData.url) : null;
+          if (loginSrc) {
+            img.src = loginSrc;
+            img.style.opacity = '1';
+            wrapper.classList.add('has-image');
+            if (placeholder) placeholder.style.display = 'none';
+            return;
+          }
+        } catch (_) {}
+        startLocalFallback();
+      }).catch(() => startLocalFallback());
+
+      function startLocalFallback() {
+        const candidates = [
+          'imagen-login.jpg','imagen-login.png','imagen-login.webp','imagen-login.jpeg',
+          'imagen-login.JPG','imagen-login.PNG',
+          'custom-image.jpg','custom-image.png',
+          'login-3d.jpg','login-3d.png',
+          'uploads/imagen-login.jpg',
+          'image.png'
+        ];
+        let i = 0;
+        const tryNext = () => {
+          if (i >= candidates.length) {
+            wrapper.classList.remove('has-image');
+            if (placeholder) placeholder.style.display = 'flex';
+            return;
+          }
+          const src = candidates[i++];
+          const test = new Image();
+          test.onload = () => {
+            img.src = src;
+            img.style.opacity = '1';
+            wrapper.classList.add('has-image');
+            if (placeholder) placeholder.style.display = 'none';
+          };
+          test.onerror = tryNext;
+          test.src = src + '?t=' + Date.now();
+        };
+        tryNext();
+      }
+      wrapper.addEventListener('dragover', e => { e.preventDefault(); wrapper.style.outline = '2px dashed #2440E8'; });
+      wrapper.addEventListener('dragleave', () => { wrapper.style.outline = ''; });
+      wrapper.addEventListener('drop', e => {
+        e.preventDefault(); wrapper.style.outline = '';
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+          const url = URL.createObjectURL(file);
+          img.src = url;
+          wrapper.classList.add('has-image');
+          if (placeholder) placeholder.style.display = 'none';
+        }
+      });
+    })();
+  </script>
   <script type="module">
     import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, syncUserToFirestore } from './firebase-config.js';
 
@@ -77,8 +159,8 @@
       try {
         errorEl.hidden = true;
         submitBtn.disabled = true;
-        submitBtn.innerHTML = "<span>Verificando credenciales...</span>";
-        
+        submitBtn.innerHTML = "<span>Validando acceso…</span>";
+
         let userCred;
         try {
           userCred = await signInWithEmailAndPassword(auth, email, password);
@@ -88,7 +170,7 @@
               userCred = await createUserWithEmailAndPassword(auth, email, password);
             } catch (createErr) {
               if (createErr.code === 'auth/email-already-in-use') {
-                throw new Error("La contraseña ingresada es incorrecta.");
+                throw new Error("Contraseña incorrecta.");
               }
               throw createErr;
             }
@@ -99,15 +181,13 @@
 
         const user = userCred.user;
         await syncUserToFirestore(user);
-
-        sessionStorage.setItem('miphone_admin_session', JSON.stringify({ authenticated: true, email: user.email, uid: user.uid }));
         window.location.href = 'index.html';
 
       } catch (err) {
         errorEl.innerText = err.message || 'Credenciales no válidas.';
         errorEl.hidden = false;
         submitBtn.disabled = false;
-        submitBtn.innerHTML = "<span>Ingresar al Panel Admin</span><span class='btn-arrow'>→</span>";
+        submitBtn.innerHTML = "<span>Entrar al panel</span><i class=\"ph ph-arrow-right\" aria-hidden=\"true\"></i>";
       }
     });
   </script>

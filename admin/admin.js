@@ -1,10 +1,9 @@
 /* ==========================================================================
-   MI PHONE HN — PANEL ADMIN SAAS CON FIREBASE FIRESTORE & STORAGE
+   MI PHONE HN — PANEL ADMIN SAAS CON FIREBASE FIRESTORE
    ========================================================================== */
 
 import { 
   db, 
-  storage, 
   auth, 
   collection, 
   doc, 
@@ -14,9 +13,6 @@ import {
   getDocs,
   getDoc,
   onSnapshot, 
-  ref, 
-  uploadBytes, 
-  getDownloadURL, 
   onAuthStateChanged, 
   signOut,
   signInWithEmailAndPassword,
@@ -46,9 +42,9 @@ async function seedDefaultCategories() {
     for (const cat of defaults) {
       await setDoc(doc(db, "categories", cat.id), { label: cat.label });
     }
-    console.log("✅ Categorías predeterminadas creadas en Firestore.");
+    console.log("Categorías predeterminadas creadas en Firestore.");
   } catch (err) {
-    console.warn("⚠️ Error al crear categorías predeterminadas:", err);
+    console.warn("Error al crear categorías predeterminadas:", err);
   }
 }
 
@@ -89,7 +85,7 @@ function renderCategoryFilter() {
   const filter = document.getElementById("admin-category-filter");
   if (!filter) return;
   const currentValue = filter.value;
-  filter.innerHTML = '<option value="all">📁 Todas las Categorías</option>';
+  filter.innerHTML = '<option value="all">Todas las Categorías</option>';
   categories.forEach(cat => {
     const opt = document.createElement("option");
     opt.value = cat.id;
@@ -114,15 +110,23 @@ function renderFormCategories() {
 }
 
 function renderCategoryList() {
+  // FLAT OPS — etiquetas planas profesionales, mono id, conteo de uso
   const list = document.getElementById("category-list");
   if (!list) return;
   list.innerHTML = '';
   categories.forEach((cat, index) => {
+    const count = products.filter(p=>p.category===cat.id).length;
     const item = document.createElement("div");
     item.className = "category-list-item";
     item.innerHTML = `
-      <span class="category-list-label">${escapeHTML(cat.label)}</span>
-      <button type="button" class="btn btn-danger btn-sm" data-cat-index="${index}">Eliminar</button>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+        <span class="category-list-label">${escapeHTML(cat.label)}</span>
+        <span style="font-family:var(--font-mono);font-size:.6875rem;color:var(--ink-3);font-weight:600">${escapeHTML(cat.id)} · ${count} prod</span>
+      </div>
+      <button type="button" class="btn btn-danger btn-sm" data-cat-index="${index}">
+        <i class="ph ph-trash" aria-hidden="true"></i>
+        <span>Eliminar</span>
+      </button>
     `;
     list.appendChild(item);
   });
@@ -165,15 +169,15 @@ let existingImageUrls = [];
 let pendingImageFiles = [];
 let pendingImagesFirst = false;
 let previewObjectUrls = [];
+/* Detección de cambios sin guardar del Drawer de producto. */
+let formSnapshot = null;
+let formIsDirty = false;
 const migratedProductIds = new Set();
 const MAX_PRODUCT_IMAGES = 8;
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
 
 /* DOM elements */
-const loginScreen = document.getElementById("login-screen");
 const adminApp = document.getElementById("admin-app");
-const loginForm = document.getElementById("login-form");
-const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 const adminAlert = document.getElementById("admin-alert");
 const productsTableBody = document.getElementById("products-table-body");
@@ -210,6 +214,15 @@ const productImageFileInput = document.getElementById("product-image-file");
 const productImageUrlsInput = document.getElementById("product-image");
 const productImagesPreview = document.getElementById("product-images-preview");
 const productImagesCount = document.getElementById("product-images-count");
+// Drawer de producto: elementos del rediseño
+const drawerModeChip = document.getElementById("drawer-mode-chip");
+const drawerModeCopy = document.getElementById("drawer-mode-copy");
+const drawerUpdateNotice = document.getElementById("drawer-update-notice");
+const drawerDangerZone = document.getElementById("drawer-danger-zone");
+const unsavedDialog = document.getElementById("unsaved-dialog");
+const unsavedOverlay = document.getElementById("unsaved-overlay");
+const unsavedStayBtn = document.getElementById("unsaved-stay-btn");
+const unsavedDiscardBtn = document.getElementById("unsaved-discard-btn");
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init);
@@ -224,17 +237,17 @@ function init() {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
         if (!userData || userData.role !== 'admin') {
-          showLoginError("Tu cuenta no tiene permisos de administrador. Contacta al administrador del sistema.");
           await signOut(auth);
+          window.location.href = 'login.html';
           return;
         }
       } catch (err) {
-        showLoginError("Error al verificar credenciales: " + err.message);
         await signOut(auth);
+        window.location.href = 'login.html';
         return;
       }
 
-      showAdmin();
+      adminApp.hidden = false;
       listenToProducts();
       listenToCategories();
 
@@ -243,7 +256,7 @@ function init() {
         sidebarUserName.textContent = user.displayName || user.email || "Admin Session";
       }
     } else {
-      showLogin();
+      window.location.href = 'login.html';
       if (unsubscribeFirestore) {
         unsubscribeFirestore();
         unsubscribeFirestore = null;
@@ -255,7 +268,6 @@ function init() {
     }
   });
 
-  loginForm?.addEventListener("submit", handleLogin);
   logoutBtn?.addEventListener("click", handleLogout);
   adminSearch?.addEventListener("input", renderProductsTable);
   categoryFilter?.addEventListener("change", renderProductsTable);
@@ -263,6 +275,28 @@ function init() {
   reloadBtn?.addEventListener("click", () => listenToProducts());
   reloadBtnTop?.addEventListener("click", () => listenToProducts());
   productForm?.addEventListener("submit", handleProductSubmit);
+
+  // Limpieza de errores de campo mientras el usuario corrige (solo Drawer).
+  productForm?.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (target.id) {
+      const slot = productForm.querySelector(`[data-error-for="${target.id}"]`);
+      if (slot) {
+        slot.hidden = true;
+        slot.textContent = "";
+      }
+      target.classList.remove("field-invalid");
+    }
+    const section = target.closest(".form-section");
+    if (section?.id) {
+      const sectionSlot = productForm.querySelector(`[data-error-for="${section.id}"]`);
+      if (sectionSlot) {
+        sectionSlot.hidden = true;
+        sectionSlot.textContent = "";
+      }
+    }
+  });
   modalCloseBtn?.addEventListener("click", closeProductModal);
   modalOverlay?.addEventListener("click", closeProductModal);
   cancelFormBtn?.addEventListener("click", closeProductModal);
@@ -276,6 +310,23 @@ function init() {
   confirmOkBtn?.addEventListener("click", () => {
     confirmCallback?.();
     closeConfirm();
+  });
+
+  // Diálogo de cambios sin guardar (pertenece al Drawer de producto)
+  unsavedStayBtn?.addEventListener("click", closeUnsavedDialog);
+  unsavedOverlay?.addEventListener("click", closeUnsavedDialog);
+  unsavedDiscardBtn?.addEventListener("click", () => {
+    const action = unsavedDialogAction;
+    closeUnsavedDialog();
+    action?.();
+  });
+
+  // Protección al abandonar la página con el Drawer abierto y cambios pendientes.
+  window.addEventListener("beforeunload", (event) => {
+    if (productModal && !productModal.hidden && isProductFormDirty()) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
   });
 
   // Mobile Sidebar Toggle
@@ -372,7 +423,7 @@ function init() {
     try {
       await setDoc(doc(db, "categories", id), { label: name });
       if (newCategoryName) newCategoryName.value = "";
-      showAlert(`✅ Categoría "${name}" creada.`, "success");
+      showAlert(`Categoría "${name}" creada.`, "success");
     } catch (err) {
       showAlert("Error al crear categoría: " + err.message, "error");
     }
@@ -386,84 +437,33 @@ function init() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (unsavedDialog && !unsavedDialog.hidden) {
+        closeUnsavedDialog();
+        return;
+      }
       closeProductModal();
       closeCategoryModal();
       closeConfirm();
     }
   });
 }
-
 /* Sesión y Autenticación */
-
-async function handleLogin(event) {
-  event.preventDefault();
-  hideLoginError();
-
-  const email = document.getElementById("admin-email")?.value.trim();
-  const password = document.getElementById("admin-password")?.value || "";
-
-  if (!email || !password) {
-    showLoginError("Ingresa tu correo y contraseña.");
-    return;
-  }
-
-  const submitBtn = loginForm.querySelector("button[type='submit']");
-  try {
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      setButtonLabel(submitBtn, "Conectando a Firebase...", "spinner-gap");
-    }
-
-    let userCred;
-    try {
-      userCred = await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        userCred = await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        throw err;
-      }
-    }
-
-    await syncUserToFirestore(userCred.user);
-    showAlert("¡Sesión iniciada con éxito!", "success");
-  } catch (error) {
-    showLoginError(error.message || "Error al iniciar sesión.");
-  } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      setButtonLabel(submitBtn, "Entrar al panel", "arrow-right");
-    }
-  }
-}
 
 async function handleLogout() {
   try {
     await signOut(auth);
-    location.reload();
+    window.location.href = 'login.html';
   } catch (err) {
     showAlert("Error al cerrar sesión: " + err.message, "error");
   }
 }
 
 function showAdmin() {
-  loginScreen.hidden = true;
   adminApp.hidden = false;
 }
 
 function showLogin() {
-  loginScreen.hidden = false;
-  adminApp.hidden = true;
-}
-
-function showLoginError(message) {
-  if (!loginError) return;
-  loginError.textContent = message;
-  loginError.hidden = false;
-}
-
-function hideLoginError() {
-  if (loginError) loginError.hidden = true;
+  window.location.href = 'login.html';
 }
 
 /* Firestore: Lectura en Tiempo Real (R) & Auto-Importación Garantizada */
@@ -806,16 +806,16 @@ async function autoImportProductsJson() {
           importedCount++;
         }
       } catch (docErr) {
-        console.warn(`⚠️ No se pudo verificar o importar el producto ID ${docId}:`, docErr.message);
+        console.warn(`No se pudo verificar o importar el producto ID ${docId}:`, docErr.message);
       }
     }
 
     if (importedCount > 0) {
-      console.log(`✅ ${importedCount} productos sincronizados automáticamente hacia Cloud Firestore.`);
-      showAlert(`📦 Se importaron ${importedCount} productos a Firestore.`, "success");
+      console.log(`${importedCount} productos sincronizados automáticamente hacia Cloud Firestore.`);
+      showAlert(`Se importaron ${importedCount} productos a Firestore.`, "success");
     }
   } catch (err) {
-    console.warn("⚠️ Error durante la sincronización inicial de productos con Firestore:", err.message);
+    console.warn("Error durante la sincronización inicial de productos con Firestore:", err.message);
   } finally {
     isImportingProducts = false;
   }
@@ -845,7 +845,7 @@ function listenToProducts() {
       updateDashboardMetrics();
       setLoading(false);
     }, async (error) => {
-      console.warn("⚠️ Streaming en tiempo real bloqueado, ejecutando fallback HTTP getDocs:", error);
+      console.warn("Streaming en tiempo real bloqueado, ejecutando fallback HTTP getDocs:", error);
       await fetchProductsFallback();
     });
   } catch (err) {
@@ -866,7 +866,7 @@ async function fetchProductsFallback() {
     updateDashboardMetrics();
   } catch (err) {
     console.error("Error al obtener productos vía fallback:", err);
-    showAlert("⚠️ Conexión bloqueada por el navegador.", "error");
+    showAlert("Conexión bloqueada por el navegador.", "error");
   } finally {
     setLoading(false);
   }
@@ -911,6 +911,7 @@ function getFilteredProducts() {
 }
 
 function renderProductsTable() {
+  // FLAT OPS v7 — Rework total de renderizado: colores planos, sin círculos infantiles, jerarquía editorial
   const filtered = getFilteredProducts();
 
   const countChip = document.getElementById("table-count-chip");
@@ -928,28 +929,53 @@ function renderProductsTable() {
   emptyTableMsg.hidden = true;
 
   filtered.forEach((product) => {
-    const row = document.createElement("tr");
+    const row = document.createElement("div");
+    row.className = "data-grid-row";
     const basePrice = getBasePrice(product);
     const conditionClass = product.condition === "nuevo" ? "nuevo" : "seminuevo";
+    const conditionLabel = product.badge || (product.condition === 'nuevo' ? 'Nuevo' : 'Seminuevo');
+    const imageUrl = getProductImageUrls(product)[0] || '';
+    const brandInitial = (product.brand || product.title || '?').trim().charAt(0).toUpperCase();
+    const productCategoryLabel = getCategoryLabel(product.category) || product.category || '';
+    const shortId = String(product.id).slice(0,6).toUpperCase();
 
     row.innerHTML = `
-      <td>
+      <div class="data-grid-cell">
         <div class="product-cell">
-          <img class="product-thumb" src="${escapeHTML(getProductImageUrls(product)[0] || '')}" alt="${escapeHTML(product.title || '')}" loading="lazy">
+          ${imageUrl
+            ? `<img class="product-thumb" src="${escapeHTML(imageUrl)}" alt="${escapeHTML(product.title || '')}" loading="lazy">`
+            : `<div class="product-thumb product-thumb--placeholder" aria-hidden="true"><span>${escapeHTML(brandInitial)}</span></div>`
+          }
           <div class="product-cell-info">
             <strong>${escapeHTML(product.title || '')}</strong>
-            <span>${escapeHTML(product.brand || '')}</span>
+            <span class="product-cell-meta">
+              <span class="product-cell-brand">${escapeHTML(product.brand || '')}</span>
+              <span class="product-cell-meta-dot" aria-hidden="true"></span>
+              <span class="product-cell-sku">${escapeHTML(shortId)}</span>
+            </span>
           </div>
         </div>
-      </td>
-      <td><span class="category-pill">${escapeHTML(getCategoryLabel(product.category) || product.category || '')}</span></td>
-      <td><span class="condition-pill ${conditionClass}">${escapeHTML(product.badge || (product.condition === 'nuevo' ? 'Nuevo' : 'Seminuevo'))}</span></td>
-      <td><strong>${formatCurrency(basePrice)}</strong></td>
-      <td style="text-align: right;">
-        <div class="table-actions">
-          <button type="button" class="btn btn-secondary btn-sm" data-edit="${product.id}">Editar</button>
+      </div>
+      <div class="data-grid-cell">
+        <span class="category-pill">${escapeHTML(productCategoryLabel)}</span>
+      </div>
+      <div class="data-grid-cell">
+        <span class="condition-pill ${conditionClass}"><i class="condition-dot" aria-hidden="true"></i>${escapeHTML(conditionLabel)}</span>
+      </div>
+      <div class="data-grid-cell data-grid-cell--right">
+        <div class="price-cell">
+          <strong class="product-price">${formatCurrency(basePrice)}</strong>
+          <span class="price-cell-currency">HNL</span>
         </div>
-      </td>
+      </div>
+      <div class="data-grid-cell data-grid-cell--right">
+        <div class="table-actions">
+          <button type="button" class="table-action-btn table-action-btn--edit" data-edit="${product.id}" title="Editar producto">
+            <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+            <span>Editar</span>
+          </button>
+        </div>
+      </div>
     `;
 
     row.querySelector("img")?.addEventListener("error", (event) => {
@@ -964,6 +990,7 @@ function renderProductsTable() {
   });
 }
 
+
 function getBasePrice(product) {
   const storageVars = product?.variants?.storage;
   if (Array.isArray(storageVars) && storageVars.length > 0) {
@@ -976,35 +1003,161 @@ function getBasePrice(product) {
 /* Modal / Slide-Over Drawer de producto */
 
 function openProductModal(productId) {
+  // Si el Drawer ya está abierto con cambios sin guardar, pedir confirmación
+  // antes de cambiar de producto.
+  if (productModal && !productModal.hidden && isProductFormDirty()) {
+    openUnsavedDialog(() => {
+      forceCloseProductModal();
+      openProductModal(productId);
+    });
+    return;
+  }
+
   editingProductId = productId;
   formError.hidden = true;
+  clearFieldErrors();
 
   resetMediaEditor();
   const dropzoneText = fileDropzone?.querySelector(".dropzone-text");
-  if (dropzoneText) dropzoneText.textContent = "Arrastra varias imágenes o haz clic para explorar";
+  if (dropzoneText) dropzoneText.textContent = "Arrastra tus imágenes aquí o haz clic para explorar";
 
-  if (productId === null) {
+  const isEditing = productId !== null;
+
+  if (!isEditing) {
     modalTitle.textContent = "Nuevo producto";
-    deleteProductBtn.hidden = true;
     fillProductForm(createEmptyProduct());
   } else {
     const product = products.find((item) => String(item.id) === String(productId));
     if (!product) return;
 
     modalTitle.textContent = "Editar producto";
-    deleteProductBtn.hidden = false;
     fillProductForm(product);
   }
 
+  // Estados visuales del rediseño: chip de modo, aviso y zona de riesgo.
+  deleteProductBtn.hidden = !isEditing;
+  if (drawerDangerZone) drawerDangerZone.hidden = !isEditing;
+  if (drawerUpdateNotice) drawerUpdateNotice.hidden = !isEditing;
+  if (drawerModeChip) {
+    drawerModeChip.textContent = isEditing ? "Edición" : "Nuevo";
+    drawerModeChip.classList.toggle("is-editing", isEditing);
+  }
+  if (drawerModeCopy) {
+    drawerModeCopy.textContent = isEditing
+      ? "Los cambios reemplazarán la información publicada"
+      : "Completa las secciones y guarda para publicar";
+  }
+
+  const submitBtn = productForm?.querySelector("button[type='submit']");
+  if (submitBtn) setButtonLabel(submitBtn, isEditing ? "Actualizar producto" : "Guardar producto", "check");
+
   productModal.hidden = false;
   document.body.style.overflow = "hidden";
+  document.getElementById("drawer-body")?.scrollTo({ top: 0 });
+
+  // Punto de partida para detectar cambios sin guardar.
+  captureFormBaseline();
 }
 
+/* Cierre con protección de cambios sin guardar */
 function closeProductModal() {
+  if (isProductFormDirty()) {
+    openUnsavedDialog(forceCloseProductModal);
+    return;
+  }
+  forceCloseProductModal();
+}
+
+function forceCloseProductModal() {
   productModal.hidden = true;
   document.body.style.overflow = "";
   editingProductId = null;
+  formSnapshot = null;
+  formIsDirty = false;
+  clearFieldErrors();
   clearPreviewObjectUrls();
+}
+
+/* ---- Detección de cambios sin guardar (solo Drawer de producto) ---- */
+
+function computeFormSnapshot() {
+  if (!productForm) return "";
+  const parts = [];
+
+  ["product-title", "product-brand", "product-category", "product-condition",
+   "product-battery-health", "product-image", "product-description"]
+    .forEach((id) => {
+      parts.push(document.getElementById(id)?.value ?? "");
+    });
+
+  parts.push([...(includesList?.querySelectorAll(".include-input") || [])].map((i) => i.value).join("¦"));
+  parts.push([...(specsList?.querySelectorAll(".spec-input") || [])].map((i) => i.value).join("¦"));
+  parts.push([...(colorsList?.querySelectorAll(".color-row") || [])].map((row) => [
+    row.querySelector(".color-name")?.value,
+    row.querySelector(".color-hex")?.value,
+    row.querySelector(".color-rgb")?.value,
+    row.querySelector(".color-hsl")?.value,
+    row.querySelector(".color-oklch")?.value
+  ].join("·")).join("¦"));
+  parts.push([...(storageList?.querySelectorAll(".dynamic-row") || [])].map((row) => [
+    row.querySelector(".storage-name")?.value,
+    row.querySelector(".storage-old-price")?.value,
+    row.querySelector(".storage-price")?.value,
+    row.querySelector(".storage-stock")?.value
+  ].join("·")).join("¦"));
+
+  parts.push(existingImageUrls.join("¦"));
+  parts.push(String(pendingImageFiles.length));
+
+  return parts.join("‖");
+}
+
+function captureFormBaseline() {
+  formSnapshot = computeFormSnapshot();
+  formIsDirty = false;
+}
+
+function isProductFormDirty() {
+  if (formSnapshot === null) return false;
+  formIsDirty = computeFormSnapshot() !== formSnapshot;
+  return formIsDirty;
+}
+
+let unsavedDialogAction = null;
+
+function openUnsavedDialog(onDiscard) {
+  if (!unsavedDialog) {
+    // Respaldo defensivo: sin diálogo disponible, no bloquear al usuario.
+    onDiscard?.();
+    return;
+  }
+  unsavedDialogAction = onDiscard;
+  unsavedDialog.hidden = false;
+}
+
+function closeUnsavedDialog() {
+  if (unsavedDialog) unsavedDialog.hidden = true;
+  unsavedDialogAction = null;
+}
+
+/* ---- Validación visual por campo (solo Drawer de producto) ---- */
+
+function setFieldError(targetId, message) {
+  const slot = productForm?.querySelector(`[data-error-for="${targetId}"]`);
+  if (slot) {
+    slot.textContent = message;
+    slot.hidden = false;
+  }
+  const input = document.getElementById(targetId);
+  input?.classList.add("field-invalid");
+}
+
+function clearFieldErrors() {
+  productForm?.querySelectorAll(".field-error-msg").forEach((slot) => {
+    slot.hidden = true;
+    slot.textContent = "";
+  });
+  productForm?.querySelectorAll(".field-invalid").forEach((el) => el.classList.remove("field-invalid"));
 }
 
 function createEmptyProduct() {
@@ -1036,7 +1189,6 @@ function fillProductForm(product) {
   document.getElementById("product-brand").value = product.brand || "";
   document.getElementById("product-category").value = product.category || "iphones";
   document.getElementById("product-condition").value = product.condition || "nuevo";
-  document.getElementById("product-badge").value = product.badge || "";
   document.getElementById("product-battery-health").value = product.batteryHealth ?? "";
 
   existingImageUrls = getProductImageUrls(product).slice(0, MAX_PRODUCT_IMAGES);
@@ -1100,7 +1252,7 @@ function addIncludeRow(value = "") {
   const row = document.createElement("div");
   row.className = "dynamic-row include-row";
   row.innerHTML = `
-    <input type="text" class="include-input" value="${escapeHTML(value)}" placeholder="Ej. Cable USB-C original" aria-label="Elemento incluido">
+    <input type="text" class="include-input" value="${escapeHTML(value)}" placeholder="Cable USB-C original, cargador 25W…" aria-label="Elemento incluido">
     <div class="include-order-actions" aria-label="Cambiar orden">
       <button type="button" class="move-row-btn" data-move="up" aria-label="Mover hacia arriba" title="Mover hacia arriba"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
       <button type="button" class="move-row-btn" data-move="down" aria-label="Mover hacia abajo" title="Mover hacia abajo"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
@@ -1134,7 +1286,7 @@ function addSpecRow(value = "") {
   const row = document.createElement("div");
   row.className = "dynamic-row";
   row.innerHTML = `
-    <input type="text" class="spec-input" value="${escapeHTML(value)}" placeholder="Ej. Chip A17 Pro">
+    <input type="text" class="spec-input" value="${escapeHTML(value)}" placeholder="Chip A17 Pro, pantalla 6.7” OLED 120 Hz…">
     <button type="button" class="remove-row-btn">Quitar</button>
   `;
   row.querySelector(".remove-row-btn")?.addEventListener("click", () => row.remove());
@@ -1214,7 +1366,7 @@ function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
     <div class="color-row-summary">
       <label class="variant-field">
         <span>Nombre del color</span>
-        <input type="text" class="color-name" value="${escapeHTML(color.name)}" placeholder="Ej. Titanio natural">
+        <input type="text" class="color-name" value="${escapeHTML(color.name)}" placeholder="Titanio natural, Negro fantasma…">
       </label>
       <div class="color-primary-control">
         <span class="compact-field-label">Color y Hex</span>
@@ -1276,19 +1428,19 @@ function addStorageRow(name = "128GB", price = 0, oldPrice = 0, stock = null) {
   row.innerHTML = `
     <label class="variant-field">
       <span>Capacidad</span>
-      <input type="text" class="storage-name" value="${escapeHTML(name)}" placeholder="Ej. 256GB" aria-label="Capacidad">
+      <input type="text" class="storage-name" value="${escapeHTML(name)}" placeholder="256 GB" aria-label="Capacidad">
     </label>
     <label class="variant-field">
       <span>Precio normal</span>
-      <input type="number" class="storage-old-price" value="${Number(oldPrice) || 0}" min="0" step="100" placeholder="L. 0" aria-label="Precio normal">
+      <input type="number" class="storage-old-price" value="${Number(oldPrice) || 0}" min="0" step="100" placeholder="24,999.00" aria-label="Precio normal">
     </label>
     <label class="variant-field">
       <span>Precio oferta</span>
-      <input type="number" class="storage-price" value="${Number(price) || 0}" min="0" step="100" placeholder="L. 0" aria-label="Precio de oferta">
+      <input type="number" class="storage-price" value="${Number(price) || 0}" min="0" step="100" placeholder="22,499.00" aria-label="Precio de oferta">
     </label>
     <label class="variant-field">
       <span>Stock</span>
-      <input type="number" class="storage-stock" value="${stockValue}" min="0" step="1" placeholder="0" aria-label="Stock de esta capacidad">
+      <input type="number" class="storage-stock" value="${stockValue}" min="0" step="1" placeholder="5" aria-label="Stock de esta capacidad">
     </label>
     <button type="button" class="remove-row-btn" aria-label="Quitar capacidad">Quitar</button>
   `;
@@ -1472,19 +1624,13 @@ async function uploadProductImages(files, submitBtn) {
 
   for (let index = 0; index < files.length; index += 1) {
     const file = files[index];
-    if (submitBtn) setButtonLabel(submitBtn, `Subiendo imagen ${index + 1} de ${files.length}...`, "spinner-gap");
+    if (submitBtn) setButtonLabel(submitBtn, `Comprimiendo imagen ${index + 1} de ${files.length}...`, "spinner-gap");
 
     try {
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const productFolder = editingProductId ? String(editingProductId) : "new";
-      const storageRef = ref(storage, `products/${productFolder}/${Date.now()}_${index}_${safeName}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      urls.push(await getDownloadURL(snapshot.ref));
-    } catch (storageError) {
-      // Conserva el fallback existente para entornos locales o Storage bloqueado.
-      // La compresión reduce el riesgo de exceder el tamaño del documento.
-      console.warn(`Firebase Storage no disponible para ${file.name}; usando imagen comprimida.`, storageError);
       urls.push(await compressAndReadImage(file, 640, 0.62));
+    } catch (err) {
+      console.error(`Error al procesar imagen ${file.name}:`, err);
+      throw new Error(`No se pudo procesar la imagen ${file.name}`);
     }
   }
 
@@ -1511,12 +1657,31 @@ async function migrateLegacyProductImages(items) {
   }
 }
 
-/* Firestore & Firebase Storage: Crear, Editar, Eliminar */
+/* Firestore: Crear, Editar, Eliminar */
 
 async function handleProductSubmit(event) {
   event.preventDefault();
-  formError.hidden = true;
 
+  // Al actualizar un producto publicado, pedir confirmación visual elegante
+  // antes de reemplazar la información actual.
+  if (editingProductId) {
+    showConfirm(
+      "Actualizar producto",
+      "Los cambios reemplazarán la información actual del producto publicado en la tienda.",
+      () => submitProductForm(),
+      { tone: "primary", okLabel: "Sí, actualizar" }
+    );
+    return;
+  }
+
+  submitProductForm();
+}
+
+async function submitProductForm() {
+  formError.hidden = true;
+  clearFieldErrors();
+
+  const isEditing = Boolean(editingProductId);
   const submitBtn = productForm.querySelector("button[type='submit']");
 
   try {
@@ -1529,13 +1694,26 @@ async function handleProductSubmit(event) {
     const brand = document.getElementById("product-brand").value.trim();
     const category = document.getElementById("product-category").value;
     const condition = document.getElementById("product-condition").value;
-    const badge = document.getElementById("product-badge").value.trim() || (condition === "nuevo" ? "Nuevo" : "Seminuevo");
+    // La etiqueta se deriva de la condición (el campo manual fue retirado del formulario).
+    const badge = condition === "nuevo" ? "Nuevo" : "Seminuevo";
     const batteryHealth = normalizeBatteryHealth(document.getElementById("product-battery-health").value);
     const description = document.getElementById("product-description").value.trim();
     const directImageUrls = parseImageUrls(document.getElementById("product-image").value).slice(0, MAX_PRODUCT_IMAGES);
 
-    if (!title || !brand) {
-      throw new Error("Completa el nombre y marca del producto.");
+    // Validación visual por campo, con desplazamiento al primer error.
+    let firstInvalidId = null;
+    if (!title) {
+      setFieldError("product-title", "Escribe el nombre comercial del producto.");
+      firstInvalidId = firstInvalidId || "product-title";
+    }
+    if (!brand) {
+      setFieldError("product-brand", "Indica la marca del producto.");
+      firstInvalidId = firstInvalidId || "product-brand";
+    }
+    if (firstInvalidId) {
+      document.getElementById(firstInvalidId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById(firstInvalidId)?.focus({ preventScroll: true });
+      throw new Error("Revisa los campos marcados para continuar.");
     }
 
     // Subida múltiple. Las URLs ya guardadas se conservan y los archivos nuevos
@@ -1550,7 +1728,9 @@ async function handleProductSubmit(event) {
       : [...directImageUrls, ...uploadedImageUrls];
     const images = uniqueImageUrls(orderedImageUrls).slice(0, MAX_PRODUCT_IMAGES);
     if (images.length === 0) {
-      throw new Error("Agrega al menos una imagen mediante URL o archivo.");
+      setFieldError("fs-gallery", "Agrega al menos una imagen: sube un archivo o pega una URL.");
+      document.getElementById("fs-gallery")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      throw new Error("La galería necesita al menos una imagen.");
     }
 
     const includes = [...includesList.querySelectorAll(".include-input")]
@@ -1590,7 +1770,9 @@ async function handleProductSubmit(event) {
       .filter((item) => item.name);
 
     if (storageVars.length === 0) {
-      throw new Error("Agrega al menos una capacidad con precio.");
+      setFieldError("fs-storage", "Agrega al menos una capacidad con su precio.");
+      document.getElementById("fs-storage")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      throw new Error("Debes definir al menos una capacidad con precio.");
     }
 
     const baseStorage = storageVars[0];
@@ -1624,16 +1806,19 @@ async function handleProductSubmit(event) {
       // Actualizar documento existente
       const productRef = doc(db, "products", String(editingProductId));
       await setDoc(productRef, productData, { merge: true });
-      showAlert("🎉 Producto actualizado con éxito en Firestore.", "success");
+      showAlert("Producto actualizado con éxito en Firestore.", "success");
     } else {
       // Crear nuevo documento
       productData.createdAt = new Date().toISOString();
       const colRef = collection(db, "products");
       await addDoc(colRef, productData);
-      showAlert("🎉 Nuevo producto agregado con éxito a Firestore.", "success");
+      showAlert("Nuevo producto agregado con éxito a Firestore.", "success");
     }
 
-    closeProductModal();
+    // Guardado exitoso: no hay cambios pendientes, cerrar sin confirmación.
+    formSnapshot = null;
+    formIsDirty = false;
+    forceCloseProductModal();
   } catch (error) {
     console.error("Error al guardar producto:", error);
     let msg = error.message;
@@ -1642,10 +1827,11 @@ async function handleProductSubmit(event) {
     }
     formError.textContent = msg;
     formError.hidden = false;
+    formError.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      setButtonLabel(submitBtn, "Guardar cambios", "check");
+      setButtonLabel(submitBtn, isEditing ? "Actualizar producto" : "Guardar producto", "check");
     }
   }
 }
@@ -1655,17 +1841,18 @@ async function handleDeleteProduct() {
 
   showConfirm(
     "Eliminar producto",
-    "¿Estás seguro de eliminar este producto directamente de Firestore?",
+    "Esta acción eliminará permanentemente el producto del catálogo y de la tienda. No se puede deshacer.",
     async () => {
       try {
         const productRef = doc(db, "products", String(editingProductId));
         await deleteDoc(productRef);
-        closeProductModal();
-        showAlert("🗑️ Producto eliminado de Firestore.", "success");
+        forceCloseProductModal();
+        showAlert("Producto eliminado de Firestore.", "success");
       } catch (error) {
         showAlert("Error al eliminar producto: " + error.message, "error");
       }
-    }
+    },
+    { tone: "danger", okLabel: "Sí, eliminar" }
   );
 }
 
@@ -1687,10 +1874,28 @@ function showAlert(message, type = "success") {
   }, 4000);
 }
 
-function showConfirm(title, message, callback) {
+function showConfirm(title, message, callback, options = {}) {
   confirmTitle.textContent = title;
   confirmMessage.textContent = message;
   confirmCallback = callback;
+
+  // Tono visual del diálogo: "danger" (predeterminado) o "primary".
+  const tone = options.tone === "primary" ? "primary" : "danger";
+  const icon = confirmDialog.querySelector(".confirm-icon");
+  const iconGlyph = confirmDialog.querySelector(".confirm-icon i");
+  if (icon) {
+    icon.classList.toggle("confirm-icon--danger", tone === "danger");
+    icon.classList.toggle("confirm-icon--blue", tone === "primary");
+  }
+  if (iconGlyph) {
+    iconGlyph.className = tone === "primary" ? "ph ph-arrows-clockwise" : "ph ph-warning";
+  }
+  if (confirmOkBtn) {
+    confirmOkBtn.classList.toggle("btn-danger", tone === "danger");
+    confirmOkBtn.classList.toggle("btn-primary", tone === "primary");
+    confirmOkBtn.textContent = options.okLabel || "Confirmar";
+  }
+
   confirmDialog.hidden = false;
 }
 
@@ -1743,3 +1948,752 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     reader.readAsDataURL(file);
   });
 }
+
+/* ==========================================================================
+   OBSIDIAN PRISM v6 — VISUAL ENHANCEMENTS LAYER
+   Solo estética — No modifica Firebase, Auth, CRUD, Validaciones.
+   ========================================================================== */
+(() => {
+  // ---------- Metrics Count Animation ----------
+  const animateCount = (el, target) => {
+    if (!el) return;
+    const start = parseInt(el.dataset.lastValue || '0', 10);
+    const end = Number(target) || 0;
+    if (start === end) return;
+    const duration = 600;
+    const t0 = performance.now();
+    const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / duration);
+      const eased = easeOut(p);
+      el.textContent = Math.round(start + (end - start) * eased);
+      if (p < 1) requestAnimationFrame(step);
+      else el.dataset.lastValue = String(end);
+    };
+    requestAnimationFrame(step);
+  };
+
+  const origUpdateMetrics = window.updateDashboardMetrics || updateDashboardMetrics;
+  // Enhance metrics after original logic
+  const enhancedUpdateMetrics = () => {
+    try { origUpdateMetrics(); } catch(e){}
+    const ids = ['metric-total-products','metric-iphones-count','metric-samsung-count','metric-others-count'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.textContent) {
+        const val = parseInt(el.textContent,10);
+        if (!isNaN(val)) {
+          // trigger count animation from previous
+          const previous = el.dataset.lastValue ? parseInt(el.dataset.lastValue,10) : 0;
+          if (previous !== val) animateCount(el, val);
+        }
+      }
+    });
+    const syncEl = document.getElementById('sync-time');
+    if (syncEl) {
+      const now = new Date();
+      syncEl.textContent = now.toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'});
+    }
+  };
+  // Monkey patch if possible
+  try { window.updateDashboardMetrics = enhancedUpdateMetrics; } catch(e){}
+
+  // Since original function is not on window, we override the local reference by observing DOM
+  // Poll metrics container for changes
+  const metricsObserver = new MutationObserver(() => {
+    // re-animate sparkline bars on hover sequence
+    document.querySelectorAll('.metric-card').forEach((card, idx) => {
+      const bars = card.querySelectorAll('.metric-sparkline span');
+      bars.forEach((b,i)=>{
+        b.style.transitionDelay = `${i*40}ms`;
+      });
+    });
+  });
+  const metricGrid = document.querySelector('.metrics-grid');
+  if (metricGrid) metricsObserver.observe(metricGrid,{childList:true,subtree:true,characterData:true});
+
+  // ---------- Table Row Staggered Entrance ----------
+  const enhanceTableRows = () => {
+    const rows = document.querySelectorAll('#products-table-body .data-grid-row');
+    rows.forEach((row, i) => {
+      row.style.opacity = '0';
+      row.style.transform = 'translateY(6px)';
+      row.style.transition = `opacity 360ms cubic-bezier(.16,1,.3,1) ${i*32}ms, transform 360ms cubic-bezier(.16,1,.3,1) ${i*32}ms`;
+      requestAnimationFrame(()=> {
+        requestAnimationFrame(()=> {
+          row.style.opacity = '1';
+          row.style.transform = 'translateY(0)';
+        });
+      });
+    });
+  };
+  // Hook after renderProductsTable
+  const origRender = renderProductsTable;
+  const wrappedRender = function(...args){
+    const res = origRender.apply(this, args);
+    setTimeout(enhanceTableRows, 20);
+    return res;
+  };
+  try {
+    // Replace local reference — JS closure cannot be overwritten from outer, so we patch global if exported
+    // We'll also use MutationObserver fallback
+    window.renderProductsTable = wrappedRender;
+  } catch(e){}
+  // Observer fallback for every table body change
+  const tb = document.getElementById('products-table-body');
+  if (tb) {
+    new MutationObserver(() => enhanceTableRows()).observe(tb, {childList:true});
+  }
+
+  // ---------- Command+K Focus Search ----------
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      document.getElementById('admin-search')?.focus();
+    }
+  });
+  document.querySelector('.topbar-search-kbd')?.addEventListener('click', ()=>{
+    document.getElementById('admin-search')?.focus();
+  });
+
+  // ---------- Button Ripple / Press ----------
+  document.addEventListener('pointerdown', (e) => {
+    const btn = e.target.closest('.btn, .topbar-icon-btn, .table-action-btn');
+    if (!btn) return;
+    btn.style.setProperty('--ripple-x', `${e.offsetX || 20}px`);
+    btn.style.setProperty('--ripple-y', `${e.offsetY || 20}px`);
+    btn.classList.add('is-pressing');
+  });
+  document.addEventListener('pointerup', () => {
+    document.querySelectorAll('.is-pressing').forEach(b=>b.classList.remove('is-pressing'));
+  });
+
+  // ---------- Login Orb Parallax (Mouse) ----------
+  const loginVisual = document.querySelector('.login-visual');
+  if (loginVisual && window.matchMedia('(min-width: 981px)').matches) {
+    let raf = null;
+    loginVisual.addEventListener('mousemove', (e) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        const rect = loginVisual.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) / rect.width - 0.5;
+        const my = (e.clientY - rect.top) / rect.height - 0.5;
+        document.querySelectorAll('.login-orb').forEach((orb, i) => {
+          const depth = (i+1)*10;
+          orb.style.transform = `translate(${mx*depth}px, ${my*depth}px) scale(${1 + Math.abs(mx)*0.04})`;
+        });
+        const content = document.querySelector('.login-visual-content');
+        if (content) content.style.transform = `translate(${mx*8}px, ${my*8}px)`;
+      });
+    });
+    loginVisual.addEventListener('mouseleave', () => {
+      document.querySelectorAll('.login-orb').forEach(orb=> orb.style.transform='');
+      const content = document.querySelector('.login-visual-content');
+      if (content) content.style.transform='';
+    });
+  }
+
+  // ---------- Standalone login body parallax ----------
+  const loginBody = document.querySelector('.login-body');
+  if (loginBody) {
+    let raf2 = null;
+    loginBody.addEventListener('mousemove', (e) => {
+      if (raf2) return;
+      raf2 = requestAnimationFrame(()=>{
+        raf2=null;
+        const mx = (e.clientX / window.innerWidth - 0.5);
+        const my = (e.clientY / window.innerHeight - 0.5);
+        document.querySelectorAll('.login-body .login-orb').forEach((orb,i)=>{
+          const d = (i+1)*12;
+          orb.style.transform = `translate(${mx*d}px, ${my*d}px)`;
+        });
+        const card = document.querySelector('.login-body .login-card');
+        if (card) card.style.transform = `translate(${mx*6}px, ${my*6}px)`;
+      });
+    });
+    loginBody.addEventListener('mouseleave', ()=>{
+      document.querySelectorAll('.login-body .login-orb').forEach(o=>o.style.transform='');
+      const card = document.querySelector('.login-body .login-card');
+      if (card) card.style.transform='';
+    });
+  }
+
+  // ---------- Sidebar: improve mobile close on link click ----------
+  document.querySelectorAll('.sidebar-link').forEach(link=>{
+    link.addEventListener('click', ()=>{
+      const sb = document.getElementById('admin-sidebar');
+      if (sb && sb.classList.contains('mobile-open')) {
+        // small delay for UX
+        setTimeout(()=> sb.classList.remove('mobile-open'), 120);
+        const toggle = document.getElementById('sidebar-toggle');
+        if (toggle) toggle.checked = false;
+      }
+    });
+  });
+
+  // ---------- Sync time live updater ----------
+  setInterval(()=>{
+    const el = document.getElementById('sync-time');
+    if (el && el.textContent && el.textContent !== 'ahora') {
+      // keep simple relative update each minute
+    }
+  }, 60000);
+
+  // ---------- Add subtle focus ring animation for inputs ----------
+  document.addEventListener('focusin', (e)=>{
+    if (e.target.matches('input, select, textarea')) {
+      e.target.closest('.form-group')?.classList.add('is-focused');
+    }
+  });
+  document.addEventListener('focusout', (e)=>{
+    if (e.target.matches('input, select, textarea')) {
+      e.target.closest('.form-group')?.classList.remove('is-focused');
+    }
+  });
+
+  console.log('[Obsidian Prism v6] Visual enhancements loaded — logic intact.');
+})();
+
+/* ==========================================================================
+   FLAT OPS v7 — VISUAL ENHANCEMENTS REALES (colores planos + movimiento perceptible)
+   ========================================================================== */
+(() => {
+  // Grid speed boost for flat ops — make animation perceptible
+  const grids = document.querySelectorAll('.login-grid');
+  grids.forEach(g=>{ g.style.animationDuration = '12s'; });
+
+  // Bars growth on view
+  const barsObs = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        entry.target.querySelectorAll('.login-device__bars span').forEach((b,i)=>{
+          const h = b.style.getPropertyValue('--bar');
+          b.style.height='2%';
+          setTimeout(()=>{ b.style.height=h; }, 80+i*90);
+        });
+      }
+    });
+  },{threshold:0.4});
+  document.querySelectorAll('.login-device__bars').forEach(b=>barsObs.observe(b));
+
+  // Metric bars sequential rise
+  document.querySelectorAll('.metric-card').forEach(card=>{
+    card.addEventListener('mouseenter', ()=>{
+      card.querySelectorAll('.metric-sparkline span').forEach((s,i)=>{
+        const h = s.style.getPropertyValue('--h') || '60%';
+        s.style.height='4%';
+        setTimeout(()=>{ s.style.height=h; }, i*60);
+      });
+    });
+  });
+
+  // Table row deeper stagger + flat border left accent on hover
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = `
+    #products-table-body .data-grid-row{position:relative;transition:background 160ms ease,transform 220ms cubic-bezier(.16,1,.3,1),opacity 220ms ease}
+    #products-table-body .data-grid-row:hover{transform:translateX(2px)}
+    #products-table-body .data-grid-row::before{
+      content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--ink);opacity:0;transition:opacity 160ms ease
+    }
+    #products-table-body .data-grid-row:hover::before{opacity:1}
+  `;
+  document.head.appendChild(styleSheet);
+
+  // Sidebar active line draw animation
+  const activeLinks = document.querySelectorAll('.sidebar-link.active');
+  activeLinks.forEach(l=>{
+    l.animate([{borderLeftColor:'transparent'},{borderLeftColor:'var(--side-active-line)'}],{duration:600,easing:'ease-out'});
+  });
+
+  // Sync time update cada 60 min
+  const syncEl = document.getElementById('sync-time');
+  if(syncEl){
+    const updateSync = ()=>{
+      syncEl.textContent = new Date().toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'});
+    };
+    updateSync();
+    setInterval(updateSync, 3600000);
+  }
+
+  // Input flat focus — border 2px animation
+  document.addEventListener('focusin', e=>{
+    if(e.target.matches('input,select,textarea')){
+      e.target.style.transition='border-color 160ms ease,box-shadow 160ms ease';
+    }
+  });
+
+  console.log('[Flat Ops v7] Flat colors + real motion loaded — logic intact.');
+})();
+
+/* ==========================================================================
+   v8 FINAL — Sidebar imágenes + promo card útil
+   ========================================================================== */
+(() => {
+  const tryLoadImage = (base, exts, onSuccess, onFail) => {
+    let idx = 0;
+    const attempt = () => {
+      if (idx >= exts.length) { onFail && onFail(); return; }
+      const url = exts[idx++].includes('/') ? exts[idx-1] : `${base}${exts[idx-1]}`;
+      // Actually construct correctly
+    };
+    // Simpler: try direct URLs via Image
+    const candidates = [
+      `${base}.jpg`, `${base}.jpeg`, `${base}.png`, `${base}.webp`, `${base}.avif`,
+      `${base}`, // maybe user uploaded without ext but with dot?
+      `imagensidebar.jpg`, `imagensidebar.png`, `imagensidebar.webp`,
+      `imagensidebar.jpeg`, `imagensidebar`,
+      `imagentarjeta.jpg`, `imagentarjeta.png`, `imagentarjeta.webp`, `imagentarjeta.jpeg`, `imagentarjeta`
+    ];
+    // Filter for relevant base
+    const filtered = base.includes('sidebar') ? candidates.filter(c=>c.toLowerCase().includes('sidebar')) : candidates.filter(c=>c.toLowerCase().includes('tarjeta') || c.toLowerCase().includes('card'));
+    // Also include base + exts
+    const finalList = [...new Set([
+      `${base}.jpg`, `${base}.png`, `${base}.webp`, `${base}.jpeg`,
+      `${base}`,
+      ...filtered
+    ])];
+    let i = 0;
+    const loadNext = () => {
+      if (i >= finalList.length) { onFail && onFail(); return; }
+      const src = finalList[i++];
+      const img = new Image();
+      img.onload = () => onSuccess(src);
+      img.onerror = loadNext;
+      img.src = src + (src.includes('?') ? '' : `?t=${Date.now()}`); // cache bust for new uploads
+    };
+    loadNext();
+  };
+
+  const setSidebarBg = () => {
+    const el = document.getElementById('sidebar-bg');
+    if (!el) return;
+    const candidates = [
+      'imagensidebar.jpg','imagensidebar.png','imagensidebar.webp','imagensidebar.jpeg',
+      'imagensidebar.JPG','imagensidebar.PNG',
+      'sidebar-bg.jpg','sidebar-bg.png',
+      'uploads/imagensidebar.jpg','uploads/imagensidebar.png'
+    ];
+    let idx=0;
+    const tryNext=()=>{
+      if(idx>=candidates.length){
+        // fallback: generate subtle dark texture with canvas
+        el.style.background = 'radial-gradient(400px 300px at 20% 20%, #151A2E, transparent 70%), radial-gradient(500px 360px at 80% 80%, #12182C, transparent 70%), #0E101C';
+        el.classList.add('is-loaded');
+        el.style.opacity='0.55';
+        return;
+      }
+      const src=candidates[idx++];
+      const img=new Image();
+      img.onload=()=>{
+        el.style.backgroundImage = `url('${src}')`;
+        el.style.backgroundSize='cover';
+        el.style.backgroundPosition='center';
+        el.classList.add('is-loaded');
+      };
+      img.onerror=tryNext;
+      img.src=src;
+    };
+    tryNext();
+  };
+
+  const setPromoBg = () => {
+    const el=document.getElementById('promo-bg');
+    if(!el) return;
+    const candidates=[
+      'imagentarjeta.jpg','imagentarjeta.png','imagentarjeta.webp','imagentarjeta.jpeg',
+      'imagentarjeta.JPG','imagentarjeta.PNG',
+      'card-bg.jpg','card-bg.png',
+      'uploads/imagentarjeta.jpg'
+    ];
+    let idx=0;
+    const tryNext=()=>{
+      if(idx>=candidates.length){
+        el.style.background='linear-gradient(135deg, #1A1F3A 0%, #121525 100%)';
+        el.classList.add('is-loaded');
+        return;
+      }
+      const src=candidates[idx++];
+      const img=new Image();
+      img.onload=()=>{
+        el.style.backgroundImage=`url('${src}')`;
+        el.style.backgroundSize='cover';
+        el.style.backgroundPosition='center';
+        el.classList.add('is-loaded');
+      };
+      img.onerror=tryNext;
+      img.src=src;
+    };
+    tryNext();
+  };
+
+  // Promo stats sync
+  const updatePromoStats = () => {
+    const totalEl = document.getElementById('promo-total');
+    const mainTotal = document.getElementById('metric-total-products');
+    if(totalEl && mainTotal){
+      totalEl.textContent = mainTotal.textContent || '0';
+    }
+  };
+
+  // Observe metric changes
+  const metricTotal = document.getElementById('metric-total-products');
+  if(metricTotal){
+    new MutationObserver(updatePromoStats).observe(metricTotal,{childList:true,characterData:true,subtree:true});
+  }
+
+  // Init after DOM
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>{ setSidebarBg(); setPromoBg(); updatePromoStats(); });
+  }else{
+    setSidebarBg(); setPromoBg(); updatePromoStats();
+  }
+
+  // Also try again after 2s in case images uploaded late
+  setTimeout(()=>{ setSidebarBg(); setPromoBg(); }, 2000);
+
+  console.log('[v8 Final] Sidebar imagen + promo tarjeta integrada lista');
+})();
+
+// Sidebar footer image loader — busca imagen_barra con cualquier extensión
+(() => {
+  const img = document.getElementById('imagen-barra');
+  if (!img) return;
+  const exts = ['jpg','jpeg','png','webp','gif','svg','JPG','JPEG','PNG','WEBP'];
+  let i = 0;
+  const fromFirestore = () => window.__imagenesFirestore && window.__imagenesFirestore.barra;
+  const tryNext = () => {
+    if (fromFirestore()) return;
+    if (i >= exts.length) { img.style.display = 'none'; return; }
+    const src = 'imagen_barra.' + exts[i++];
+    const test = new Image();
+    test.onload = () => { img.src = src; img.style.display = 'block'; };
+    test.onerror = tryNext;
+    test.src = src + '?t=' + Date.now();
+  };
+  tryNext();
+  // Re-check when page becomes visible (e.g. after upload)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tryNext(); });
+})();
+
+// ==========================================================================
+// SETTINGS MODULE — Navegación + Gestión de Imágenes (base64 en Firestore)
+// ==========================================================================
+(() => {
+  const settingsLink = document.getElementById('settings-link');
+  const catalogSection = document.getElementById('catalog');
+  const overviewSection = document.getElementById('overview');
+  const metricsSection = document.querySelector('.metrics-grid');
+  const settingsSection = document.getElementById('settings');
+  const bannerEl = document.getElementById('admin-banner');
+
+  if (!settingsLink || !settingsSection) return;
+
+  const IMAGENES_COLLECTION = 'imagenes';
+
+  const IMAGE_KEYS = ['banner', 'login', 'sidebar', 'tarjeta', 'barra'];
+
+  const imageMeta = {
+    banner:  { label: 'Banner del panel' },
+    login:   { label: 'Imagen de login' },
+    sidebar: { label: 'Imagen de la sidebar' },
+    tarjeta: { label: 'Imagen para tarjeta' },
+    barra:   { label: 'Imagen de barra' }
+  };
+
+  // ---- Navegación ----
+  function showCatalog() {
+    if (catalogSection) catalogSection.hidden = false;
+    if (overviewSection) overviewSection.hidden = false;
+    if (metricsSection) metricsSection.hidden = false;
+    if (bannerEl) bannerEl.style.display = '';
+    settingsSection.hidden = true;
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    const catLink = document.querySelector('a[href="#catalog"]');
+    if (catLink) catLink.classList.add('active');
+  }
+
+  function showSettings() {
+    if (catalogSection) catalogSection.hidden = true;
+    if (overviewSection) overviewSection.hidden = true;
+    if (metricsSection) metricsSection.hidden = true;
+    if (bannerEl) bannerEl.style.display = 'none';
+    settingsSection.hidden = false;
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    settingsLink.classList.add('active');
+  }
+
+  settingsLink.addEventListener('click', (e) => { e.preventDefault(); showSettings(); });
+  const catLink = document.querySelector('a[href="#catalog"]');
+  if (catLink) catLink.addEventListener('click', (e) => { e.preventDefault(); showCatalog(); });
+
+  // ---- State: mapa de key → { url, file?, urlInput? } ----
+  const state = {};
+  IMAGE_KEYS.forEach(k => { state[k] = { url: '', file: null, urlValue: '', changed: false }; });
+
+  // ---- Helpers ----
+  function setStatus(key, type, msg) {
+    const el = document.getElementById(`status-${key}`);
+    if (!el) return;
+    if (type === 'loading') {
+      el.innerHTML = `<span class="settings-upload-spinner"></span><span>${msg}</span>`;
+      el.className = 'settings-upload-status is-loading';
+    } else if (type === 'success') {
+      el.innerHTML = `<i class="ph ph-check-circle"></i><span>${msg}</span>`;
+      el.className = 'settings-upload-status is-success';
+    } else if (type === 'error') {
+      el.innerHTML = `<i class="ph ph-x-circle"></i><span>${msg}</span>`;
+      el.className = 'settings-upload-status is-error';
+    } else {
+      el.innerHTML = ''; el.className = 'settings-upload-status';
+    }
+  }
+
+  function setPreview(key, url) {
+    const card = document.querySelector(`.settings-image-card[data-key="${key}"]`);
+    if (!card) return;
+    const img = card.querySelector('.settings-image-preview img');
+    const ph = card.querySelector('.settings-image-placeholder');
+    if (img) {
+      if (url) { img.src = url.startsWith('data:') ? url : url + '?t=' + Date.now(); img.style.display = 'block'; }
+      else { img.src = ''; img.style.display = 'none'; }
+    }
+    if (ph) ph.style.display = url ? 'none' : 'flex';
+  }
+
+  function updateButtons(key) {
+    const card = document.querySelector(`.settings-image-card[data-key="${key}"]`);
+    if (!card) return;
+    const saveBtn = card.querySelector('.settings-save-btn');
+    const cancelBtn = card.querySelector('.settings-cancel-btn');
+    const changed = state[key].changed;
+    saveBtn.disabled = !changed;
+    cancelBtn.disabled = !changed;
+  }
+
+  async function loadFromFirestore() {
+    try {
+      const snapshot = await getDocs(collection(db, IMAGENES_COLLECTION));
+      snapshot.forEach(docSnap => {
+        const key = docSnap.id;
+        const docData = docSnap.data();
+        if (IMAGE_KEYS.includes(key)) {
+          const imageData = docData.data || docData.url;
+          if (imageData) {
+            state[key].url = imageData;
+            setPreview(key, imageData);
+            applySitePreview(key, imageData);
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('[Settings] Firestore no disponible.');
+    }
+  }
+
+  // ---- Aplicar preview en todo el sitio ----
+  function applySitePreview(key, url) {
+    if (!url) return;
+    window.__imagenesFirestore = window.__imagenesFirestore || {};
+    window.__imagenesFirestore[key] = true;
+    const finalUrl = url.startsWith('data:') ? url : url + '?t=' + Date.now();
+    switch (key) {
+      case 'banner':
+        const bannerImg = document.querySelector('#admin-banner');
+        if (bannerImg) bannerImg.style.backgroundImage = `url('${finalUrl}')`;
+        break;
+      case 'sidebar':
+        const sidebarBg = document.getElementById('sidebar-bg');
+        if (sidebarBg) sidebarBg.style.backgroundImage = `url('${finalUrl}')`;
+        break;
+      case 'tarjeta':
+        const promoBg = document.getElementById('promo-bg');
+        if (promoBg) promoBg.style.backgroundImage = `url('${finalUrl}')`;
+        break;
+      case 'barra':
+        const barraImg = document.getElementById('imagen-barra');
+        if (barraImg) { barraImg.src = finalUrl; barraImg.style.display = 'block'; }
+        break;
+      case 'login':
+        break;
+    }
+  }
+
+  function readAsDataURL(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function doSave(key) {
+    setStatus(key, 'loading', 'Guardando...');
+    const file = state[key].file;
+    const urlValue = state[key].urlValue;
+    let finalData;
+
+    try {
+      if (file) {
+        finalData = await readAsDataURL(file);
+      } else if (urlValue) {
+        const resp = await fetch(urlValue);
+        const blob = await resp.blob();
+        finalData = await readAsDataURL(blob);
+      } else {
+        setStatus(key, 'error', 'No hay datos para guardar');
+        return;
+      }
+
+      const docRef = doc(db, IMAGENES_COLLECTION, key);
+      await setDoc(docRef, { data: finalData, updatedAt: new Date().toISOString() });
+
+      state[key].url = finalData;
+      state[key].file = null;
+      state[key].urlValue = '';
+      state[key].changed = false;
+      updateButtons(key);
+
+      setPreview(key, finalData);
+      applySitePreview(key, finalData);
+
+      const card = document.querySelector(`.settings-image-card[data-key="${key}"]`);
+      if (card) {
+        const fnEl = card.querySelector('.settings-file-name');
+        if (fnEl) fnEl.textContent = '';
+        const fi = card.querySelector('.settings-file-input');
+        if (fi) fi.value = '';
+        const ui = card.querySelector('.settings-url-input');
+        if (ui) ui.value = '';
+      }
+
+      setStatus(key, 'success', 'Imagen guardada');
+      showAlert('Imagen actualizada correctamente', 'success');
+      setTimeout(() => setStatus(key, '', ''), 3000);
+    } catch (err) {
+      console.error('[Settings] Save error:', err);
+      setStatus(key, 'error', 'Error al guardar');
+      showAlert('Error al guardar la imagen', 'error');
+    }
+  }
+
+  function doCancel(key) {
+    state[key].file = null;
+    state[key].urlValue = '';
+    state[key].changed = false;
+    updateButtons(key);
+
+    const card = document.querySelector(`.settings-image-card[data-key="${key}"]`);
+    if (card) {
+      const fnEl = card.querySelector('.settings-file-name');
+      if (fnEl) fnEl.textContent = '';
+      const fi = card.querySelector('.settings-file-input');
+      if (fi) fi.value = '';
+      const ui = card.querySelector('.settings-url-input');
+      if (ui) ui.value = '';
+    }
+
+    setPreview(key, state[key].url || '');
+    setStatus(key, '', '');
+  }
+
+  // ---- File picker: solo se abre al hacer clic en el botón ----
+  document.querySelectorAll('.settings-file-btn').forEach(btn => {
+    const card = btn.closest('.settings-image-card');
+    if (!card) return;
+    const key = card.dataset.key;
+    const fileInput = card.querySelector('.settings-file-input');
+    if (!fileInput) return;
+
+    btn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Validate type
+      const validTypes = ['image/jpeg','image/png','image/webp','image/gif'];
+      if (!validTypes.includes(file.type)) {
+        showAlert('Formato no válido. Usa JPG, PNG, WEBP o GIF.', 'error');
+        fileInput.value = '';
+        return;
+      }
+
+      if (file.size > 8 * 1024 * 1024) {
+        showAlert('La imagen no puede superar 8MB.', 'error');
+        fileInput.value = '';
+        return;
+      }
+
+      state[key].file = file;
+      state[key].urlValue = '';
+      state[key].changed = true;
+      updateButtons(key);
+
+      // Show filename
+      const fnEl = card.querySelector('.settings-file-name');
+      if (fnEl) fnEl.textContent = file.name;
+
+      // Preview local
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = card.querySelector('.settings-image-preview img');
+        const ph = card.querySelector('.settings-image-placeholder');
+        if (img) { img.src = ev.target.result; img.style.display = 'block'; }
+        if (ph) ph.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+
+      // Clear URL input
+      const urlInput = card.querySelector('.settings-url-input');
+      if (urlInput) urlInput.value = '';
+    });
+  });
+
+  // ---- URL input ----
+  document.querySelectorAll('.settings-url-input').forEach(input => {
+    const card = input.closest('.settings-image-card');
+    if (!card) return;
+    const key = card.dataset.key;
+
+    input.addEventListener('input', () => {
+      state[key].urlValue = input.value.trim();
+      state[key].file = null;
+      state[key].changed = !!state[key].urlValue;
+      updateButtons(key);
+
+      // Clear file
+      const fi = card.querySelector('.settings-file-input');
+      if (fi) fi.value = '';
+      const fnEl = card.querySelector('.settings-file-name');
+      if (fnEl) fnEl.textContent = '';
+    });
+  });
+
+  // ---- Guardar / Cancelar ----
+  document.querySelectorAll('.settings-save-btn').forEach(btn => {
+    const card = btn.closest('.settings-image-card');
+    if (!card) return;
+    const key = card.dataset.key;
+
+    btn.addEventListener('click', () => {
+      if (!state[key].changed) return;
+      showConfirm('Reemplazar imagen',
+        '¿Estás seguro de que deseas reemplazar esta imagen? La versión anterior será sobrescrita.',
+        () => doSave(key));
+    });
+  });
+
+  document.querySelectorAll('.settings-cancel-btn').forEach(btn => {
+    const card = btn.closest('.settings-image-card');
+    if (!card) return;
+    const key = card.dataset.key;
+    btn.addEventListener('click', () => doCancel(key));
+  });
+
+  // ---- Cargar datos al iniciar ----
+  loadFromFirestore();
+
+  console.log('[Settings v2] Módulo de configuración con Firestore listo');
+})();

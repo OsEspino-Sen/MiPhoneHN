@@ -4,766 +4,274 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#f5f5f7">
-  <title>Panel de Control Admin | Mi Phone HN</title>
+  <meta name="theme-color" content="#FFFFFF">
+  <title>Mi Phone HN — Panel Administrativo</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/duotone/style.css">
   <link rel="stylesheet" href="admin.css">
 
-  <!-- Estilos complementarios del editor: galería, variantes, contenido y color.
-       Se mantienen junto a la estructura actual de index.html. -->
   <style>
     @keyframes adminIconSpin { to { transform: rotate(360deg); } }
     .ph-spinner-gap { animation: adminIconSpin .8s linear infinite; }
-
-    .form-hint {
-      margin-top: 5px;
-      color: var(--ink-3, #a1a1a6);
-      font-size: .625rem;
-      line-height: 1.45;
-    }
-
-    .field-with-suffix {
-      position: relative;
-    }
-
-    .field-with-suffix input {
-      padding-right: 38px;
-    }
-
-    .field-suffix {
-      position: absolute;
-      top: 50%;
-      right: 13px;
-      color: var(--ink-3, #a1a1a6);
-      font-size: .72rem;
-      font-weight: 700;
-      transform: translateY(-50%);
-      pointer-events: none;
-    }
-
-    .media-preview-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin: 15px 0 9px;
-    }
-
-    .media-preview-header strong {
-      color: var(--ink-2, #6e6e73);
-      font-size: .7rem;
-    }
-
-    .media-count-chip {
-      padding: 4px 8px;
-      color: var(--brand-700, #0071e3);
-      background: var(--brand-50, #f0f7ff);
-      border: 1px solid var(--brand-100, #e8f3ff);
-      border-radius: 999px;
-      font-size: .58rem;
-      font-weight: 700;
-    }
-
-    .media-preview-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 9px;
-      min-height: 88px;
-      padding: 10px;
-      background: var(--bg-secondary, #f5f5f7);
-      border: 1px solid var(--border-light, #d2d2d7);
-      border-radius: 13px;
-    }
-
-    .media-preview-empty {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      min-height: 66px;
-      color: var(--ink-3, #a1a1a6);
-      font-size: .65rem;
-      text-align: center;
-    }
-
-    .media-preview-item {
-      position: relative;
-      aspect-ratio: 1;
-      overflow: hidden;
-      background: #fff;
-      border: 1px solid var(--border-light, #d2d2d7);
-      border-radius: 11px;
-      box-shadow: 0 5px 14px rgba(0, 0, 0, .04);
-    }
-
-    .media-preview-item.is-primary {
-      border-color: var(--brand-700, #0071e3);
-      box-shadow: 0 0 0 2px rgba(0, 113, 227, .12);
-    }
-
-    .media-preview-item.is-pending::after {
-      content: 'Pendiente';
-      position: absolute;
-      right: 5px;
-      bottom: 5px;
-      padding: 3px 5px;
-      color: #fff;
-      background: rgba(24, 35, 52, .74);
-      border-radius: 5px;
-      font-size: .48rem;
-      font-weight: 800;
-    }
-
-    .media-preview-item img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      padding: 7px;
-    }
-
-    .media-primary-badge {
-      position: absolute;
-      top: 5px;
-      left: 5px;
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      padding: 3px 5px;
-      color: #fff;
-      background: var(--brand-700, #0071e3);
-      border-radius: 5px;
-      font-size: .48rem;
-      font-weight: 700;
-    }
-
-    .media-primary-btn {
-      position: absolute;
-      top: 5px;
-      left: 5px;
-      width: 25px;
-      height: 25px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      color: var(--brand-700, #0071e3);
-      background: rgba(255, 255, 255, .92);
-      border: 1px solid var(--brand-100, #e8f3ff);
-      border-radius: 7px;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0, 113, 227, .1);
-    }
-
-    .media-primary-btn:hover {
-      color: #fff;
-      background: var(--brand-700, #0071e3);
-    }
-
-    .media-remove-btn {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      width: 25px;
-      height: 25px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      color: #fff;
-      background: var(--danger, #c84650);
-      border: 0;
-      border-radius: 7px;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(200, 70, 80, .18);
-    }
-
-    .media-remove-btn:hover {
-      background: #a92f3a;
-    }
-
-    .variant-field {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .variant-field > span,
-    .compact-field-label {
-      color: var(--ink-2, #6e6e73);
-      font-size: .58rem;
-      font-weight: 700;
-      letter-spacing: .045em;
-      text-transform: uppercase;
-    }
-
-    .variant-field input {
-      width: 100%;
-      min-width: 0;
-    }
-
-    .dynamic-row.storage-row {
-      display: grid;
-      grid-template-columns: minmax(100px, 1.1fr) minmax(90px, .85fr) minmax(90px, .85fr) minmax(70px, .62fr) auto;
-      align-items: end;
-      padding: 11px;
-    }
-
-    .dynamic-row.storage-row .storage-stock {
-      min-width: 0;
-    }
-
-    /* Componente compacto de color: nombre, selector y Hex permanecen visibles;
-       RGB, HSL y OKLCH viven dentro de un panel secundario desplegable. */
-    .dynamic-row.color-row {
-      display: block;
-      padding: 12px;
-      background: var(--bg-secondary, #f5f5f7);
-      border-color: var(--border-light, #d2d2d7);
-    }
-
-    .color-row-summary {
-      display: grid;
-      grid-template-columns: minmax(150px, 1fr) minmax(220px, 1.25fr) auto;
-      align-items: end;
-      gap: 10px;
-    }
-
-    .color-primary-control {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .color-compact-control {
-      min-width: 0;
-      height: 42px;
-      display: grid;
-      grid-template-columns: 42px minmax(0, 1fr);
-      overflow: hidden;
-      background: #fff;
-      border: 1px solid var(--border-color, #d2d2d7);
-      border-radius: 10px;
-      transition: border-color .16s ease, box-shadow .16s ease;
-    }
-
-    .color-compact-control:focus-within {
-      border-color: var(--brand-700, #0071e3);
-      box-shadow: 0 0 0 4px rgba(0, 113, 227, .1);
-    }
-
-    .color-compact-control input[type="color"] {
-      width: 42px;
-      min-width: 42px;
-      height: 40px;
-      padding: 4px;
-      background: var(--bg-secondary, #f5f5f7);
-      border: 0;
-      border-right: 1px solid var(--border-light, #d2d2d7);
-      border-radius: 0;
-      cursor: pointer;
-    }
-
-    .color-compact-control .color-hex {
-      min-width: 0;
-      height: 40px;
-      padding: 8px 11px;
-      background: transparent;
-      border: 0;
-      border-radius: 0;
-      box-shadow: none;
-      font-family: 'Inter', monospace;
-      font-size: .72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .color-row-summary > .remove-row-btn {
-      min-height: 42px;
-    }
-
-    .color-advanced {
-      margin-top: 9px;
-      overflow: hidden;
-      background: var(--bg-secondary, #f5f5f7);
-      border: 1px solid var(--border-light, #d2d2d7);
-      border-radius: 10px;
-    }
-
-    .color-advanced summary {
-      min-height: 38px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 11px;
-      color: var(--brand-700, #0071e3);
-      cursor: pointer;
-      list-style: none;
-      font-size: .63rem;
-      font-weight: 700;
-      user-select: none;
-    }
-
-    .color-advanced summary::-webkit-details-marker { display: none; }
-
-    .color-advanced summary .ph-caret-down {
-      margin-left: auto;
-      transition: transform .2s ease;
-    }
-
-    .color-advanced[open] summary .ph-caret-down {
-      transform: rotate(180deg);
-    }
-
-    .color-advanced-hint {
-      color: var(--ink-3, #a1a1a6);
-      font-weight: 600;
-    }
-
-    .color-advanced-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 9px;
-      padding: 10px;
-      border-top: 1px solid var(--border-light, #d2d2d7);
-    }
-
-    .color-advanced-grid input {
-      font-family: 'Inter', monospace;
-      font-size: .66rem;
-    }
-
-    .dynamic-row.include-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto auto;
-      align-items: center;
-    }
-
-    .include-order-actions {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .move-row-btn {
-      width: 34px;
-      height: 34px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      color: var(--brand-700, #0071e3);
-      background: var(--brand-50, #f0f7ff);
-      border: 1px solid var(--brand-100, #e8f3ff);
-      border-radius: 9px;
-      cursor: pointer;
-    }
-
-    .move-row-btn:hover:not(:disabled) {
-      color: #fff;
-      background: var(--brand-700, #0071e3);
-    }
-
-    .move-row-btn:disabled {
-      cursor: not-allowed;
-      opacity: .35;
-    }
-
-    @media (max-width: 640px) {
-      .media-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .dynamic-row.storage-row { grid-template-columns: 1fr 1fr; }
-      .dynamic-row.storage-row .remove-row-btn { grid-column: 1 / -1; width: 100%; }
-      .color-row-summary { grid-template-columns: 1fr; }
-      .color-row-summary > .remove-row-btn { width: 100%; }
-      .color-advanced-grid { grid-template-columns: 1fr; }
-      .color-advanced-hint { display: none; }
-      .dynamic-row.include-row { grid-template-columns: minmax(0, 1fr) auto; }
-      .dynamic-row.include-row .remove-row-btn { grid-column: 1 / -1; width: 100%; }
-    }
   </style>
 
   <script type="module" src="admin.js" defer></script>
 </head>
 <body>
 
-  <!-- =====================================================================
-       1. ACCESO ADMINISTRATIVO
-       Se conservan todos los IDs utilizados por admin.js.
-       ===================================================================== -->
-  <section id="login-screen" class="login-screen">
-    <div class="login-visual" aria-hidden="true">
-      <div class="login-orb login-orb--one"></div>
-      <div class="login-orb login-orb--two"></div>
-      <div class="login-grid"></div>
-      <div class="login-device">
-        <div class="login-device__top">
-          <span class="login-device__signal"></span>
-          <span class="login-device__label">MI PHONE / ADMIN OS</span>
-          <span class="login-device__status">LIVE</span>
-        </div>
-        <div class="login-device__content">
-          <div class="login-device__brand">
-            <span class="login-device__mark">
-              <i class="ph ph-device-mobile-camera" aria-hidden="true"></i>
-            </span>
-            <div>
-              <strong>Tu tienda, en orden.</strong>
-              <span>Una operación más inteligente.</span>
-            </div>
-          </div>
-          <div class="login-device__metrics">
-            <span><i></i> Catálogo conectado</span>
-            <span>Firebase Sync</span>
-          </div>
-          <div class="login-device__bars">
-            <span style="--bar: 78%"></span>
-            <span style="--bar: 54%"></span>
-            <span style="--bar: 91%"></span>
-            <span style="--bar: 68%"></span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="login-shell">
-      <div class="login-card">
-        <div class="login-brand">
-          <span class="login-brand-mark">
-            <i class="ph ph-device-mobile-camera" aria-hidden="true"></i>
-          </span>
-          <span class="login-brand-text">Mi Phone <b>HN</b></span>
-        </div>
-
-        <div class="login-heading">
-          <span class="eyebrow"><i></i> Portal administrativo</span>
-          <h1>Bienvenido de nuevo</h1>
-          <p>Accede al centro de control de catálogo e inventario.</p>
-        </div>
-
-        <form id="login-form" class="login-form">
-          <div class="form-group">
-            <label for="admin-email">Correo de administrador</label>
-            <div class="input-with-icon">
-              <span class="input-icon">
-                <i class="ph ph-envelope-simple" aria-hidden="true"></i>
-              </span>
-              <input type="email" id="admin-email" autocomplete="username" required placeholder="admin@miphonehn.com">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="admin-password">Contraseña</label>
-            <div class="input-with-icon">
-              <span class="input-icon">
-                <i class="ph ph-lock-key" aria-hidden="true"></i>
-              </span>
-              <input type="password" id="admin-password" autocomplete="current-password" required placeholder="••••••••">
-            </div>
-          </div>
-
-          <p id="login-error" class="form-error" role="alert" hidden></p>
-
-          <button type="submit" class="btn btn-primary btn-block btn-lg">
-            <span>Entrar al panel</span>
-            <i class="ph ph-arrow-right" aria-hidden="true"></i>
-          </button>
-        </form>
-
-        <div class="login-footer">
-          <span class="secure-note">
-            <i class="ph ph-shield-check" aria-hidden="true"></i>
-            Acceso protegido y cifrado
-          </span>
-          <a href="../index.html" class="back-link">
-            Volver a la tienda
-            <i class="ph ph-arrow-up-right" aria-hidden="true"></i>
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- =====================================================================
-       2. PANEL PRINCIPAL
-       ===================================================================== -->
+  <!-- ADMIN APP -->
   <div id="admin-app" class="admin-app" hidden>
     <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle" aria-hidden="true">
 
-    <!-- Sidebar premium -->
     <aside class="admin-sidebar" id="admin-sidebar">
+      <div class="admin-sidebar-bg" id="sidebar-bg"></div>
+      <div class="admin-sidebar-overlay"></div>
+
       <div class="sidebar-brand">
-        <span class="sidebar-brand-mark">
-          <i class="ph ph-device-mobile-camera" aria-hidden="true"></i>
-        </span>
+        <span class="sidebar-brand-mark"><i class="ph ph-device-mobile-camera" aria-hidden="true"></i></span>
         <span class="sidebar-brand-copy">
-          <strong>Mi Phone <span style="color: #0ea5e9">HN</span></strong>
-          <small>Panel administrativo</small>
+          <strong>Mi Phone HN</strong>
+          <small id="sidebar-user-name">Panel centralizado</small>
         </span>
+        <button type="button" class="sidebar-brand-action" aria-label="Opciones"><i class="ph ph-dots-three" aria-hidden="true"></i></button>
       </div>
 
       <nav class="sidebar-nav" aria-label="Navegación administrativa">
-        <span class="sidebar-nav-title">Espacio de trabajo</span>
-
-        <a href="#overview" class="sidebar-link">
-          <span class="link-icon">
-            <i class="ph ph-squares-four" aria-hidden="true"></i>
-          </span>
-          <span>Resumen</span>
-        </a>
-
+        <span class="sidebar-nav-title">Gestión</span>
         <a href="#catalog" class="sidebar-link active" aria-current="page">
-          <span class="link-icon">
-            <i class="ph ph-shopping-bag-open" aria-hidden="true"></i>
-          </span>
-          <span>Catálogo</span>
+          <span class="link-icon"><i class="ph-duotone ph-package" aria-hidden="true"></i></span>
+          <span class="link-text">Catálogo</span>
           <span class="link-badge">Live</span>
         </a>
-
-        <a href="#inventory" class="sidebar-link">
-          <span class="link-icon">
-            <i class="ph ph-package" aria-hidden="true"></i>
-          </span>
-          <span>Inventario</span>
+        <a id="settings-link" href="#settings" class="sidebar-link">
+          <span class="link-icon"><i class="ph-duotone ph-gear-six" aria-hidden="true"></i></span>
+          <span class="link-text">Configuración</span>
         </a>
-
-        <span class="sidebar-nav-title sidebar-nav-title--spaced">Accesos</span>
-
         <a id="view-store-link" href="../index.html" target="_blank" rel="noopener noreferrer" class="sidebar-link">
-          <span class="link-icon">
-            <i class="ph ph-eye" aria-hidden="true"></i>
-          </span>
-          <span>Ver tienda</span>
-          <i class="ph ph-arrow-square-out" aria-hidden="true"></i>
+          <span class="link-icon"><i class="ph-duotone ph-storefront" aria-hidden="true"></i></span>
+          <span class="link-text">Ver tienda</span>
+          <i class="ph ph-arrow-up-right link-arrow" aria-hidden="true"></i>
         </a>
       </nav>
 
-      <div class="sidebar-system-card">
-        <div class="system-card-top">
-          <span class="system-card-icon">
-            <i class="ph ph-database" aria-hidden="true"></i>
-          </span>
-          <button type="button" aria-label="Estado del sistema" title="Servicios conectados">
-            <i class="ph ph-dots-three" aria-hidden="true"></i>
-          </button>
+      <div class="sidebar-promo-card" id="sidebar-promo-card">
+        <div class="sidebar-promo-bg" id="promo-bg"></div>
+        <div class="sidebar-promo-overlay"></div>
+        <div class="sidebar-promo-content">
+          <span class="promo-eyebrow">Centro operativo</span>
+          <h4>Gestión centralizada activa</h4>
+          <p>Administra productos, categorías y disponibilidad desde un único panel seguro y organizado.</p>
+          <div class="promo-stats">
+            <div><strong id="promo-total">0</strong><span>Productos</span></div>
+            <div><strong id="promo-sync">Live</strong><span>Sincronización</span></div>
+          </div>
         </div>
-        <strong>Todo conectado</strong>
-        <p>Firestore y Storage sincronizando en tiempo real.</p>
-        <div class="system-card-status"><i></i> Operación estable</div>
       </div>
 
       <div class="sidebar-footer">
-        <div class="sidebar-footer-status">
-          <span class="sidebar-pulse"></span>
-          <span>
-            <strong>Firebase Online</strong>
-            <small>Última sincronización: ahora</small>
-          </span>
+        <div class="sidebar-footer-image" id="sidebar-footer-image">
+          <img id="imagen-barra" src="" alt="" style="display:none">
         </div>
-        <span class="version-chip">v2.0</span>
       </div>
     </aside>
 
     <label for="sidebar-toggle" class="sidebar-scrim" aria-label="Cerrar menú"></label>
 
-    <!-- Contenedor principal -->
     <div class="admin-main-wrapper">
       <header class="admin-topbar">
         <div class="topbar-left">
-          <label for="sidebar-toggle" class="mobile-menu-button" aria-label="Abrir menú">
-            <i class="ph ph-list" aria-hidden="true"></i>
-          </label>
-          <div class="topbar-context">
-            <span class="topbar-workspace">Mi Phone HN</span>
-            <i class="ph ph-caret-right" aria-hidden="true"></i>
-            <strong>Catálogo</strong>
-          </div>
+          <label for="sidebar-toggle" class="mobile-menu-button" id="mobile-menu-toggle" aria-label="Abrir menú"><i class="ph ph-list" aria-hidden="true"></i></label>
+          <div class="topbar-breadcrumb"><span class="topbar-breadcrumb-root">Mi Phone HN</span><i class="ph ph-caret-right" aria-hidden="true"></i><span class="topbar-breadcrumb-current">Catálogo central</span></div>
         </div>
-
-        <div class="topbar-search">
-          <span class="topbar-search-icon">
-            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-          </span>
-          <input type="search" id="admin-search" placeholder="Buscar modelo, marca o especificación…" aria-label="Buscar productos">
-          <kbd class="topbar-search-kbd">⌘ K</kbd>
-        </div>
-
-        <div class="topbar-actions">
-          <span class="topbar-live"><i></i><span>En vivo</span></span>
-          <button type="button" id="reload-btn-top" class="topbar-icon-btn" title="Sincronizar catálogo" aria-label="Sincronizar catálogo">
-            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
-          </button>
-          <button type="button" id="logout-btn" class="topbar-icon-btn topbar-icon-btn--logout" title="Cerrar sesión" aria-label="Cerrar sesión">
-            <i class="ph ph-sign-out" aria-hidden="true"></i>
-          </button>
-        </div>
+        <div class="topbar-search"><span class="topbar-search-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></span><input type="search" id="admin-search" placeholder="Buscar modelo, marca…" aria-label="Buscar productos"><kbd class="topbar-search-kbd">⌘ K</kbd></div>
+        <div class="topbar-actions"><div class="sync-summary sync-summary--topbar"><span class="sync-summary-icon"><i class="ph ph-check" aria-hidden="true"></i></span><div class="sync-summary-text"><strong>Sincronizado</strong><small>Actualizado <span id="sync-time">ahora</span></small></div></div><button type="button" id="logout-btn" class="topbar-icon-btn topbar-icon-btn--logout" title="Cerrar sesión" aria-label="Cerrar sesión"><i class="ph ph-sign-out" aria-hidden="true"></i></button></div>
       </header>
 
       <main class="admin-main-content">
         <div class="content-container">
+          <div id="admin-banner"></div>
           <div id="admin-alert" class="admin-toast" role="status" hidden></div>
 
-          <!-- Encabezado -->
           <section class="page-header" id="overview">
             <div class="page-heading-copy">
-              <span class="page-eyebrow"><i></i> Centro de operaciones</span>
-              <h1 class="page-title">Catálogo &amp; Inventario</h1>
-              <p class="page-subtitle">Controla productos, variantes, precios y disponibilidad desde un solo lugar.</p>
+              <div class="page-eyebrow-row"><span class="page-eyebrow"><i></i> Administración centralizada</span><span class="page-eyebrow-divider"></span><span class="page-eyebrow-meta">Catálogo · Inventario · Sincronización</span></div>
+              <h1 class="page-title">Centro de catálogo</h1>
+              <p class="page-subtitle">Organiza productos, controla inventario y mantén tu tienda siempre actualizada desde un único lugar limpio y profesional.</p>
             </div>
             <div class="page-header-actions">
-              <span class="sync-summary">
-                <span class="sync-summary-icon">
-                  <i class="ph ph-check" aria-hidden="true"></i>
-                </span>
-                <span><strong>Sincronizado</strong><small>Datos al día</small></span>
-              </span>
-              <button type="button" id="add-product-btn" class="btn btn-primary btn-add-product">
-                <i class="ph ph-plus" aria-hidden="true"></i>
-                <span>Nuevo producto</span>
-              </button>
+              <button type="button" id="add-product-btn" class="btn btn-primary btn-add-product"><i class="ph ph-plus" aria-hidden="true"></i><span>Nuevo producto</span></button>
             </div>
           </section>
 
-          <!-- Métricas compactas -->
-          <section class="metrics-grid" aria-label="Resumen del catálogo">
-            <article class="metric-card metric-card--blue">
-              <div class="metric-card-top">
-                <span class="metric-icon">
-            <i class="ph ph-package" aria-hidden="true"></i>
-                </span>
-                <span class="metric-trend metric-trend--up"><i></i> Catálogo</span>
-              </div>
-              <div class="metric-main">
-                <span class="metric-value" id="metric-total-products">0</span>
-                <span class="metric-label">Productos totales</span>
-              </div>
-              <span class="metric-orbit" aria-hidden="true"></span>
+          <section class="metrics-grid" aria-label="Resumen">
+            <article class="metric-card metric-card--blue" id="add-product-quick-card" role="button" tabindex="0" title="Nuevo producto">
+              <div class="metric-card-header"><span class="metric-icon"><i class="ph-duotone ph-package" aria-hidden="true"></i></span><span class="metric-trend metric-trend--up">Total</span></div>
+              <div class="metric-main"><span class="metric-value" id="metric-total-products">0</span><span class="metric-label">Productos en catálogo</span></div>
+              <div class="metric-sparkline" aria-hidden="true"><span style="--h: 40%"></span><span style="--h: 65%"></span><span style="--h: 50%"></span><span style="--h: 80%"></span><span style="--h: 70%"></span><span style="--h: 95%"></span></div>
             </article>
-
-            <article class="metric-card metric-card--cyan">
-              <div class="metric-card-top">
-                <span class="metric-icon">
-            <i class="ph ph-apple-logo" aria-hidden="true"></i>
-                </span>
-                <span class="metric-trend"><i></i> Apple</span>
-              </div>
-              <div class="metric-main">
-                <span class="metric-value" id="metric-iphones-count">0</span>
-                <span class="metric-label">iPhones</span>
-              </div>
-              <span class="metric-orbit" aria-hidden="true"></span>
-            </article>
-
-            <article class="metric-card metric-card--violet">
-              <div class="metric-card-top">
-                <span class="metric-icon">
-            <i class="ph ph-android-logo" aria-hidden="true"></i>
-                </span>
-                <span class="metric-trend"><i></i> Android</span>
-              </div>
-              <div class="metric-main">
-                <span class="metric-value" id="metric-samsung-count">0</span>
-                <span class="metric-label">Samsung</span>
-              </div>
-              <span class="metric-orbit" aria-hidden="true"></span>
-            </article>
-
-            <article class="metric-card metric-card--amber" id="inventory">
-              <div class="metric-card-top">
-                <span class="metric-icon">
-            <i class="ph ph-headphones" aria-hidden="true"></i>
-                </span>
-                <span class="metric-trend"><i></i> Otros</span>
-              </div>
-              <div class="metric-main">
-                <span class="metric-value" id="metric-others-count">0</span>
-                <span class="metric-label">iPads &amp; accesorios</span>
-              </div>
-              <span class="metric-orbit" aria-hidden="true"></span>
-            </article>
+            <article class="metric-card metric-card--cyan"><div class="metric-card-header"><span class="metric-icon"><i class="ph-duotone ph-device-mobile" aria-hidden="true"></i></span><span class="metric-trend">iPhone</span></div><div class="metric-main"><span class="metric-value" id="metric-iphones-count">0</span><span class="metric-label">Catálogo Apple</span></div><div class="metric-sparkline" aria-hidden="true"><span style="--h: 30%"></span><span style="--h: 55%"></span><span style="--h: 70%"></span><span style="--h: 60%"></span><span style="--h: 85%"></span><span style="--h: 75%"></span></div></article>
+            <article class="metric-card metric-card--violet"><div class="metric-card-header"><span class="metric-icon"><i class="ph-duotone ph-device-mobile-camera" aria-hidden="true"></i></span><span class="metric-trend">Android</span></div><div class="metric-main"><span class="metric-value" id="metric-samsung-count">0</span><span class="metric-label">Catálogo Samsung</span></div><div class="metric-sparkline" aria-hidden="true"><span style="--h: 50%"></span><span style="--h: 35%"></span><span style="--h: 60%"></span><span style="--h: 45%"></span><span style="--h: 70%"></span><span style="--h: 55%"></span></div></article>
+            <article class="metric-card metric-card--amber" id="inventory"><div class="metric-card-header"><span class="metric-icon"><i class="ph-duotone ph-headset" aria-hidden="true"></i></span><span class="metric-trend">Otros</span></div><div class="metric-main"><span class="metric-value" id="metric-others-count">0</span><span class="metric-label">iPads y accesorios</span></div><div class="metric-sparkline" aria-hidden="true"><span style="--h: 25%"></span><span style="--h: 45%"></span><span style="--h: 35%"></span><span style="--h: 60%"></span><span style="--h: 50%"></span><span style="--h: 70%"></span></div></article>
           </section>
 
-          <!-- Superficie de catálogo -->
           <section class="catalog-surface" id="catalog">
-            <header class="catalog-header">
-              <div>
-                <div class="catalog-title-row">
-                  <h2>Productos</h2>
-                  <span class="catalog-status"><i></i> Base activa</span>
-                </div>
-                <p>Vista central del catálogo publicado y sus condiciones comerciales.</p>
-              </div>
-              <div class="catalog-header-note">
-                <i class="ph ph-coins" aria-hidden="true"></i>
-                Precios en HNL
+            <header class="catalog-header"><div class="catalog-header-title"><div class="catalog-title-row"><h2>Catálogo publicado</h2><span class="catalog-status"><i></i> Sincronizado</span><span class="media-count-chip" id="table-count-chip">0 ítems</span></div><p>Listado central de productos con control de estado y precio base.</p></div><div class="catalog-header-note"><i class="ph ph-currency-dollar" aria-hidden="true"></i><span>Precios en HNL</span></div></header>
+            <div class="filter-bar"><div class="filter-inputs"><span class="filter-label">Filtros</span><div class="filter-select"><span class="filter-select-icon"><i class="ph ph-funnel-simple" aria-hidden="true"></i></span><select id="admin-category-filter" class="custom-select" aria-label="Filtrar por categoría"><option value="all">Todas</option></select></div><button type="button" id="manage-categories-btn" class="btn btn-secondary btn-manage-categories"><i class="ph ph-tag" aria-hidden="true"></i><span>Categorías</span></button></div><div class="filter-actions"><span class="filter-sync-copy"><i></i> Tiempo real</span><button type="button" id="reload-btn" class="btn btn-secondary"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i><span>Recargar</span></button></div></div>
+            <div class="table-card"><div class="table-responsive"><div class="data-grid"><div class="data-grid-header"><div class="data-grid-cell data-grid-cell--header">Producto</div><div class="data-grid-cell data-grid-cell--header">Categoría</div><div class="data-grid-cell data-grid-cell--header">Condición</div><div class="data-grid-cell data-grid-cell--header data-grid-cell--right">Precio</div><div class="data-grid-cell data-grid-cell--header data-grid-cell--right data-grid-cell--actions">Acción</div></div><div class="data-grid-body" id="products-table-body"></div></div></div><div id="empty-table-msg" class="empty-state" hidden><div class="empty-illustration"><span class="empty-illustration__back"></span><span class="empty-illustration__front"><i class="ph ph-package" aria-hidden="true"></i></span></div><h3>Sin productos</h3><p>Crea un producto para organizar tu catálogo centralizado.</p></div><footer class="table-footer-note"><span><i></i> Firestore · Sincronización segura</span><span>Actualización instantánea</span></footer></div>
+          </section>
+
+          <section class="settings-section" id="settings" hidden>
+            <header class="page-header">
+              <div class="page-heading-copy">
+                <div class="page-eyebrow-row"><span class="page-eyebrow"><i></i> Configuración</span><span class="page-eyebrow-divider"></span><span class="page-eyebrow-meta">Imágenes · Personalización</span></div>
+                <h1 class="page-title">Configuración del panel</h1>
+                <p class="page-subtitle">Gestiona las imágenes y apariencia de tu panel administrativo.</p>
               </div>
             </header>
 
-            <div class="filter-bar">
-              <div class="filter-inputs">
-                <span class="filter-label">Filtrar por</span>
-                <div class="filter-select">
-                  <span class="filter-select-icon">
-                    <i class="ph ph-funnel-simple" aria-hidden="true"></i>
-                  </span>
-                  <select id="admin-category-filter" class="custom-select" aria-label="Filtrar por categoría">
-                    <option value="all">Todas las categorías</option>
-                  </select>
-                </div>
-                <button type="button" id="manage-categories-btn" class="btn btn-secondary btn-manage-categories" title="Gestionar categorías" aria-label="Gestionar categorías">
-                  <i class="ph ph-folder-simple-plus" aria-hidden="true"></i>
-                  <span>Categorías</span>
-                </button>
-              </div>
-              <div class="filter-actions">
-                <span class="filter-sync-copy"><i></i> Actualización en tiempo real</span>
-                <button type="button" id="reload-btn" class="btn btn-secondary">
-            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
-                  <span>Recargar</span>
-                </button>
-              </div>
+            <div class="settings-tabs">
+              <button type="button" class="settings-tab active" data-tab="images"><i class="ph ph-image" aria-hidden="true"></i><span>Imágenes</span></button>
             </div>
 
-            <div class="table-card">
-              <div class="table-responsive">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Producto</th>
-                      <th>Categoría</th>
-                      <th>Condición</th>
-                      <th>Precio base</th>
-                      <th class="table-actions-heading">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody id="products-table-body">
-                    <!-- Filas inyectadas por admin.js -->
-                  </tbody>
-                </table>
-              </div>
+            <div class="settings-tab-content" id="settings-images-tab">
+              <div class="settings-grid">
 
-              <div id="empty-table-msg" class="empty-state" hidden>
-                <div class="empty-illustration">
-                  <span class="empty-illustration__back"></span>
-                  <span class="empty-illustration__front">
-                    <i class="ph ph-package" aria-hidden="true"></i>
-                  </span>
-                </div>
-                <h3>No se encontraron productos</h3>
-                <p>Ajusta la búsqueda o crea un nuevo producto para comenzar a organizar tu catálogo.</p>
-              </div>
+                <article class="settings-image-card" data-key="banner">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
+                    <div><h3>Banner del panel</h3><p>Imagen principal del panel de administración.</p></div>
+                  </div>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Banner">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/banner.jpg">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status" id="status-banner"></div>
+                </article>
 
-              <footer class="table-footer-note">
-                <span><i></i> Catálogo protegido por Firestore</span>
-                <span>Los cambios se reflejan automáticamente en la tienda.</span>
-              </footer>
+                <article class="settings-image-card" data-key="login">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-monitor" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de login</h3><p>Fondo de la pantalla de inicio de sesión.</p></div>
+                  </div>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Login">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagen-login">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status" id="status-login"></div>
+                </article>
+
+                <article class="settings-image-card" data-key="sidebar">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-sidebar" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de la sidebar</h3><p>Fondo de la barra lateral.</p></div>
+                  </div>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Sidebar">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/sidebar">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status" id="status-sidebar"></div>
+                </article>
+
+                <article class="settings-image-card" data-key="tarjeta">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-card" aria-hidden="true"></i></div>
+                    <div><h3>Imagen para tarjeta</h3><p>Fondo de la tarjeta promocional del sidebar.</p></div>
+                  </div>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Tarjeta">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagentarjeta">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status" id="status-tarjeta"></div>
+                </article>
+
+                <article class="settings-image-card" data-key="barra">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-rows" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de barra</h3><p>Imagen del footer del sidebar.</p></div>
+                  </div>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Barra">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagen_barra">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status" id="status-barra"></div>
+                </article>
+
+              </div>
             </div>
           </section>
         </div>
@@ -771,256 +279,254 @@
     </div>
   </div>
 
-
-  <!-- =====================================================================
-       3. DRAWER: CREAR / EDITAR PRODUCTO
-       ===================================================================== -->
+  <!-- DRAWER DE PRODUCTO (rediseño premium) -->
   <div id="product-modal" class="drawer-backdrop" hidden>
     <div class="drawer-overlay" id="modal-overlay"></div>
-
     <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
       <header class="drawer-header">
-        <div class="drawer-heading-icon">
-            <i class="ph ph-cube" aria-hidden="true"></i>
-        </div>
+        <div class="drawer-heading-icon"><i class="ph-duotone ph-package" aria-hidden="true"></i></div>
         <div class="drawer-title-group">
-          <span class="drawer-eyebrow">Editor de catálogo</span>
-          <h2 id="modal-title">Gestión de Producto</h2>
-          <p class="drawer-subtitle"><i></i> Sincronización automática con Firebase</p>
+          <span class="drawer-eyebrow">Editor de producto</span>
+          <h2 id="modal-title">Producto</h2>
+          <p class="drawer-subtitle"><i></i> <span id="drawer-mode-copy">Los cambios se sincronizan con la tienda al guardar</span></p>
         </div>
-        <button type="button" id="modal-close-btn" class="btn-close-drawer" aria-label="Cerrar panel">
-          <i class="ph ph-x" aria-hidden="true"></i>
-        </button>
+        <span class="drawer-mode-chip" id="drawer-mode-chip">Nuevo</span>
+        <button type="button" id="modal-close-btn" class="btn-close-drawer" aria-label="Cerrar"><i class="ph ph-x" aria-hidden="true"></i></button>
       </header>
 
-      <form id="product-form" class="drawer-form">
-        <div class="drawer-body">
+      <form id="product-form" class="drawer-form" novalidate>
+        <div class="drawer-body" id="drawer-body">
           <input type="hidden" id="product-id">
 
-          <div class="form-section">
-            <div class="section-heading-wrap">
-              <span class="section-num">01</span>
-              <div>
+          <!-- Aviso de edición -->
+          <div class="drawer-notice" id="drawer-update-notice" hidden>
+            <span class="drawer-notice-icon"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i></span>
+            <div class="drawer-notice-copy">
+              <strong>Estás actualizando un producto publicado</strong>
+              <p>Al guardar, los cambios reemplazarán la información actual visible en la tienda.</p>
+            </div>
+          </div>
+
+          <!-- 01 · Información principal -->
+          <section class="form-section" id="fs-main">
+            <header class="fs-head">
+              <span class="fs-icon fs-icon--ink"><i class="ph-duotone ph-package" aria-hidden="true"></i></span>
+              <div class="fs-copy">
                 <h3 class="section-heading">Información principal</h3>
-                <p>Identidad comercial y clasificación del producto.</p>
+                <p>Información básica que identifica al producto en el catálogo.</p>
               </div>
-            </div>
-            <div class="form-grid-2">
-              <div class="form-group">
-                <label for="product-title">Nombre del producto <span class="req">*</span></label>
-                <input type="text" id="product-title" required placeholder="Ej. iPhone 15 Pro Max">
-              </div>
-              <div class="form-group">
-                <label for="product-brand">Marca <span class="req">*</span></label>
-                <input type="text" id="product-brand" required placeholder="Ej. Apple / Samsung">
-              </div>
-              <div class="form-group">
-                <label for="product-category">Categoría <span class="req">*</span></label>
-                <select id="product-category" required class="custom-select"></select>
-              </div>
-              <div class="form-group">
-                <label for="product-condition">Condición <span class="req">*</span></label>
-                <select id="product-condition" required class="custom-select">
-                  <option value="nuevo">Nuevo (Sellado)</option>
-                  <option value="seminuevo">Seminuevo (Certificado)</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="product-badge">Etiqueta visual</label>
-                <input type="text" id="product-badge" placeholder="Ej. Oferta especial o entrega inmediata">
-                <span class="form-hint">Texto breve que se mostrará como distintivo del producto.</span>
-              </div>
-              <div class="form-group">
-                <label for="product-battery-health">Salud de batería</label>
-                <div class="field-with-suffix">
-                  <input type="number" id="product-battery-health" min="0" max="100" step="1" inputmode="numeric" placeholder="Ej. 95">
-                  <span class="field-suffix">%</span>
+              <span class="fs-chip fs-chip--req">Obligatorio</span>
+            </header>
+            <div class="fs-body">
+              <div class="form-grid-2">
+                <div class="form-group form-span-2">
+                  <label for="product-title">Nombre del producto <span class="req">*</span></label>
+                  <input type="text" id="product-title" required placeholder="Samsung Galaxy S25 Ultra 512 GB" autocomplete="off">
+                  <span class="form-hint">Escribe el nombre comercial que verá el cliente.</span>
+                  <span class="field-error-msg" data-error-for="product-title" hidden></span>
                 </div>
-                <span class="form-hint">Opcional. Recomendado para equipos seminuevos.</span>
+                <div class="form-group">
+                  <label for="product-brand">Marca <span class="req">*</span></label>
+                  <input type="text" id="product-brand" required placeholder="Apple, Samsung, Xiaomi…" autocomplete="off">
+                  <span class="form-hint">Fabricante del producto.</span>
+                  <span class="field-error-msg" data-error-for="product-brand" hidden></span>
+                </div>
+                <div class="form-group">
+                  <label for="product-category">Categoría <span class="req">*</span></label>
+                  <select id="product-category" required class="custom-select"></select>
+                  <span class="form-hint">Familia donde se mostrará en la tienda.</span>
+                </div>
+                <div class="form-group">
+                  <label for="product-condition">Condición <span class="req">*</span></label>
+                  <select id="product-condition" required class="custom-select">
+                    <option value="nuevo">Nuevo</option>
+                    <option value="seminuevo">Seminuevo</option>
+                  </select>
+                  <span class="form-hint">Estado real del equipo.</span>
+                </div>
+                <div class="form-group">
+                  <label for="product-battery-health">Salud de batería</label>
+                  <div class="field-with-suffix">
+                    <input type="number" id="product-battery-health" min="0" max="100" placeholder="95">
+                    <span class="field-suffix">%</span>
+                  </div>
+                  <span class="form-hint">Solo para equipos seminuevos. Déjalo vacío si es nuevo.</span>
+                </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div class="form-section">
-            <div class="section-heading-wrap">
-              <span class="section-num">02</span>
-              <div>
-                <h3 class="section-heading">Galería multimedia</h3>
-                <p>La primera imagen será la portada principal del producto.</p>
+          <!-- 02 · Galería -->
+          <section class="form-section" id="fs-gallery">
+            <header class="fs-head">
+              <span class="fs-icon fs-icon--violet"><i class="ph-duotone ph-images" aria-hidden="true"></i></span>
+              <div class="fs-copy">
+                <h3 class="section-heading">Galería de imágenes</h3>
+                <p>Sube hasta 8 fotos. La primera imagen será la portada del producto.</p>
               </div>
-            </div>
-            <div class="drag-dropzone" id="file-dropzone">
-              <input type="file" id="product-image-file" accept="image/*" multiple>
-              <div class="dropzone-content">
-                <span class="dropzone-icon">
-                  <i class="ph ph-cloud-arrow-up" aria-hidden="true"></i>
-                </span>
-                <span class="dropzone-text">Arrastra varias imágenes o haz clic para explorar</span>
-                <span class="dropzone-sub">Hasta 8 archivos JPG, PNG o WEBP · máximo 8 MB por imagen</span>
+              <span class="fs-chip fs-chip--req">Obligatorio</span>
+            </header>
+            <div class="fs-body">
+              <div class="drag-dropzone" id="file-dropzone">
+                <input type="file" id="product-image-file" accept="image/*" multiple>
+                <div class="dropzone-content">
+                  <span class="dropzone-icon"><i class="ph ph-upload-simple" aria-hidden="true"></i></span>
+                  <span class="dropzone-text">Arrastra tus imágenes aquí o haz clic para explorar</span>
+                  <span class="dropzone-sub">JPG, PNG o WEBP · Máximo 8 imágenes · 8 MB cada una</span>
+                </div>
               </div>
+              <div class="media-preview-header">
+                <strong>Vista previa de la galería</strong>
+                <span class="media-count-chip" id="product-images-count">0</span>
+              </div>
+              <div id="product-images-preview" class="media-preview-grid" aria-live="polite">
+                <div class="media-preview-empty"><i class="ph ph-images" aria-hidden="true"></i> Aún no hay imágenes seleccionadas.</div>
+              </div>
+              <div class="form-group url-field">
+                <label for="product-image">URLs de imágenes <span class="label-optional">Opcional</span></label>
+                <textarea id="product-image" rows="3" placeholder="https://ejemplo.com/imagen-frontal.jpg&#10;https://ejemplo.com/imagen-trasera.jpg"></textarea>
+                <span class="form-hint">Pega una URL por línea si prefieres enlazar imágenes ya alojadas.</span>
+              </div>
+              <span class="field-error-msg" data-error-for="fs-gallery" hidden></span>
             </div>
+          </section>
 
-            <div class="media-preview-header">
-              <strong>Vista previa de la galería</strong>
-              <span class="media-count-chip" id="product-images-count">0 imágenes</span>
-            </div>
-            <div id="product-images-preview" class="media-preview-grid" aria-live="polite">
-              <div class="media-preview-empty"><i class="ph ph-images" aria-hidden="true"></i> Aún no hay imágenes seleccionadas.</div>
-            </div>
-
-            <div class="form-group url-field">
-              <label for="product-image">URLs externas</label>
-              <textarea id="product-image" rows="3" placeholder="Una URL por línea&#10;https://ejemplo.com/frontal.jpg&#10;https://ejemplo.com/trasera.jpg"></textarea>
-              <span class="form-hint">Puedes combinar URLs existentes con nuevos archivos. La primera URL será la portada.</span>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <div class="section-heading-wrap">
-              <span class="section-num">03</span>
-              <div>
+          <!-- 03 · Descripción -->
+          <section class="form-section" id="fs-description">
+            <header class="fs-head">
+              <span class="fs-icon fs-icon--blue"><i class="ph-duotone ph-text-align-left" aria-hidden="true"></i></span>
+              <div class="fs-copy">
                 <h3 class="section-heading">Descripción comercial</h3>
-                <p>Información visible para orientar la compra.</p>
+                <p>Cuenta lo más atractivo del producto: garantía, estado, beneficios.</p>
+              </div>
+              <span class="fs-chip">Opcional</span>
+            </header>
+            <div class="fs-body">
+              <div class="form-group form-full">
+                <textarea id="product-description" rows="4" placeholder="Equipo 100% original con garantía de 12 meses. Incluye todos sus accesorios y caja sellada…"></textarea>
+                <span class="form-hint">Este texto aparece en la página del producto. Sé claro y directo.</span>
               </div>
             </div>
-            <div class="form-group form-full">
-              <textarea id="product-description" rows="4" placeholder="Detalles de garantía, estado físico del equipo, accesorios incluidos…"></textarea>
-            </div>
-          </div>
+          </section>
 
-          <div class="form-section">
-            <div class="section-heading-wrap">
-              <span class="section-num">04</span>
-              <div>
-                <h3 class="section-heading">Contenido del paquete</h3>
-                <p>Administra y ordena lo que recibirá el cliente con este producto.</p>
+          <!-- 04 · Incluye -->
+          <section class="form-section" id="fs-includes">
+            <header class="fs-head">
+              <span class="fs-icon fs-icon--green"><i class="ph-duotone ph-list-checks" aria-hidden="true"></i></span>
+              <div class="fs-copy">
+                <h3 class="section-heading">¿Qué incluye?</h3>
+                <p>Enumera el contenido del paquete. Usa las flechas para ordenar.</p>
               </div>
+              <span class="fs-chip">Opcional</span>
+            </header>
+            <div class="fs-body">
+              <div id="includes-list" class="dynamic-stack"></div>
+              <button type="button" id="add-include-btn" class="btn btn-dashed btn-block"><i class="ph ph-plus" aria-hidden="true"></i> Agregar elemento incluido</button>
             </div>
-            <div id="includes-list" class="dynamic-stack"></div>
-            <button type="button" id="add-include-btn" class="btn btn-dashed btn-block">
-              <i class="ph ph-plus" aria-hidden="true"></i>
-              Agregar elemento al paquete
-            </button>
-          </div>
+          </section>
 
-          <div class="form-section">
-            <div class="section-heading-wrap">
-              <span class="section-num">05</span>
-              <div>
+          <!-- 05 · Especificaciones -->
+          <section class="form-section" id="fs-specs">
+            <header class="fs-head">
+              <span class="fs-icon fs-icon--amber"><i class="ph-duotone ph-cpu" aria-hidden="true"></i></span>
+              <div class="fs-copy">
                 <h3 class="section-heading">Especificaciones técnicas</h3>
-                <p>Características clave presentadas al cliente.</p>
+                <p>Puntos clave del hardware: chip, pantalla, cámara, memoria.</p>
               </div>
+              <span class="fs-chip">Opcional</span>
+            </header>
+            <div class="fs-body">
+              <div id="specs-list" class="dynamic-stack"></div>
+              <button type="button" id="add-spec-btn" class="btn btn-dashed btn-block"><i class="ph ph-plus" aria-hidden="true"></i> Agregar especificación</button>
             </div>
-            <div id="specs-list" class="dynamic-stack"></div>
-            <button type="button" id="add-spec-btn" class="btn btn-dashed btn-block">
-              <i class="ph ph-plus" aria-hidden="true"></i>
-              Agregar especificación
-            </button>
-          </div>
+          </section>
 
-          <div class="form-section">
-            <div class="section-heading-wrap">
-              <span class="section-num">06</span>
-              <div>
-                <h3 class="section-heading">Variantes de color</h3>
-                <p>Opciones disponibles para cada modelo.</p>
+          <!-- 06 · Colores -->
+          <section class="form-section" id="fs-colors">
+            <header class="fs-head">
+              <span class="fs-icon fs-icon--pink"><i class="ph-duotone ph-palette" aria-hidden="true"></i></span>
+              <div class="fs-copy">
+                <h3 class="section-heading">Colores disponibles</h3>
+                <p>Variantes de color que el cliente podrá elegir en la tienda.</p>
               </div>
+              <span class="fs-chip">Opcional</span>
+            </header>
+            <div class="fs-body">
+              <div id="colors-list" class="dynamic-stack"></div>
+              <button type="button" id="add-color-btn" class="btn btn-dashed btn-block"><i class="ph ph-plus" aria-hidden="true"></i> Agregar color</button>
             </div>
-            <div id="colors-list" class="dynamic-stack"></div>
-            <button type="button" id="add-color-btn" class="btn btn-dashed btn-block">
-              <i class="ph ph-plus" aria-hidden="true"></i>
-              Agregar color
-            </button>
-          </div>
+          </section>
 
-          <div class="form-section">
-            <div class="section-heading-wrap">
-              <span class="section-num">07</span>
-              <div>
+          <!-- 07 · Capacidades y precios -->
+          <section class="form-section" id="fs-storage">
+            <header class="fs-head">
+              <span class="fs-icon fs-icon--ink"><i class="ph-duotone ph-hard-drives" aria-hidden="true"></i></span>
+              <div class="fs-copy">
                 <h3 class="section-heading">Capacidades, precios y stock</h3>
-                <p>Configura precios y existencias de forma independiente para cada capacidad.</p>
+                <p>Define cada capacidad con su precio en Lempiras. La primera fila es el precio base.</p>
+              </div>
+              <span class="fs-chip fs-chip--req">Obligatorio</span>
+            </header>
+            <div class="fs-body">
+              <div id="storage-list" class="dynamic-stack"></div>
+              <button type="button" id="add-storage-btn" class="btn btn-dashed btn-block"><i class="ph ph-plus" aria-hidden="true"></i> Agregar capacidad</button>
+              <span class="field-error-msg" data-error-for="fs-storage" hidden></span>
+            </div>
+          </section>
+
+          <!-- Zona de riesgo (solo edición) -->
+          <section class="form-section drawer-danger-card" id="drawer-danger-zone" hidden>
+            <header class="fs-head">
+              <span class="fs-icon fs-icon--danger"><i class="ph-duotone ph-warning-octagon" aria-hidden="true"></i></span>
+              <div class="fs-copy">
+                <h3 class="section-heading">Zona de riesgo</h3>
+                <p>Acciones permanentes que no se pueden deshacer.</p>
+              </div>
+            </header>
+            <div class="fs-body">
+              <div class="danger-row">
+                <div class="danger-row-copy">
+                  <strong><i class="ph ph-trash" aria-hidden="true"></i> Eliminar producto</strong>
+                  <p>Esta acción eliminará permanentemente el producto del catálogo y de la tienda.</p>
+                </div>
+                <button type="button" id="delete-product-btn" class="btn btn-danger-solid" hidden><i class="ph ph-trash" aria-hidden="true"></i> Eliminar</button>
               </div>
             </div>
-            <div id="storage-list" class="dynamic-stack"></div>
-            <button type="button" id="add-storage-btn" class="btn btn-dashed btn-block">
-              <i class="ph ph-plus" aria-hidden="true"></i>
-              Agregar capacidad / precio
-            </button>
-          </div>
+          </section>
 
           <p id="form-error" class="form-error" role="alert" hidden></p>
         </div>
 
         <footer class="drawer-footer">
-          <button type="button" id="delete-product-btn" class="btn btn-danger-ghost" hidden>
-            <i class="ph ph-trash" aria-hidden="true"></i>
-            Eliminar
-          </button>
+          <span class="drawer-footer-hint"><i class="ph ph-info" aria-hidden="true"></i> Los campos con <em>*</em> son obligatorios</span>
           <div class="drawer-actions-right">
             <button type="button" id="cancel-form-btn" class="btn btn-secondary">Cancelar</button>
-            <button type="submit" class="btn btn-primary">
-              <i class="ph ph-check" aria-hidden="true"></i>
-              Guardar cambios
-            </button>
+            <button type="submit" class="btn btn-primary btn-save-product"><i class="ph ph-check" aria-hidden="true"></i> Guardar producto</button>
           </div>
         </footer>
       </form>
     </aside>
   </div>
 
-
-  <!-- =====================================================================
-       4. GESTIÓN DE CATEGORÍAS
-       ===================================================================== -->
-  <div id="category-modal" class="confirm-backdrop" role="dialog" aria-labelledby="category-modal-title" hidden>
-    <div class="confirm-overlay" id="category-overlay"></div>
-    <div class="confirm-card category-card">
-      <div class="confirm-card-head">
-        <div class="confirm-icon confirm-icon--blue">
-          <i class="ph ph-folder-simple" aria-hidden="true"></i>
-        </div>
-        <div>
-          <span class="confirm-eyebrow">Organización</span>
-          <h3 id="category-modal-title">Gestionar categorías</h3>
-          <p>Crea y organiza las familias de productos de tu tienda.</p>
-        </div>
-      </div>
-      <div id="category-list" class="category-list"></div>
-      <div class="category-add-form">
-        <label for="new-category-name">Nueva categoría</label>
-        <div class="category-add-row">
-          <input type="text" id="new-category-name" placeholder="Nombre de la categoría…">
-          <button type="button" id="add-category-btn-modal" class="btn btn-primary">
-            <i class="ph ph-plus" aria-hidden="true"></i>
-            Agregar
-          </button>
-        </div>
-      </div>
-      <div class="confirm-button-group confirm-button-group--full">
-        <button type="button" id="close-category-modal-btn" class="btn btn-secondary btn-block">Cerrar panel</button>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- =====================================================================
-       5. DIÁLOGO DE CONFIRMACIÓN
-       ===================================================================== -->
-  <div id="confirm-dialog" class="confirm-backdrop" role="alertdialog" aria-labelledby="confirm-title" hidden>
-    <div class="confirm-overlay" id="confirm-overlay"></div>
-    <div class="confirm-card confirm-card--centered">
-      <div class="confirm-icon confirm-icon--danger">
-        <i class="ph ph-warning" aria-hidden="true"></i>
-      </div>
-      <span class="confirm-eyebrow">Confirmación requerida</span>
-      <h3 id="confirm-title">¿Confirmar acción?</h3>
-      <p id="confirm-message">Esta operación es irreversible.</p>
+  <!-- CONFIRMACIÓN DE CAMBIOS SIN GUARDAR (pertenece al Drawer) -->
+  <div id="unsaved-dialog" class="confirm-backdrop" role="alertdialog" aria-labelledby="unsaved-title" hidden>
+    <div class="confirm-overlay" id="unsaved-overlay"></div>
+    <div class="confirm-card confirm-card--centered unsaved-card">
+      <div class="confirm-icon unsaved-icon--warning"><i class="ph ph-warning" aria-hidden="true"></i></div>
+      <span class="confirm-eyebrow">Cambios sin guardar</span>
+      <h3 id="unsaved-title">Tienes cambios sin guardar</h3>
+      <p>Si sales ahora perderás toda la información modificada en este formulario.</p>
       <div class="confirm-button-group">
-        <button type="button" id="confirm-cancel-btn" class="btn btn-secondary">Cancelar</button>
-        <button type="button" id="confirm-ok-btn" class="btn btn-danger">Confirmar</button>
+        <button type="button" id="unsaved-discard-btn" class="btn btn-danger-ghost">Salir sin guardar</button>
+        <button type="button" id="unsaved-stay-btn" class="btn btn-primary">Seguir editando</button>
       </div>
     </div>
   </div>
 
-</body>
+  <div id="category-modal" class="confirm-backdrop" role="dialog" aria-labelledby="category-modal-title" hidden><div class="confirm-overlay" id="category-overlay"></div><div class="confirm-card category-card"><div class="confirm-card-head"><div class="confirm-icon confirm-icon--blue"><i class="ph ph-tag" aria-hidden="true"></i></div><div><span class="confirm-eyebrow">Organización</span><h3 id="category-modal-title">Categorías</h3><p>Familias de productos.</p></div></div><div id="category-list" class="category-list"></div><div class="category-add-form"><label for="new-category-name">Nueva</label><div class="category-add-row"><input type="text" id="new-category-name" placeholder="Nombre…"><button type="button" id="add-category-btn-modal" class="btn btn-primary"><i class="ph ph-plus" aria-hidden="true"></i> Agregar</button></div></div><div class="confirm-button-group confirm-button-group--full"><button type="button" id="close-category-modal-btn" class="btn btn-secondary btn-block">Cerrar</button></div></div></div>
+
+  <div id="confirm-dialog" class="confirm-backdrop" role="alertdialog" aria-labelledby="confirm-title" hidden><div class="confirm-overlay" id="confirm-overlay"></div><div class="confirm-card confirm-card--centered"><div class="confirm-icon confirm-icon--danger"><i class="ph ph-warning" aria-hidden="true"></i></div><span class="confirm-eyebrow">Confirmación</span><h3 id="confirm-title">¿Confirmar?</h3><p id="confirm-message">Irreversible.</p><div class="confirm-button-group"><button type="button" id="confirm-cancel-btn" class="btn btn-secondary">Cancelar</button><button type="button" id="confirm-ok-btn" class="btn btn-danger">Confirmar</button></div></div></div>
+
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2399cedace1a25e',t:'MTc4NTQ2OTU1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
