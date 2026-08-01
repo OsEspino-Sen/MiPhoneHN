@@ -117,27 +117,50 @@ document.addEventListener("DOMContentLoaded", () => {
   loadProducts();
   loadSiteSettings();
 
-  // Llegada con hash desde otra página (p. ej. Nosotros/Soporte desde la
-  // Tienda): scroll suave a la sección una vez el layout está estable. Se
-  // espera la carga completa (imágenes del hero desde Supabase/Cloudinary
-  // desplazan el layout) y se reintenta por si queda algún cambio tardío.
-  if (window.location.hash && !isShopPage) {
-    const scrollToHashSection = () => {
-      try {
-        const target = document.querySelector(window.location.hash);
-        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch (err) {
-        /* hash inválido: ignorar */
+  // Navegación entre páginas: al llegar desde otra página (p. ej. Tienda/Soporte)
+  // con un hash (#about-section, #faq-section, #hero) se hace un scroll suave a
+  // esa sección una vez el layout está estable (las imágenes del hero desplazan
+  // el layout) y se reintenta por si queda algún cambio tardío; al finalizar se
+  // limpia el hash para que una recarga posterior del Inicio quede arriba y no
+  // salte de nuevo a esa sección.
+  if (!isShopPage) {
+    if (window.location.hash) {
+      const hash = window.location.hash;
+      const target = (() => {
+        try {
+          return document.querySelector(hash);
+        } catch {
+          return null;
+        }
+      })();
+      const scrollToHashSection = () => {
+        try {
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch {
+          /* ignorar */
+        }
+      };
+      const clearHash = () => {
+        if (window.location.hash) {
+          history.replaceState(null, "", window.location.pathname + window.location.search);
+        }
+      };
+      const runHashScroll = () => {
+        setTimeout(scrollToHashSection, 200);
+        setTimeout(() => {
+          scrollToHashSection();
+          clearHash();
+        }, 1000);
+      };
+      if (document.readyState === "complete") {
+        runHashScroll();
+      } else {
+        window.addEventListener("load", runHashScroll, { once: true });
       }
-    };
-    const runHashScroll = () => {
-      setTimeout(scrollToHashSection, 200);
-      setTimeout(scrollToHashSection, 1000);
-    };
-    if (document.readyState === "complete") {
-      runHashScroll();
     } else {
-      window.addEventListener("load", runHashScroll, { once: true });
+      // Carga directa del Inicio sin hash: anular cualquier restauración de
+      // scroll del navegador y quedar arriba (sección Inicio).
+      requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
     }
   }
 });
@@ -1640,11 +1663,20 @@ function applyHeroPhones(images) {
     const img = mockup.querySelector(".phone-mockup-img");
     if (img) {
       img.onerror = null;
+      img.onload = null;
+      img.classList.remove("is-loaded");
+      mockup.classList.remove("is-loaded");
       img.hidden = !url;
       img.src = url ? optimizeCloudinaryUrl(url, 500) : "";
       mockup.classList.toggle("has-img", !!url);
       if (url) {
+        img.onload = () => {
+          img.classList.add("is-loaded");
+          mockup.classList.add("is-loaded");
+        };
         img.onerror = () => {
+          img.classList.remove("is-loaded");
+          mockup.classList.remove("is-loaded");
           img.hidden = true;
           mockup.classList.remove("has-img");
         };
@@ -1679,11 +1711,20 @@ function applyHeroPhones(images) {
     const img = mockup?.querySelector(".phone-mockup-img");
     if (!img || !mockup) return;
     img.onerror = null;
+    img.onload = null;
+    img.classList.remove("is-loaded");
+    mockup.classList.remove("is-loaded");
     img.hidden = !url;
     mockup.classList.toggle("has-img", !!url);
     img.src = url;
     if (url) {
+      img.onload = () => {
+        img.classList.add("is-loaded");
+        mockup.classList.add("is-loaded");
+      };
       img.onerror = () => {
+        img.classList.remove("is-loaded");
+        mockup.classList.remove("is-loaded");
         img.hidden = true;
         mockup.classList.remove("has-img");
       };
@@ -1722,7 +1763,11 @@ function applyHeroPhones(images) {
       mB.style.zIndex = "3";
       await new Promise((r) => setTimeout(r, 500));
 
-      if (imgA) imgA.src = nextImg;
+      if (imgA) {
+        imgA.classList.remove("is-loaded");
+        imgA.onload = () => imgA.classList.add("is-loaded");
+        imgA.src = nextImg;
+      }
       mA.classList.remove("phone-1");
       mA.classList.add("phone-2");
       mB.classList.remove("phone-2");
@@ -1743,7 +1788,11 @@ function applyHeroPhones(images) {
       clearInline(mA);
       clearInline(mB);
     } else {
-      if (imgA) imgA.src = nextImg;
+      if (imgA) {
+        imgA.classList.remove("is-loaded");
+        imgA.onload = () => imgA.classList.add("is-loaded");
+        imgA.src = nextImg;
+      }
       if (mA) { mA.classList.remove("phone-1"); mA.classList.add("phone-2"); }
       if (mB) { mB.classList.remove("phone-2"); mB.classList.add("phone-1"); }
     }
@@ -1759,9 +1808,15 @@ function applyAboutImage(dataUrl) {
   const img = document.getElementById("about-image");
   if (!wrap || !img) return;
   if (dataUrl) {
+    img.classList.remove("is-loaded");
+    img.onload = () => img.classList.add("is-loaded");
+    img.onerror = () => img.classList.remove("is-loaded");
     img.src = optimizeCloudinaryUrl(dataUrl, 1200);
     wrap.hidden = false;
   } else {
+    img.onload = null;
+    img.onerror = null;
+    img.classList.remove("is-loaded");
     img.src = "";
     wrap.hidden = true;
   }
