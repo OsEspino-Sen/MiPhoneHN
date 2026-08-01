@@ -118,15 +118,26 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSiteSettings();
 
   // Llegada con hash desde otra página (p. ej. Nosotros/Soporte desde la
-  // Tienda): scroll suave a la sección una vez cargado el DOM.
+  // Tienda): scroll suave a la sección una vez el layout está estable. Se
+  // espera la carga completa (imágenes del hero desde Supabase/Cloudinary
+  // desplazan el layout) y se reintenta por si queda algún cambio tardío.
   if (window.location.hash && !isShopPage) {
-    try {
-      const target = document.querySelector(window.location.hash);
-      if (target) {
-        setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    const scrollToHashSection = () => {
+      try {
+        const target = document.querySelector(window.location.hash);
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (err) {
+        /* hash inválido: ignorar */
       }
-    } catch (err) {
-      /* hash inválido: ignorar */
+    };
+    const runHashScroll = () => {
+      setTimeout(scrollToHashSection, 200);
+      setTimeout(scrollToHashSection, 1000);
+    };
+    if (document.readyState === "complete") {
+      runHashScroll();
+    } else {
+      window.addEventListener("load", runHashScroll, { once: true });
     }
   }
 });
