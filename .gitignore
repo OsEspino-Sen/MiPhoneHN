@@ -1,6 +1,7 @@
 node_modules/
 .vite/
 dist/
+.vercel/
 
 .firebase/
 .env
