@@ -18,5 +18,8 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "vite": "^5.4.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.111.0"
   }
 }

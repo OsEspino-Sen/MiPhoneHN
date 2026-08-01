@@ -1,9 +1,29 @@
 /* ========================================================================== 
    MI PHONE HN — LÓGICA DE APLICACIÓN
-   Los productos se cargan desde Firebase Cloud Firestore en tiempo real
+   Los productos se cargan desde Supabase en tiempo real
    ========================================================================== */
 
-const WHATSAPP_PHONE = "50488238432";
+const WHATSAPP_DEFAULTS = {
+  phone: "50488238432",
+  title: "NUEVO PEDIDO — MI PHONE HN",
+  labels: {
+    cliente: "Cliente",
+    dni: "DNI",
+    ciudad: "Ciudad/Envío",
+    productos: "Productos",
+    cantidad: "Cantidad",
+    subtotal: "Subtotal",
+    total: "TOTAL",
+    despacho: "Despacho",
+    logistica: "Logística"
+  },
+  despachoValue: "Choluteca, Honduras",
+  logisticaValue: "Rápido Cargo",
+  messageTemplate: "*[TITULO]*\n\n[LABEL_CLIENTE]: [NOMBRE_CLIENTE]\n[LABEL_DNI]: [DNI_CLIENTE]\n[LABEL_CIUDAD]: [CIUDAD_CLIENTE]\n\n*[LABEL_PRODUCTOS]:*\n[LISTA_PRODUCTOS]\n\n*[LABEL_TOTAL]: [TOTAL_PEDIDO]*\n\n[LABEL_DESPACHO]: [DESPACHO]\n[LABEL_LOGISTICA]: [LOGISTICA]",
+  productLineTemplate: "- [NOMBRE_PRODUCTO] ([VARIACION])\n  [LABEL_CANTIDAD]: [CANTIDAD]\n  [LABEL_SUBTOTAL]: [SUBTOTAL]"
+};
+
+let whatsappSettings = { ...WHATSAPP_DEFAULTS, labels: { ...WHATSAPP_DEFAULTS.labels } };
 const FALLBACK_IMAGE = "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-14-1.jpg";
 
 let products = [];
@@ -57,6 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupEventListeners();
   calculateFinancing();
   loadProducts();
+  loadSiteSettings();
 });
 
 /* ========================================================================== 
@@ -67,8 +88,8 @@ async function loadProducts() {
   showCatalogLoading();
 
   try {
-    const { db, collection, onSnapshot, getDocs } = await import("./firebase-config.js");
-    const productsRef = collection(db, "products");
+    const { db, collection, onSnapshot, getDocs } = await import("./supabase-config.js");
+    const productsRef = collection(db, "productos");
 
     onSnapshot(productsRef, (snapshot) => {
       products = snapshot.docs.map((docSnap) => normalizeProductRecord({
@@ -86,12 +107,12 @@ async function loadProducts() {
         }));
         renderProducts();
       } catch (getErr) {
-        console.error("Error al obtener catálogo desde Firestore:", getErr);
+        console.error("Error al obtener catálogo desde Supabase:", getErr);
         showCatalogError();
       }
     });
   } catch (error) {
-    console.error("No se pudo conectar a Firebase Firestore:", error);
+    console.error("No se pudo conectar a Supabase:", error);
     showCatalogError();
   }
 }
@@ -112,7 +133,7 @@ function showCatalogError() {
   productsGrid.innerHTML = `
     <div class="catalog-status catalog-status-error" role="alert">
       <h3>No se pudo cargar el catálogo</h3>
-      <p>Verifica tu conexión a internet y la configuración de Cloud Firestore.</p>
+      <p>Verifica tu conexión a internet y la configuración de Supabase.</p>
       <button type="button" class="btn btn-secondary" id="retry-catalog-btn">Reintentar</button>
     </div>
   `;
@@ -172,6 +193,18 @@ function setupEventListeners() {
     });
   });
 
+  bindFaqAccordion();
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    closeProductModal();
+    closeCart();
+  });
+
+  setupCheckoutValidationListeners();
+}
+
+function bindFaqAccordion() {
   document.querySelectorAll(".faq-question").forEach((button) => {
     button.addEventListener("click", () => {
       const item = button.parentElement;
@@ -189,12 +222,6 @@ function setupEventListeners() {
         button.setAttribute("aria-expanded", "true");
       }
     });
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-    closeProductModal();
-    closeCart();
   });
 }
 
@@ -288,6 +315,7 @@ function renderProducts() {
    ========================================================================== */
 
 function openProductModal(productId) {
+  if (!productModal || !productModalBody) return;
   const product = products.find((item) => String(item.id) === String(productId));
   if (!product) return;
 
@@ -372,7 +400,6 @@ function renderModalContent() {
   const oldPriceHTML = selectedStorageOption.oldPrice
     ? `<span class="modal-price-old">${formatCurrency(selectedStorageOption.oldPrice)}</span>`
     : "";
-  const monthlyPayment = formatCurrency(Math.round(selectedStorageOption.price / 6));
   const battery = getBatteryPresentation(product.batteryHealth);
   const batteryHTML = battery
     ? `
@@ -466,13 +493,6 @@ function renderModalContent() {
               <span class="option-helper">Selecciona una opción</span>
             </div>
             <div class="option-selectors storage-selectors" id="modal-storage-container">${storageHTML}</div>
-          </div>
-
-          <div class="payment-option">
-            <span class="payment-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="M3 10h18"></path><path d="M7 15h3"></path></svg>
-            </span>
-            <span><small>Financiamiento disponible</small><strong>6 cuotas de ${monthlyPayment}/mes sin intereses</strong></span>
           </div>
 
           <div class="modal-actions">
@@ -798,6 +818,76 @@ function updateCartUI() {
    CHECKOUT POR WHATSAPP
    ========================================================================== */
 
+const CHECKOUT_FIELDS = [
+  { id: "client-name", groupId: "group-client-name" },
+  { id: "client-dni", groupId: "group-client-dni" },
+  { id: "client-location", groupId: "group-client-location" }
+];
+
+function setFieldError(field) {
+  const input = document.getElementById(field.id);
+  const group = document.getElementById(field.groupId);
+  if (input) input.setAttribute("aria-invalid", "true");
+  if (group) group.classList.add("is-invalid");
+}
+
+function clearFieldError(field) {
+  const input = document.getElementById(field.id);
+  const group = document.getElementById(field.groupId);
+  if (input) input.removeAttribute("aria-invalid");
+  if (group) group.classList.remove("is-invalid");
+}
+
+function showCheckoutError() {
+  const error = document.getElementById("checkout-form-error");
+  if (error) error.hidden = false;
+}
+
+function hideCheckoutError() {
+  const error = document.getElementById("checkout-form-error");
+  if (error) error.hidden = true;
+}
+
+function validateCheckoutForm() {
+  let isValid = true;
+  let firstInvalid = null;
+
+  CHECKOUT_FIELDS.forEach((field) => {
+    const input = document.getElementById(field.id);
+    const value = input?.value.trim() || "";
+
+    if (value) {
+      clearFieldError(field);
+    } else {
+      setFieldError(field);
+      isValid = false;
+      firstInvalid = firstInvalid || input;
+    }
+  });
+
+  if (isValid) {
+    hideCheckoutError();
+  } else {
+    showCheckoutError();
+    if (firstInvalid) firstInvalid.focus();
+  }
+  return isValid;
+}
+
+function setupCheckoutValidationListeners() {
+  CHECKOUT_FIELDS.forEach((field) => {
+    const input = document.getElementById(field.id);
+    if (!input) return;
+    input.addEventListener("input", () => {
+      clearFieldError(field);
+      hideCheckoutError();
+    });
+    input.addEventListener("blur", () => {
+      if (!(input.value.trim())) setFieldError(field);
+    });
+  });
+}
+
 function checkoutCartWhatsApp() {
   if (cart.length === 0) return;
 
@@ -813,6 +903,8 @@ function checkoutCartWhatsApp() {
     return;
   }
 
+  if (!validateCheckoutForm()) return;
+
   const nameInput = document.getElementById("client-name");
   const dniInput = document.getElementById("client-dni");
   const locationInput = document.getElementById("client-location");
@@ -821,31 +913,49 @@ function checkoutCartWhatsApp() {
   const dni = dniInput?.value.trim() || "";
   const location = locationInput?.value.trim() || "";
 
-  if (!name || !dni || !location) {
-    alert("Completa todos los datos de entrega antes de enviar tu pedido.");
-    return;
-  }
-
+  const ws = whatsappSettings;
+  const labels = ws.labels || {};
   let subtotal = 0;
-  let message = "*NUEVO PEDIDO — MI PHONE HN*\n\n";
-  message += `Cliente: ${name}\n`;
-  message += `DNI: ${dni}\n`;
-  message += `Ciudad/Envío: ${location}\n\n`;
-  message += "*Productos:*\n";
-
-  cart.forEach((item) => {
+  const lines = cart.map((item) => {
     const itemTotal = Number(item.price || 0) * Number(item.quantity || 0);
     subtotal += itemTotal;
-    message += `- ${item.title} (${item.storage} | ${item.color})\n`;
-    message += `  Cantidad: ${item.quantity}\n`;
-    message += `  Subtotal: ${formatCurrency(itemTotal)}\n`;
+    return fillTemplate(ws.productLineTemplate, {
+      NOMBRE_PRODUCTO: item.title,
+      VARIACION: `${item.storage} | ${item.color}`,
+      LABEL_CANTIDAD: labels.cantidad,
+      CANTIDAD: item.quantity,
+      LABEL_SUBTOTAL: labels.subtotal,
+      SUBTOTAL: formatCurrency(itemTotal)
+    });
+  }).join("\n");
+
+  const message = fillTemplate(ws.messageTemplate, {
+    TITULO: ws.title,
+    LABEL_CLIENTE: labels.cliente,
+    NOMBRE_CLIENTE: name,
+    LABEL_DNI: labels.dni,
+    DNI_CLIENTE: dni,
+    LABEL_CIUDAD: labels.ciudad,
+    CIUDAD_CLIENTE: location,
+    LABEL_PRODUCTOS: labels.productos,
+    LISTA_PRODUCTOS: lines,
+    LABEL_TOTAL: labels.total,
+    TOTAL_PEDIDO: formatCurrency(subtotal),
+    LABEL_DESPACHO: labels.despacho,
+    DESPACHO: ws.despachoValue,
+    LABEL_LOGISTICA: labels.logistica,
+    LOGISTICA: ws.logisticaValue
   });
 
-  message += `\n*TOTAL: ${formatCurrency(subtotal)}*\n\n`;
-  message += "Despacho: Choluteca, Honduras\n";
-  message += "Logística: Rápido Cargo";
+  window.open(`https://wa.me/${ws.phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+}
 
-  window.open(`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+function fillTemplate(template, values) {
+  let output = String(template || "");
+  Object.entries(values).forEach(([key, value]) => {
+    output = output.split(`[${key}]`).join(String(value ?? ""));
+  });
+  return output;
 }
 
 /* ========================================================================== 
@@ -860,7 +970,7 @@ function calculateFinancing() {
 
   if (amount <= 0) {
     calcValue.textContent = "L. 0 / mes";
-    calcWhatsappBtn.href = `https://wa.me/${WHATSAPP_PHONE}`;
+    calcWhatsappBtn.href = `https://wa.me/${whatsappSettings.phone}`;
     return;
   }
 
@@ -875,7 +985,7 @@ function calculateFinancing() {
     "¿Cuáles son los requisitos con BAC o Ficohsa?"
   ].join("\n");
 
-  calcWhatsappBtn.href = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
+  calcWhatsappBtn.href = `https://wa.me/${whatsappSettings.phone}?text=${encodeURIComponent(message)}`;
 }
 
 /* ========================================================================== 
@@ -1035,7 +1145,7 @@ function buildSpecsTable(specs) {
 
 function buildIncludesList(includes) {
   // El cliente no define contenido predeterminado: todo proviene del documento
-  // del producto en Firestore y conserva exactamente el orden del administrador.
+  // del producto en la base de datos y conserva exactamente el orden del administrador.
   const items = (Array.isArray(includes) ? includes : [])
     .map((item) => typeof item === "string"
       ? item.trim()
@@ -1181,3 +1291,371 @@ function formatCurrency(value) {
     maximumFractionDigits: 0
   })}`;
 }
+
+/* ========================================================================== 
+   CONTENIDO DEL SITIO (configuracion/ en Supabase)
+   ========================================================================== */
+
+function applyCompanySettings(company) {
+  if (!company) return;
+
+  if (company.name) {
+    document.title = `${company.name} | Celulares Nuevos y Seminuevos en Honduras`;
+  }
+
+  const metaDescription = document.querySelector('meta[name="description"]');
+  if (metaDescription && company.description) {
+    metaDescription.setAttribute("content", company.description);
+  }
+
+  const aboutParagraphs = document.getElementById("about-paragraphs");
+  if (aboutParagraphs && company.about) {
+    const raw = String(company.about);
+    if (/<[a-z][\s\S]*>/i.test(raw)) {
+      aboutParagraphs.innerHTML = raw;
+    } else {
+      aboutParagraphs.innerHTML = raw
+        .split(/\n\s*\n/)
+        .filter((paragraph) => paragraph.trim())
+        .map((paragraph) => `<p>${paragraph}</p>`)
+        .join("");
+    }
+  }
+
+  // Campos de contacto y ubicación configurables desde el panel.
+  if (company.ubicacion) {
+    const footerLocation = document.getElementById("footer-location");
+    if (footerLocation) footerLocation.textContent = company.ubicacion;
+  }
+
+  if (company.telefono) {
+    const footerPhone = document.getElementById("footer-phone");
+    if (footerPhone) footerPhone.textContent = company.telefono;
+    const footerWaLink = document.getElementById("footer-wa-link");
+    if (footerWaLink) {
+      const digits = String(company.telefono).replace(/[^0-9]/g, "");
+      if (digits) footerWaLink.href = `https://wa.me/${digits}`;
+    }
+  }
+}
+
+function applyHomeSettings(home) {
+  if (!home) return;
+
+  const announcement = document.getElementById("announcement-text");
+  if (announcement && home.announcement) {
+    announcement.textContent = home.announcement;
+  }
+
+  const heroTag = document.getElementById("hero-tag");
+  if (heroTag && home.hero?.tag) heroTag.textContent = home.hero.tag;
+
+  const heroTitle = document.getElementById("hero-title");
+  if (heroTitle && home.hero?.title) heroTitle.textContent = home.hero.title;
+
+  const heroSubtitle = document.getElementById("hero-subtitle");
+  if (heroSubtitle && home.hero?.subtitle) heroSubtitle.textContent = home.hero.subtitle;
+
+  if (Array.isArray(home.cards)) renderTrustCards(home.cards);
+  if (Array.isArray(home.stats)) renderStats(home.stats);
+}
+
+function renderTrustCards(cards) {
+  const grid = document.getElementById("trust-grid");
+  if (!grid) return;
+
+  const template = grid.querySelector(".trust-card")?.outerHTML;
+  if (!template) return;
+
+  grid.innerHTML = cards.map((card, index) => {
+    const doc = new DOMParser().parseFromString(template, "text/html");
+    const article = doc.querySelector(".trust-card");
+    if (!article) return "";
+    article.querySelector("h2").textContent = card.title || "";
+    article.querySelector("p").textContent = card.description || "";
+    return article.outerHTML;
+  }).join("");
+}
+
+function renderStats(stats) {
+  const container = document.getElementById("about-stats");
+  if (!container) return;
+
+  container.innerHTML = stats.map((stat) => `
+    <div class="stat-card">
+      <span class="stat-num">${escapeHTML(stat.number)}</span>
+      <span class="stat-lbl">${escapeHTML(stat.label)}</span>
+    </div>
+  `).join("");
+}
+
+function renderFaqs(items) {
+  const accordion = document.getElementById("faq-accordion");
+  if (!accordion || !Array.isArray(items)) return;
+
+  accordion.innerHTML = items.map((item) => `
+    <article class="faq-item">
+      <button type="button" class="faq-question" aria-expanded="false">
+        <span>${escapeHTML(item.q)}</span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="faq-arrow" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div class="faq-answer">${item.a || ""}</div>
+    </article>
+  `).join("");
+
+  bindFaqAccordion();
+}
+
+function applyFooterSettings(footer) {
+  if (!footer) return;
+
+  const description = document.getElementById("footer-desc");
+  if (description && footer.description) description.textContent = footer.description;
+
+  const location = document.getElementById("footer-location");
+  if (location && footer.location) location.textContent = footer.location;
+
+  const phone = document.getElementById("footer-phone");
+  if (phone && footer.phone) phone.textContent = footer.phone;
+
+  const shipping = document.getElementById("footer-shipping");
+  if (shipping && footer.shipping) shipping.textContent = footer.shipping;
+
+  const copyright = document.getElementById("footer-copyright");
+  if (copyright && footer.copyright) copyright.textContent = footer.copyright;
+
+  const payments = document.getElementById("payment-methods");
+  if (payments && Array.isArray(footer.paymentMethods)) {
+    payments.innerHTML = footer.paymentMethods
+      .map((method) => `<span class="pay-logo-badge">${escapeHTML(method)}</span>`)
+      .join("");
+  }
+}
+
+function applyWhatsappSettings(whatsapp) {
+  if (!whatsapp) return;
+
+  whatsappSettings = {
+    ...WHATSAPP_DEFAULTS,
+    ...whatsapp,
+    labels: { ...WHATSAPP_DEFAULTS.labels, ...(whatsapp.labels || {}) }
+  };
+
+  const phone = whatsappSettings.phone;
+  const heroBtn = document.getElementById("hero-wa-btn");
+  if (heroBtn) {
+    const text = "Hola Mi Phone HN, me gustaría solicitar información sobre el extrafinanciamiento.";
+    heroBtn.href = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  }
+
+  const footerWaLink = document.getElementById("footer-wa-link");
+  if (footerWaLink) footerWaLink.href = `https://wa.me/${phone}`;
+
+  calculateFinancing();
+}
+
+function setBrandLogo(dataUrl) {
+  if (!dataUrl) return;
+  const imgHtml = `<img src="${dataUrl}" alt="Mi Phone HN" class="brand-logo-img">`;
+  const headerLogo = document.querySelector(".logo");
+  if (headerLogo) headerLogo.innerHTML = imgHtml;
+  const footerLogo = document.querySelector(".footer-logo");
+  if (footerLogo) footerLogo.innerHTML = imgHtml;
+}
+
+function applyHeroImage(dataUrl) {
+  if (!dataUrl) return;
+  const hero = document.getElementById("hero");
+  if (!hero) return;
+  hero.style.setProperty("--hero-img", `url('${dataUrl}')`);
+  hero.classList.add("has-hero-img");
+}
+
+let heroPhonesTimer = null;
+
+function applyHeroPhones(images) {
+  const list = (images || []).filter(Boolean);
+  const visual = document.querySelector(".hero-visual");
+  const p1 = document.querySelector(".phone-mockup.phone-1");
+  const p2 = document.querySelector(".phone-mockup.phone-2");
+
+  if (heroPhonesTimer) {
+    clearInterval(heroPhonesTimer);
+    heroPhonesTimer = null;
+  }
+
+  const setSlot = (mockup, url) => {
+    if (!mockup) return;
+    const img = mockup.querySelector(".phone-mockup-img");
+    if (img) {
+      img.onerror = null;
+      img.hidden = !url;
+      img.src = url;
+      mockup.classList.toggle("has-img", !!url);
+      if (url) {
+        img.onerror = () => {
+          img.hidden = true;
+          mockup.classList.remove("has-img");
+        };
+      }
+    } else {
+      mockup.classList.toggle("has-img", !!url);
+    }
+  };
+
+  if (!visual || !p1 || list.length === 0) {
+    setSlot(p1, "");
+    setSlot(p2, "");
+    visual?.classList.remove("has-single", "is-swapping", "has-carousel");
+    return;
+  }
+
+  if (list.length === 1) {
+    setSlot(p1, list[0]);
+    setSlot(p2, "");
+    visual.classList.add("has-single");
+    visual.classList.remove("is-swapping", "has-carousel");
+    return;
+  }
+
+  visual.classList.remove("has-single");
+  visual.classList.add("has-carousel");
+  let idx = 0;
+  setSlot(p1, list[0]);
+  setSlot(p2, list[1]);
+
+  const swapSlot = (mockup, url) => {
+    const img = mockup?.querySelector(".phone-mockup-img");
+    if (!img || !mockup) return;
+    img.onerror = null;
+    img.hidden = !url;
+    mockup.classList.toggle("has-img", !!url);
+    img.src = url;
+    if (url) {
+      img.onerror = () => {
+        img.hidden = true;
+        mockup.classList.remove("has-img");
+      };
+    }
+  };
+
+  const clearInline = (el) => {
+    el.style.left = "";
+    el.style.top = "";
+    el.style.transform = "";
+    el.style.opacity = "";
+    el.style.zIndex = "";
+    el.style.transition = "";
+    el.style.animation = "";
+  };
+
+  const advance = async () => {
+    const mA = document.querySelector(".hero-visual .phone-mockup.phone-1");
+    const mB = document.querySelector(".hero-visual .phone-mockup.phone-2");
+    const imgA = mA && mA.querySelector(".phone-mockup-img");
+    const imgB = mB && mB.querySelector(".phone-mockup-img");
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const nextIdx = (idx + 1) % list.length;
+    const nextImg = list[(nextIdx + 1) % list.length];
+
+    if (!reduced && mA && mB) {
+      clearInline(mA);
+      clearInline(mB);
+      mA.style.animation = "none";
+      mA.style.transition = "transform 0.5s ease-in, opacity 0.5s ease-in";
+      mA.style.transform = "translateY(80px) rotate(3deg)";
+      mA.style.opacity = "0";
+      mB.style.transition = "transform 0.6s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.6s ease";
+      mB.style.transform = "translate(-112px, 20px) rotate(-5deg)";
+      mB.style.opacity = "1";
+      mB.style.zIndex = "3";
+      await new Promise((r) => setTimeout(r, 500));
+
+      if (imgA) imgA.src = nextImg;
+      mA.classList.remove("phone-1");
+      mA.classList.add("phone-2");
+      mB.classList.remove("phone-2");
+      mB.classList.add("phone-1");
+      mB.style.transition = "none";
+      mB.style.transform = "";
+      mB.style.opacity = "";
+      mB.style.zIndex = "";
+      void mB.offsetWidth;
+      mB.style.transition = "";
+
+      mA.style.transition = "all 0.5s ease";
+      mA.style.left = "112px";
+      mA.style.top = "0px";
+      mA.style.transform = "rotate(10deg)";
+      mA.style.opacity = "0.75";
+      await new Promise((r) => setTimeout(r, 500));
+      clearInline(mA);
+      clearInline(mB);
+    } else {
+      if (imgA) imgA.src = nextImg;
+      if (mA) { mA.classList.remove("phone-1"); mA.classList.add("phone-2"); }
+      if (mB) { mB.classList.remove("phone-2"); mB.classList.add("phone-1"); }
+    }
+    idx = nextIdx;
+  };
+
+  const start = () => { if (!heroPhonesTimer) heroPhonesTimer = setInterval(advance, 5000); };
+  start();
+}
+
+function applyAboutImage(dataUrl) {
+  const wrap = document.getElementById("about-image-wrap");
+  const img = document.getElementById("about-image");
+  if (!wrap || !img) return;
+  if (dataUrl) {
+    img.src = dataUrl;
+    wrap.hidden = false;
+  } else {
+    img.src = "";
+    wrap.hidden = true;
+  }
+}
+
+function applySiteSettings(documents) {
+  const byId = {};
+  documents.forEach((docSnap) => { byId[docSnap.id] = docSnap.data ? docSnap.data() : docSnap; });
+
+  applyCompanySettings(byId.empresa);
+  applyHomeSettings(byId.inicio);
+  applyFooterSettings(byId["pie-de-pagina"]);
+  renderFaqs(byId["preguntas-frecuentes"]?.items);
+  applyWhatsappSettings(byId.whatsapp);
+  setBrandLogo(byId.logo?.url || byId.logo?.data);
+  applyHeroImage(byId["hero-fondo"]?.url || byId["hero-fondo"]?.data);
+  const phones = [];
+  for (let i = 1; i <= 5; i++) {
+    const pdoc = byId["telefono-" + i];
+    const url = pdoc && (pdoc.url || pdoc.data);
+    if (url) phones.push(url);
+  }
+  applyHeroPhones(phones);
+  applyAboutImage(byId.nosotros?.url || byId.nosotros?.data);
+}
+
+async function loadSiteSettings() {
+  try {
+    const { db, collection, onSnapshot, getDocs } = await import("./supabase-config.js");
+    const settingsRef = collection(db, "configuracion");
+    const imagesRef = collection(db, "imagenes");
+
+    const applyAll = async () => {
+      try {
+        const [snapA, snapB] = await Promise.all([getDocs(settingsRef), getDocs(imagesRef)]);
+        applySiteSettings([...snapA.docs, ...snapB.docs]);
+      } catch (err) {
+        console.warn("No se pudo cargar la configuración del sitio:", err);
+      }
+    };
+
+    onSnapshot(settingsRef, () => { applyAll(); }, applyAll);
+    onSnapshot(imagesRef, () => { applyAll(); }, applyAll);
+  } catch (error) {
+    console.warn("No se pudo conectar para cargar la configuración del sitio:", error);
+  }
+}
+

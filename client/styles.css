@@ -24,6 +24,8 @@
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
+  --error: #d70015;
+  --error-bg: #fff5f5;
 }
 
 [data-theme="dark"] {
@@ -41,6 +43,8 @@
   --header-bg: rgba(10, 10, 12, 0.8);
   --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   --modal-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
+  --error: #ff453a;
+  --error-bg: rgba(255, 69, 58, 0.1);
   color-scheme: dark;
 }
 
@@ -363,15 +367,15 @@ select:focus-visible {
 
 .phone-mockup-wrapper {
   position: relative;
-  width: 320px;
-  height: 480px;
+  width: 360px;
+  height: 540px;
   margin: 0 auto;
 }
 
 .phone-mockup {
   position: absolute;
-  width: 220px;
-  height: 440px;
+  width: 250px;
+  height: 500px;
   border: 8px solid #333333;
   border-radius: 36px;
   padding: 6px;
@@ -399,7 +403,7 @@ select:focus-visible {
 .phone-2 {
   z-index: 1;
   top: 0;
-  left: 100px;
+  left: 112px;
   opacity: 0.75;
   transform: rotate(10deg);
 }
@@ -1246,6 +1250,51 @@ select:focus-visible {
 .cart-checkout-form input {
   padding: 8px 12px;
   font-size: 0.9rem;
+}
+
+.cart-checkout-form .form-group.is-invalid input {
+  border-color: var(--error);
+  background: var(--error-bg);
+}
+
+.cart-checkout-form .form-group.is-invalid input:focus {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 16%, transparent);
+}
+
+.cart-checkout-form .req {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.checkout-form-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--error-bg);
+  color: var(--error);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  animation: checkout-error-in 0.2s ease-out;
+}
+
+.checkout-form-error::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+@keyframes checkout-error-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .checkout-btn {
@@ -2719,17 +2768,17 @@ select:focus-visible {
   }
 
   .phone-mockup-wrapper {
-    width: 280px;
-    height: 400px;
+    width: 300px;
+    height: 430px;
   }
 
   .phone-mockup {
-    width: 180px;
-    height: 360px;
+    width: 190px;
+    height: 380px;
   }
 
   .phone-2 {
-    left: 80px;
+    left: 88px;
   }
 
   .trust-grid,
@@ -2830,3 +2879,144 @@ select:focus-visible {
     font-size: 1.8rem;
   }
 }
+
+/* ========================================================================== 
+   Contenido configurable (configuracion de Supabase)
+   ========================================================================== */
+.logo .brand-logo-img,
+.footer-logo .brand-logo-img {
+  display: block;
+  height: 34px;
+  width: auto;
+  object-fit: contain;
+}
+
+.hero-section.has-hero-img {
+  background: linear-gradient(rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.88)), var(--hero-img) center / cover no-repeat;
+}
+
+[data-theme="dark"] .hero-section.has-hero-img {
+  background: linear-gradient(rgba(10, 15, 25, 0.86), rgba(10, 15, 25, 0.86)), var(--hero-img) center / cover no-repeat;
+}
+
+.about-image {
+  position: relative;
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: calc(var(--radius-lg) + 10px);
+  background: linear-gradient(160deg, var(--bg-secondary), var(--bg-primary) 65%);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.08);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.about-image::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(120deg, rgba(0, 113, 227, 0.16), transparent 42%, transparent 58%, rgba(0, 113, 227, 0.1));
+  pointer-events: none;
+}
+
+.about-image:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 52px rgba(0, 0, 0, 0.12);
+}
+
+.about-image img {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  max-height: 340px;
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  animation: about-float 7s ease-in-out infinite;
+}
+
+[data-theme="dark"] .about-image {
+  background: linear-gradient(160deg, var(--bg-secondary), var(--bg-primary) 65%);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes about-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Teléfonos del hero administrables (settings heroPhones) */
+.phone-mockup.has-img {
+  border: none;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.phone-mockup.has-img .phone-screen {
+  display: none;
+}
+
+.phone-mockup-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.22));
+}
+
+.hero-visual.has-single .phone-mockup {
+  top: 20px;
+  left: 50%;
+  opacity: 1;
+  transform: translateX(-50%) rotate(-5deg);
+}
+
+.hero-visual.has-single .phone-mockup.phone-2 {
+  display: none;
+}
+
+.hero-visual.has-single .phone-mockup:hover {
+  transform: translateX(-50%) translateY(-10px) rotate(0deg);
+}
+
+/* Carrusel de teléfonos: desfile en pares con fundido */
+.hero-visual.has-carousel .phone-mockup {
+  transition: all 0.5s ease;
+}
+
+.hero-visual.has-carousel .phone-1 {
+  animation: phone-float 6s ease-in-out infinite;
+}
+
+@keyframes phone-float {
+  0%, 100% { transform: rotate(-5deg) translateY(0); }
+  50% { transform: rotate(-5deg) translateY(-12px); }
+}
+
+.hero-visual.has-carousel .phone-mockup:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-visual.has-carousel .phone-1 {
+    animation: none;
+  }
+}
+
+#hero,
+#about-section,
+#catalog-section,
+#faq-section {
+  scroll-margin-top: 90px;
+}
+
+.about-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  margin-bottom: 16px;
+}
+

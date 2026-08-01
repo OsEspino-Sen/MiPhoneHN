@@ -122,26 +122,349 @@
           <section class="catalog-surface" id="catalog">
             <header class="catalog-header"><div class="catalog-header-title"><div class="catalog-title-row"><h2>Catálogo publicado</h2><span class="catalog-status"><i></i> Sincronizado</span><span class="media-count-chip" id="table-count-chip">0 ítems</span></div><p>Listado central de productos con control de estado y precio base.</p></div><div class="catalog-header-note"><i class="ph ph-currency-dollar" aria-hidden="true"></i><span>Precios en HNL</span></div></header>
             <div class="filter-bar"><div class="filter-inputs"><span class="filter-label">Filtros</span><div class="filter-select"><span class="filter-select-icon"><i class="ph ph-funnel-simple" aria-hidden="true"></i></span><select id="admin-category-filter" class="custom-select" aria-label="Filtrar por categoría"><option value="all">Todas</option></select></div><button type="button" id="manage-categories-btn" class="btn btn-secondary btn-manage-categories"><i class="ph ph-tag" aria-hidden="true"></i><span>Categorías</span></button></div><div class="filter-actions"><span class="filter-sync-copy"><i></i> Tiempo real</span><button type="button" id="reload-btn" class="btn btn-secondary"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i><span>Recargar</span></button></div></div>
-            <div class="table-card"><div class="table-responsive"><div class="data-grid"><div class="data-grid-header"><div class="data-grid-cell data-grid-cell--header">Producto</div><div class="data-grid-cell data-grid-cell--header">Categoría</div><div class="data-grid-cell data-grid-cell--header">Condición</div><div class="data-grid-cell data-grid-cell--header data-grid-cell--right">Precio</div><div class="data-grid-cell data-grid-cell--header data-grid-cell--right data-grid-cell--actions">Acción</div></div><div class="data-grid-body" id="products-table-body"></div></div></div><div id="empty-table-msg" class="empty-state" hidden><div class="empty-illustration"><span class="empty-illustration__back"></span><span class="empty-illustration__front"><i class="ph ph-package" aria-hidden="true"></i></span></div><h3>Sin productos</h3><p>Crea un producto para organizar tu catálogo centralizado.</p></div><footer class="table-footer-note"><span><i></i> Firestore · Sincronización segura</span><span>Actualización instantánea</span></footer></div>
+            <div class="table-card"><div class="table-responsive"><div class="data-grid"><div class="data-grid-header"><div class="data-grid-cell data-grid-cell--header">Producto</div><div class="data-grid-cell data-grid-cell--header">Categoría</div><div class="data-grid-cell data-grid-cell--header">Condición</div><div class="data-grid-cell data-grid-cell--header data-grid-cell--right">Precio</div><div class="data-grid-cell data-grid-cell--header data-grid-cell--right data-grid-cell--actions">Acción</div></div><div class="data-grid-body" id="products-table-body"></div></div></div><div id="empty-table-msg" class="empty-state" hidden><div class="empty-illustration"><span class="empty-illustration__back"></span><span class="empty-illustration__front"><i class="ph ph-package" aria-hidden="true"></i></span></div><h3>Sin productos</h3><p>Crea un producto para organizar tu catálogo centralizado.</p></div><footer class="table-footer-note"><span><i></i> Supabase · Sincronización segura</span><span>Actualización instantánea</span></footer></div>
           </section>
 
           <section class="settings-section" id="settings" hidden>
             <header class="page-header">
               <div class="page-heading-copy">
-                <div class="page-eyebrow-row"><span class="page-eyebrow"><i></i> Configuración</span><span class="page-eyebrow-divider"></span><span class="page-eyebrow-meta">Imágenes · Personalización</span></div>
-                <h1 class="page-title">Configuración del panel</h1>
-                <p class="page-subtitle">Gestiona las imágenes y apariencia de tu panel administrativo.</p>
+                <div class="page-eyebrow-row"><span class="page-eyebrow"><i></i> Configuración</span><span class="page-eyebrow-divider"></span><span class="page-eyebrow-meta">Contenido · Personalización</span></div>
+                <h1 class="page-title">Configuración</h1>
+                <p class="page-subtitle">Edita la información de tu tienda, el contenido de tu sitio y el mensaje de pedidos por WhatsApp.</p>
               </div>
             </header>
 
             <div class="settings-tabs">
-              <button type="button" class="settings-tab active" data-tab="images"><i class="ph ph-image" aria-hidden="true"></i><span>Imágenes</span></button>
+              <button type="button" class="settings-tab active" data-tab="empresa"><i class="ph ph-buildings" aria-hidden="true"></i><span>Empresa</span></button>
+              <button type="button" class="settings-tab" data-tab="inicio"><i class="ph ph-house" aria-hidden="true"></i><span>Inicio</span></button>
+              <button type="button" class="settings-tab" data-tab="pie-de-pagina"><i class="ph ph-squares-four" aria-hidden="true"></i><span>Pie de página</span></button>
+              <button type="button" class="settings-tab" data-tab="preguntas"><i class="ph ph-question" aria-hidden="true"></i><span>Preguntas</span></button>
+              <button type="button" class="settings-tab" data-tab="whatsapp"><i class="ph ph-chats-circle" aria-hidden="true"></i><span>WhatsApp</span></button>
+              <button type="button" class="settings-tab" data-tab="imagenes"><i class="ph ph-image" aria-hidden="true"></i><span>Imágenes</span></button>
+              <button type="button" class="settings-tab" data-tab="llaves"><i class="ph ph-key" aria-hidden="true"></i><span>Llaves</span></button>
+              <button type="button" class="settings-tab" data-tab="usuarios"><i class="ph ph-users" aria-hidden="true"></i><span>Usuarios</span></button>
             </div>
 
-            <div class="settings-tab-content" id="settings-images-tab">
+            <div class="settings-tab-content" id="settings-empresa-tab">
+              <div class="settings-grid settings-grid--2col">
+                <article class="settings-form-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-buildings" aria-hidden="true"></i></div>
+                    <div><h3>Identidad</h3><p>Nombre y descripción principal.</p></div>
+                  </div>
+                  <div class="form-group"><label for="cmp-name">Nombre de la empresa</label><input type="text" id="cmp-name" data-cmp="name" placeholder="Mi Phone HN"><span class="form-hint">Aparece en los títulos del sitio y al compartir enlaces.</span></div>
+                  <div class="form-group"><label for="cmp-description">Descripción corta</label><textarea id="cmp-description" data-cmp="description" rows="3" placeholder="Describe tu negocio en una o dos líneas."></textarea><span class="form-hint">Es el texto que Google muestra al buscar tu tienda.</span></div>
+                </article>
+
+                <article class="settings-form-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-map-pin" aria-hidden="true"></i></div>
+                    <div><h3>Contacto y ubicación</h3><p>Datos que ven tus clientes.</p></div>
+                  </div>
+                  <div class="form-group"><label for="cmp-ubicacion">Ubicación</label><input type="text" id="cmp-ubicacion" data-cmp="ubicacion" placeholder="Choluteca, Honduras"><span class="form-hint">Ciudad o región principal.</span></div>
+                  <div class="form-group"><label for="cmp-telefono">Teléfono / WhatsApp</label><input type="text" id="cmp-telefono" data-cmp="telefono" placeholder="+504 8823-8432"><span class="form-hint">Número de contacto principal.</span></div>
+                  <div class="form-group"><label for="cmp-email">Correo electrónico</label><input type="email" id="cmp-email" data-cmp="email" placeholder="info@miphonehn.com"><span class="form-hint">Correo de contacto comercial.</span></div>
+                </article>
+              </div>
+
+              <article class="settings-form-card" style="margin-top:16px">
+                <div class="settings-image-header">
+                  <div class="settings-image-icon"><i class="ph ph-text-aa" aria-hidden="true"></i></div>
+                  <div><h3>Quiénes somos</h3><p>Historia y presentación de la empresa.</p></div>
+                </div>
+                <div class="form-group">
+                  <div class="settings-rich" data-rich-placeholder="Escribe la historia de tu negocio…">
+                    <div class="settings-rich-toolbar">
+                      <button type="button" class="settings-rich-btn" data-cmd="bold" title="Negrita" aria-label="Negrita"><strong>B</strong></button>
+                      <button type="button" class="settings-rich-btn" data-cmd="insertUnorderedList" title="Lista con viñetas" aria-label="Lista con viñetas">• Lista</button>
+                      <button type="button" class="settings-rich-btn" data-cmd="insertOrderedList" title="Lista numerada" aria-label="Lista numerada">1. Lista</button>
+                    </div>
+                    <div class="settings-rich-editor" contenteditable="true"></div>
+                    <input type="hidden" class="settings-rich-hidden" data-cmp="about">
+                  </div>
+                  <span class="form-hint">Esta historia se muestra en la página de inicio y en Nosotros. Separa los párrafos con Enter.</span>
+                </div>
+                <div class="settings-btn-row">
+                  <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="empresa" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                  <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="empresa" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                </div>
+                <div class="settings-upload-status"></div>
+              </article>
+            </div>
+
+            <div class="settings-tab-content" id="settings-inicio-tab">
+              <div class="settings-grid">
+                <article class="settings-form-card settings-form-card--hero">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-sun" aria-hidden="true"></i></div>
+                    <div><h3>Hero principal</h3><p>Títulos de la portada.</p></div>
+                  </div>
+                  <div class="form-group"><label for="home-hero-tag">Etiqueta</label><input type="text" id="home-hero-tag" data-home="hero.tag" placeholder="Tecnología premium garantizada"></div>
+                  <div class="form-group"><label for="home-hero-title">Título</label><input type="text" id="home-hero-title" data-home="hero.title" placeholder="El celular que quieres…"></div>
+                  <div class="form-group"><label for="home-hero-subtitle">Subtítulo</label><textarea id="home-hero-subtitle" data-home="hero.subtitle" rows="3" placeholder="Subtítulo del hero."></textarea></div>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="inicio" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="home" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+                <article class="settings-form-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-megaphone" aria-hidden="true"></i></div>
+                    <div><h3>Anuncio superior</h3><p>La franja que aparece arriba del sitio.</p></div>
+                  </div>
+                  <div class="form-group"><label for="home-announcement">Texto del anuncio</label><input type="text" id="home-announcement" data-home="announcement" placeholder="Envíos seguros a nivel nacional…"></div>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="inicio" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="home" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+                <article class="settings-form-card settings-list-card settings-form-card--wide" data-list-doc="home" data-list-key="cards">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-cards" aria-hidden="true"></i></div>
+                    <div><h3>Tarjetas de beneficios</h3><p>Las tarjetas que aparecen bajo la portada.</p></div>
+                  </div>
+                  <div class="settings-list-items" id="home-cards-list"></div>
+                  <button type="button" class="btn btn-dashed btn-block settings-list-add" data-add-item="cards"><i class="ph ph-plus" aria-hidden="true"></i> Agregar tarjeta</button>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="inicio" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="home" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+                <article class="settings-form-card settings-list-card" data-list-doc="home" data-list-key="stats">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-chart-bar" aria-hidden="true"></i></div>
+                    <div><h3>Números destacados</h3><p>Los números de la sección Nosotros, como 90, 100%, 48h o 24/7.</p></div>
+                  </div>
+                  <div class="settings-list-items" id="home-stats-list"></div>
+                  <button type="button" class="btn btn-dashed btn-block settings-list-add" data-add-item="stats"><i class="ph ph-plus" aria-hidden="true"></i> Agregar dato</button>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="inicio" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="home" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+              </div>
+            </div>
+
+            <div class="settings-tab-content" id="settings-pie-de-pagina-tab">
+              <div class="settings-grid">
+                <article class="settings-form-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-squares-four" aria-hidden="true"></i></div>
+                    <div><h3>Pie de página</h3><p>Información de contacto y créditos.</p></div>
+                  </div>
+                  <div class="form-group"><label for="ftr-description">Descripción</label><textarea id="ftr-description" data-ftr="description" rows="3" placeholder="Descripción corta del negocio."></textarea></div>
+                  <div class="form-group"><label for="ftr-location">Ubicación</label><input type="text" id="ftr-location" data-ftr="location" placeholder="Choluteca, Honduras"></div>
+                  <div class="form-group"><label for="ftr-phone">Teléfono / WhatsApp</label><input type="text" id="ftr-phone" data-ftr="phone" placeholder="+504 8823-8432"></div>
+                  <div class="form-group"><label for="ftr-shipping">Nota de envío</label><input type="text" id="ftr-shipping" data-ftr="shipping" placeholder="Envíos vía Rápido Cargo"></div>
+                  <div class="form-group"><label for="ftr-copyright">Copyright</label><input type="text" id="ftr-copyright" data-ftr="copyright" placeholder="© 2026 Mi Phone HN. Todos los derechos reservados."></div>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="pie-de-pagina" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="footer" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+                <article class="settings-form-card settings-list-card" data-list-doc="footer" data-list-key="paymentMethods">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-credit-card" aria-hidden="true"></i></div>
+                    <div><h3>Métodos de pago</h3><p>Etiquetas mostradas al final del sitio.</p></div>
+                  </div>
+                  <div class="settings-list-items" id="footer-payments-list"></div>
+                  <button type="button" class="btn btn-dashed btn-block settings-list-add" data-add-item="paymentMethods"><i class="ph ph-plus" aria-hidden="true"></i> Agregar método</button>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="pie-de-pagina" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="footer" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+              </div>
+            </div>
+
+            <div class="settings-tab-content" id="settings-preguntas-tab">
+              <div class="settings-grid settings-grid--single">
+                <article class="settings-form-card settings-list-card" data-list-doc="faqs" data-list-key="items">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-question" aria-hidden="true"></i></div>
+                    <div><h3>Preguntas frecuentes</h3><p>Agrega, edita, elimina y reordena las preguntas del sitio. Usa los botones de lista dentro de cada respuesta si necesitas pasos.</p></div>
+                  </div>
+                  <div class="settings-list-items" id="faqs-list"></div>
+                  <button type="button" class="btn btn-dashed btn-block settings-list-add" data-add-item="items"><i class="ph ph-plus" aria-hidden="true"></i> Agregar pregunta</button>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="preguntas-frecuentes" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar cambios</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="faqs" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                   <div class="settings-upload-status"></div>
+                </article>
+              </div>
+            </div>
+
+            <div class="settings-tab-content" id="settings-whatsapp-tab">
+              <div class="settings-grid settings-grid--single">
+                <article class="settings-form-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-chats-circle" aria-hidden="true"></i></div>
+                    <div><h3>Configuración de WhatsApp</h3><p>Todo el mensaje de pedido en un solo lugar: número, título, etiquetas, valores de envío y vista previa.</p></div>
+                  </div>
+                  <div class="form-group"><label for="wa-phone">Número de destino</label><input type="text" id="wa-phone" data-wa="phone" placeholder="50488238432"><span class="form-hint">El número de WhatsApp donde llegan los pedidos. Sin espacios ni guiones.</span></div>
+                  <div class="form-group"><label for="wa-title">Título del mensaje</label><input type="text" id="wa-title" data-wa="title" placeholder="NUEVO PEDIDO — Mi Phone HN"><span class="form-hint">Aparece en negrita al inicio del mensaje de cada pedido.</span></div>
+
+                  <h4 class="settings-subheading"><i class="ph ph-tag" aria-hidden="true"></i> Etiquetas del mensaje</h4>
+                  <span class="form-hint">Los nombres que acompañan cada dato del pedido.</span>
+                  <div class="form-grid-2">
+                    <div class="form-group"><label for="wa-lbl-cliente">Cliente</label><input type="text" id="wa-lbl-cliente" data-wa="labels.cliente" placeholder="Cliente"></div>
+                    <div class="form-group"><label for="wa-lbl-dni">DNI</label><input type="text" id="wa-lbl-dni" data-wa="labels.dni" placeholder="DNI"></div>
+                    <div class="form-group"><label for="wa-lbl-ciudad">Ciudad</label><input type="text" id="wa-lbl-ciudad" data-wa="labels.ciudad" placeholder="Ciudad/Envío"></div>
+                    <div class="form-group"><label for="wa-lbl-productos">Productos</label><input type="text" id="wa-lbl-productos" data-wa="labels.productos" placeholder="Productos"></div>
+                    <div class="form-group"><label for="wa-lbl-cantidad">Cantidad</label><input type="text" id="wa-lbl-cantidad" data-wa="labels.cantidad" placeholder="Cantidad"></div>
+                    <div class="form-group"><label for="wa-lbl-subtotal">Subtotal</label><input type="text" id="wa-lbl-subtotal" data-wa="labels.subtotal" placeholder="Subtotal"></div>
+                    <div class="form-group"><label for="wa-lbl-total">Total</label><input type="text" id="wa-lbl-total" data-wa="labels.total" placeholder="TOTAL"></div>
+                    <div class="form-group"><label for="wa-lbl-despacho">Despacho</label><input type="text" id="wa-lbl-despacho" data-wa="labels.despacho" placeholder="Despacho"></div>
+                    <div class="form-group"><label for="wa-lbl-logistica">Logística</label><input type="text" id="wa-lbl-logistica" data-wa="labels.logistica" placeholder="Logística"></div>
+                  </div>
+
+                  <h4 class="settings-subheading"><i class="ph ph-shipping-truck" aria-hidden="true"></i> Valores por defecto</h4>
+                  <span class="form-hint">Aparecen al final del mensaje, junto al envío.</span>
+                  <div class="form-grid-2">
+                    <div class="form-group"><label for="wa-despacho-value">Ciudad de despacho</label><input type="text" id="wa-despacho-value" data-wa="despachoValue" placeholder="Choluteca, Honduras"></div>
+                    <div class="form-group"><label for="wa-logistica-value">Empresa logística</label><input type="text" id="wa-logistica-value" data-wa="logisticaValue" placeholder="Rápido Cargo"></div>
+                  </div>
+
+                  <h4 class="settings-subheading"><i class="ph ph-eye" aria-hidden="true"></i> Vista previa del mensaje</h4>
+                  <span class="form-hint">Así recibirá el negocio el pedido. Se actualiza mientras escribes.</span>
+                  <pre class="settings-wa-preview" id="wa-preview"></pre>
+
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="whatsapp" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="whatsapp" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+              </div>
+            </div>
+
+            <div class="settings-tab-content" id="settings-imagenes-tab">
+              <span class="settings-subheading">Imágenes del sitio</span>
               <div class="settings-grid">
 
-                <article class="settings-image-card" data-key="banner">
+                <article class="settings-form-card settings-logo-card settings-img-card" data-img-doc="logo" data-img-key="logo">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
+                    <div><h3>Logo de la empresa</h3><p>PNG o WebP con fondo transparente. Se redimensiona automáticamente.</p></div>
+                  </div>
+                  <div class="settings-image-preview settings-image-preview--logo">
+                    <img src="" alt="Logo">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin logo</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar logo</button>
+                      <input type="file" accept=".png,.webp,.jpg,.jpeg,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-site-url-wrap">
+                      <i class="ph ph-link-simple" aria-hidden="true"></i>
+                      <input type="url" class="settings-site-url" data-img-url="logo" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
+                    </div>
+                    <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                      <button type="button" class="btn btn-danger-ghost btn-sm settings-remove-btn" disabled><i class="ph ph-trash" aria-hidden="true"></i> Eliminar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+                <article class="settings-form-card settings-img-card" data-img-doc="hero-fondo">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-image" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de fondo del hero</h3><p>Se muestra detrás de la portada. Se redimensiona automáticamente.</p></div>
+                  </div>
+                  <div class="settings-image-preview settings-image-preview--wide">
+                    <img src="" alt="Hero">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar imagen</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-site-url-wrap">
+                      <i class="ph ph-link-simple" aria-hidden="true"></i>
+                      <input type="url" class="settings-site-url" data-img-url="hero" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
+                    </div>
+                    <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                      <button type="button" class="btn btn-danger-ghost btn-sm settings-remove-btn" disabled><i class="ph ph-trash" aria-hidden="true"></i> Eliminar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+                <article class="settings-form-card settings-img-card-duo" data-img-doc="heroPhones">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-device-mobile" aria-hidden="true"></i></div>
+                    <div><h3>Imágenes del hero (carrusel)</h3><p>De 1 a 5 imágenes o URLs (https://). Se muestran como carrusel automático cada 5 s, en pares: la imagen activa pasa al frente.</p></div>
+                  </div>
+                  <div class="settings-phones-empty" id="phones-empty">
+                    <i class="ph ph-device-mobile" aria-hidden="true"></i>
+                    <span>Sin imágenes. Agrega la primera imagen o URL del hero.</span>
+                  </div>
+                  <div class="settings-phones-list" id="phones-list"></div>
+                  <button type="button" class="btn btn-dashed btn-block settings-phones-add" id="phones-add-btn" hidden><i class="ph ph-plus" aria-hidden="true"></i> Agregar imagen o URL</button>
+                  <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn settings-duo-save" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn settings-duo-cancel" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+                <article class="settings-form-card settings-img-card" data-img-doc="nosotros">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-image" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de la sección Nosotros</h3><p>Se muestra en la sección Nosotros del inicio, integrada con el texto. PNG o WebP con fondo transparente.</p></div>
+                  </div>
+                  <div class="settings-image-preview settings-image-preview--wide">
+                    <img src="" alt="Nosotros">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar imagen</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-site-url-wrap">
+                      <i class="ph ph-link-simple" aria-hidden="true"></i>
+                      <input type="url" class="settings-site-url" data-img-url="about" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
+                    </div>
+                    <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                      <button type="button" class="btn btn-danger-ghost btn-sm settings-remove-btn" disabled><i class="ph ph-trash" aria-hidden="true"></i> Eliminar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+              </div>
+
+              <span class="settings-subheading">Imágenes del panel</span>
+              <div class="settings-grid">
+
+                <article class="settings-image-card" data-key="imagen_banner_panel">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
                     <div><h3>Banner del panel</h3><p>Imagen principal del panel de administración.</p></div>
@@ -164,10 +487,10 @@
                       <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
                     </div>
                   </div>
-                  <div class="settings-upload-status" id="status-banner"></div>
+                  <div class="settings-upload-status" id="status-imagen_banner_panel"></div>
                 </article>
 
-                <article class="settings-image-card" data-key="login">
+                <article class="settings-image-card" data-key="imagen_login">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-monitor" aria-hidden="true"></i></div>
                     <div><h3>Imagen de login</h3><p>Fondo de la pantalla de inicio de sesión.</p></div>
@@ -190,10 +513,10 @@
                       <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
                     </div>
                   </div>
-                  <div class="settings-upload-status" id="status-login"></div>
+                  <div class="settings-upload-status" id="status-imagen_login"></div>
                 </article>
 
-                <article class="settings-image-card" data-key="sidebar">
+                <article class="settings-image-card" data-key="imagen_sidebar">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-sidebar" aria-hidden="true"></i></div>
                     <div><h3>Imagen de la sidebar</h3><p>Fondo de la barra lateral.</p></div>
@@ -216,10 +539,10 @@
                       <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
                     </div>
                   </div>
-                  <div class="settings-upload-status" id="status-sidebar"></div>
+                  <div class="settings-upload-status" id="status-imagen_sidebar"></div>
                 </article>
 
-                <article class="settings-image-card" data-key="tarjeta">
+                <article class="settings-image-card" data-key="imagen_tarjeta_promocional">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-card" aria-hidden="true"></i></div>
                     <div><h3>Imagen para tarjeta</h3><p>Fondo de la tarjeta promocional del sidebar.</p></div>
@@ -242,10 +565,10 @@
                       <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
                     </div>
                   </div>
-                  <div class="settings-upload-status" id="status-tarjeta"></div>
+                  <div class="settings-upload-status" id="status-imagen_tarjeta_promocional"></div>
                 </article>
 
-                <article class="settings-image-card" data-key="barra">
+                <article class="settings-image-card" data-key="imagen_barra_principal">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-rows" aria-hidden="true"></i></div>
                     <div><h3>Imagen de barra</h3><p>Imagen del footer del sidebar.</p></div>
@@ -268,11 +591,66 @@
                       <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
                     </div>
                   </div>
-                  <div class="settings-upload-status" id="status-barra"></div>
+                  <div class="settings-upload-status" id="status-imagen_barra_principal"></div>
                 </article>
 
               </div>
             </div>
+
+            <div class="settings-tab-content" id="settings-llaves-tab">
+              <div class="settings-grid settings-grid--single">
+                <article class="settings-form-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-key" aria-hidden="true"></i></div>
+                    <div><h3>Llaves de acceso</h3><p>Códigos que protegen secciones sensibles del panel.</p></div>
+                  </div>
+                  <div id="llaves-list" class="settings-list-items"></div>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-dashed btn-block" id="llave-add-btn"><i class="ph ph-plus" aria-hidden="true"></i> Generar nueva llave</button>
+                  </div>
+                  <div class="settings-upload-status" id="status-llaves"></div>
+                </article>
+              </div>
+            </div>
+
+            <div class="settings-tab-content" id="settings-usuarios-tab">
+              <div class="settings-grid settings-grid--single">
+                <article class="settings-form-card" style="padding:0;overflow:hidden">
+                  <div class="settings-image-header" style="padding:20px;border-bottom:1px solid var(--line-soft)">
+                    <div class="settings-image-icon"><i class="ph ph-users" aria-hidden="true"></i></div>
+                    <div>
+                      <h3>Usuarios del sistema</h3>
+                      <p>Administra información, rol y estado de los usuarios existentes.</p>
+                    </div>
+                  </div>
+                  <div class="usuarios-toolbar">
+                    <button type="button" class="btn btn-primary btn-sm" id="usuario-add-btn"><i class="ph ph-user-plus" aria-hidden="true"></i> Agregar usuario</button>
+                    <span id="usuarios-count" class="filter-sync-copy"><i></i> 0 usuario(s)</span>
+                  </div>
+                  <div class="table-responsive" style="padding:0 20px 20px">
+                    <table class="usuarios-table" id="usuarios-table">
+                      <thead>
+                        <tr>
+                          <th>Usuario</th>
+                          <th>Correo electrónico</th>
+                          <th>Rol</th>
+                          <th>Estado</th>
+                          <th>Fecha de creación</th>
+                          <th class="ta-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody id="usuarios-tbody"></tbody>
+                    </table>
+                    <div id="usuarios-empty" class="empty-state" hidden>
+                      <div class="empty-illustration"><span class="empty-illustration__back"></span><span class="empty-illustration__front"><i class="ph ph-users" aria-hidden="true"></i></span></div>
+                      <h3>Sin usuarios</h3>
+                      <p>Cuando un usuario acceda por primera vez se registrará aquí automáticamente.</p>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+
           </section>
         </div>
       </main>
@@ -526,7 +904,11 @@
 
   <div id="category-modal" class="confirm-backdrop" role="dialog" aria-labelledby="category-modal-title" hidden><div class="confirm-overlay" id="category-overlay"></div><div class="confirm-card category-card"><div class="confirm-card-head"><div class="confirm-icon confirm-icon--blue"><i class="ph ph-tag" aria-hidden="true"></i></div><div><span class="confirm-eyebrow">Organización</span><h3 id="category-modal-title">Categorías</h3><p>Familias de productos.</p></div></div><div id="category-list" class="category-list"></div><div class="category-add-form"><label for="new-category-name">Nueva</label><div class="category-add-row"><input type="text" id="new-category-name" placeholder="Nombre…"><button type="button" id="add-category-btn-modal" class="btn btn-primary"><i class="ph ph-plus" aria-hidden="true"></i> Agregar</button></div></div><div class="confirm-button-group confirm-button-group--full"><button type="button" id="close-category-modal-btn" class="btn btn-secondary btn-block">Cerrar</button></div></div></div>
 
+  <div id="llave-prompt-dialog" class="confirm-backdrop" role="dialog" aria-labelledby="llave-prompt-title" hidden><div class="confirm-overlay" id="llave-prompt-overlay"></div><div class="confirm-card confirm-card--centered"><div class="confirm-icon confirm-icon--primary"><i class="ph ph-key" aria-hidden="true"></i></div><span class="confirm-eyebrow">Verificación</span><h3 id="llave-prompt-title">Llave de acceso</h3><p id="llave-prompt-message">Introduce la llave generada en Configuración → Llaves.</p><input type="password" class="llave-prompt-input" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="••••••••" maxlength="12" aria-label="Llave de acceso"><div class="llave-prompt-error" hidden>Llave incorrecta. Intenta de nuevo.</div><div class="confirm-button-group"><button type="button" class="btn btn-secondary llave-prompt-cancel">Cancelar</button><button type="button" class="btn btn-primary llave-prompt-ok">Verificar</button></div></div></div>
+
+  <div id="usuario-create-dialog" class="confirm-backdrop" role="dialog" aria-labelledby="usuario-create-title" hidden><div class="confirm-overlay" id="usuario-create-overlay"></div><div class="confirm-card confirm-card--centered"><div class="confirm-icon confirm-icon--primary"><i class="ph ph-user-plus" aria-hidden="true"></i></div><span class="confirm-eyebrow">Configuración</span><h3 id="usuario-create-title">Crear usuario</h3><p>La cuenta se crea en Supabase Auth y su perfil se guarda en la base de datos. La contraseña solo vive en Auth, nunca en la base de datos.</p><form id="usuario-create-form" class="dialog-form"><label for="usuario-create-nombre">Nombre completo<input type="text" id="usuario-create-nombre" required maxlength="80" placeholder="Nombre del usuario"></label><label for="usuario-create-correo">Correo electrónico<input type="email" id="usuario-create-correo" required placeholder="correo@ejemplo.com"></label><label for="usuario-create-password">Contraseña<input type="password" id="usuario-create-password" required minlength="6" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></label><label for="usuario-create-rol">Rol<select id="usuario-create-rol"><option value="editor" selected>Editor — solo ver y editar catálogo</option><option value="admin">Administrador — acceso completo</option></select></label><div class="dialog-error" id="usuario-create-error" hidden></div><div class="confirm-button-group"><button type="button" id="usuario-create-cancel" class="btn btn-secondary">Cancelar</button><button type="submit" id="usuario-create-submit" class="btn btn-primary">Crear usuario</button></div></form></div></div>
+
   <div id="confirm-dialog" class="confirm-backdrop" role="alertdialog" aria-labelledby="confirm-title" hidden><div class="confirm-overlay" id="confirm-overlay"></div><div class="confirm-card confirm-card--centered"><div class="confirm-icon confirm-icon--danger"><i class="ph ph-warning" aria-hidden="true"></i></div><span class="confirm-eyebrow">Confirmación</span><h3 id="confirm-title">¿Confirmar?</h3><p id="confirm-message">Irreversible.</p><div class="confirm-button-group"><button type="button" id="confirm-cancel-btn" class="btn btn-secondary">Cancelar</button><button type="button" id="confirm-ok-btn" class="btn btn-danger">Confirmar</button></div></div></div>
 
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2399cedace1a25e',t:'MTc4NTQ2OTU1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>

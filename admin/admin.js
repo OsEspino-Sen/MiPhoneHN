@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MI PHONE HN — PANEL ADMIN SAAS CON FIREBASE FIRESTORE
+   MI PHONE HN â€” PANEL ADMIN SAAS CON SUPABASE + CLOUDINARY
    ========================================================================== */
 
 import { 
@@ -13,12 +13,134 @@ import {
   getDocs,
   getDoc,
   onSnapshot, 
-  onAuthStateChanged, 
+  onAuthStateChanged,
   signOut,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  syncUserToFirestore
-} from './firebase-config.js';
+  syncUserToSupabase,
+  obtenerSiguienteId,
+  permisosPorRol,
+  query,
+  where,
+  crearUsuarioTemporal,
+  uploadToCloudinary
+} from './supabase-config.js';
+
+
+// Rol y permisos del usuario autenticado (ConfiguraciÃ³n â†’ Usuarios).
+// 'admin' tiene acceso completo; 'editor' solo puede ver y editar el catÃ¡logo.
+let rolUsuarioActual = 'admin';
+let permisosUsuario = null;
+
+function esAdmin() {
+  return rolUsuarioActual === 'admin';
+}
+
+function getPermisos() {
+  if (!permisosUsuario) permisosUsuario = permisosPorRol(rolUsuarioActual);
+  return permisosUsuario;
+}
+
+/* ==========================================================================
+   LLAVES DE ACCESO â€” validaciÃ³n (ConfiguraciÃ³n â†’ Llaves)
+   Las llaves se almacenan con hash SHA-256; nunca en texto plano.
+   ========================================================================== */
+
+async function sha256Hex(texto) {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(texto).trim()));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (err) {
+    return String(texto).trim();
+  }
+}
+
+async function validarLlave(codigo, opciones = {}) {
+  try {
+    const snap = await getDoc(doc(db, 'configuracion', 'llaves-acceso'));
+    if (!snap.exists()) return true; // Bootstrap: sin llaves configuradas aÃºn, acceso libre.
+    const llaves = Array.isArray(snap.data().llaves) ? snap.data().llaves : [];
+    if (llaves.length === 0) return true; // Bootstrap: primera llave se crea sin validaciÃ³n previa.
+    const texto = String(codigo || '').trim().toUpperCase();
+    if (!texto) return false;
+    const hash = await sha256Hex(texto);
+    // La confirmaciÃ³n de acciones sensibles acepta llaves inactivas para
+    // evitar encerrar al administrador tras desactivar la Ãºnica llave.
+    return llaves.some(l => (l.activa !== false || opciones.incluirInactivas) && (l.hash === hash || l.codigo === texto));
+  } catch (err) {
+    console.warn('No se pudo validar la llave:', err.message);
+    return false;
+  }
+}
+
+// Modal de solicitud de llave. Resuelve true si la llave es correcta.
+// opciones.incluirInactivas: permite confirmar acciones con llaves desactivadas.
+let intentosLlave = 0;
+let bloqueoLlaveHasta = 0;
+const MAX_INTENTOS_LLAVE = 5;
+const BLOQUEO_LLAVE_MS = 30000;
+
+function pedirLlave(titulo, mensaje, opciones = {}) {
+  return new Promise((resolve) => {
+    const dlg = document.getElementById('llave-prompt-dialog');
+    if (!dlg) { resolve(false); return; }
+    if (Date.now() >= bloqueoLlaveHasta) intentosLlave = 0;
+    if (Date.now() < bloqueoLlaveHasta) {
+      const segundos = Math.ceil((bloqueoLlaveHasta - Date.now()) / 1000);
+      showAlert(`Demasiados intentos fallidos. Espera ${segundos} s para volver a intentar.`, 'error');
+      resolve(false);
+      return;
+    }
+    const input = dlg.querySelector('.llave-prompt-input');
+    const errorEl = dlg.querySelector('.llave-prompt-error');
+    const okBtn = dlg.querySelector('.llave-prompt-ok');
+    const cancelBtn = dlg.querySelector('.llave-prompt-cancel');
+    const tituloEl = dlg.querySelector('#llave-prompt-title');
+    const msgEl = dlg.querySelector('#llave-prompt-message');
+    if (!input || !errorEl || !okBtn || !cancelBtn || !tituloEl || !msgEl) { resolve(false); return; }
+    tituloEl.textContent = titulo || 'Llave de acceso';
+    msgEl.textContent = mensaje || 'Introduce la llave generada en Configuración → Llaves.';
+    input.value = '';
+    input.disabled = false;
+    errorEl.hidden = true;
+    dlg.hidden = false;
+    setTimeout(() => input.focus(), 50);
+
+    const terminar = (resultado) => {
+      dlg.hidden = true;
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      input.removeEventListener('keydown', onKey);
+      resolve(resultado);
+    };
+    const onOk = async () => {
+      okBtn.disabled = true;
+      const ok = await validarLlave(input.value, opciones);
+      okBtn.disabled = false;
+      if (ok) { intentosLlave = 0; terminar(true); }
+      else {
+        intentosLlave++;
+        if (intentosLlave >= MAX_INTENTOS_LLAVE) {
+          bloqueoLlaveHasta = Date.now() + BLOQUEO_LLAVE_MS;
+          errorEl.textContent = 'Demasiados intentos fallidos. Espera 30 segundos.';
+          errorEl.hidden = false;
+          input.disabled = true;
+          okBtn.disabled = true;
+          setTimeout(() => terminar(false), 2500);
+        } else {
+          errorEl.textContent = `Llave incorrecta. Intenta de nuevo (${MAX_INTENTOS_LLAVE - intentosLlave} intento(s) restante(s)).`;
+          errorEl.hidden = false;
+          input.focus();
+          input.select();
+        }
+      }
+    };
+    const onCancel = () => terminar(false);
+    const onKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); onOk(); } if (e.key === 'Escape') terminar(false); };
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    input.addEventListener('keydown', onKey);
+  });
+}
 
 let categories = [];
 
@@ -31,7 +153,7 @@ let unsubscribeCategories = null;
 
 async function seedDefaultCategories() {
   try {
-    const snap = await getDocs(collection(db, "categories"));
+    const snap = await getDocs(collection(db, "categorias"));
     if (!snap.empty) return;
     const defaults = [
       { id: "iphones", label: "iPhones" },
@@ -40,16 +162,16 @@ async function seedDefaultCategories() {
       { id: "accessories", label: "Accesorios" }
     ];
     for (const cat of defaults) {
-      await setDoc(doc(db, "categories", cat.id), { label: cat.label });
+      await setDoc(doc(db, "categorias", cat.id), { label: cat.label });
     }
-    console.log("Categorías predeterminadas creadas en Firestore.");
+    console.log("CategorÃ­as predeterminadas creadas en Supabase.");
   } catch (err) {
-    console.warn("Error al crear categorías predeterminadas:", err);
+    console.warn("Error al crear categorÃ­as predeterminadas:", err);
   }
 }
 
 function listenToCategories() {
-  const catRef = collection(db, "categories");
+  const catRef = collection(db, "categorias");
   if (unsubscribeCategories) {
     try { unsubscribeCategories(); } catch(e) {}
     unsubscribeCategories = null;
@@ -61,6 +183,9 @@ function listenToCategories() {
       renderCategoryFilter();
       renderFormCategories();
       updateDashboardMetrics();
+      // Actualizar la lista del modal en tiempo real si estÃ¡ abierto.
+      const catModal = document.getElementById("category-modal");
+      if (catModal && !catModal.hidden) renderCategoryList();
     }, async () => {
       await fetchCategoriesFallback();
     });
@@ -71,13 +196,13 @@ function listenToCategories() {
 
 async function fetchCategoriesFallback() {
   try {
-    const snap = await getDocs(collection(db, "categories"));
+    const snap = await getDocs(collection(db, "categorias"));
     categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderCategoryFilter();
     renderFormCategories();
     updateDashboardMetrics();
   } catch (err) {
-    console.error("Error al obtener categorías:", err);
+    console.error("Error al obtener categorÃ­as:", err);
   }
 }
 
@@ -85,7 +210,7 @@ function renderCategoryFilter() {
   const filter = document.getElementById("admin-category-filter");
   if (!filter) return;
   const currentValue = filter.value;
-  filter.innerHTML = '<option value="all">Todas las Categorías</option>';
+  filter.innerHTML = '<option value="all">Todas las CategorÃ­as</option>';
   categories.forEach(cat => {
     const opt = document.createElement("option");
     opt.value = cat.id;
@@ -109,52 +234,110 @@ function renderFormCategories() {
   if (currentValue) formSelect.value = currentValue;
 }
 
+let categoryEditingId = null; // id de la categorÃ­a en ediciÃ³n inline (null = ninguna)
+
 function renderCategoryList() {
-  // FLAT OPS — etiquetas planas profesionales, mono id, conteo de uso
   const list = document.getElementById("category-list");
   if (!list) return;
-  list.innerHTML = '';
+  list.innerHTML = "";
   categories.forEach((cat, index) => {
-    const count = products.filter(p=>p.category===cat.id).length;
+    const count = products.filter(p => p.category === cat.id).length;
     const item = document.createElement("div");
-    item.className = "category-list-item";
-    item.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
-        <span class="category-list-label">${escapeHTML(cat.label)}</span>
-        <span style="font-family:var(--font-mono);font-size:.6875rem;color:var(--ink-3);font-weight:600">${escapeHTML(cat.id)} · ${count} prod</span>
-      </div>
-      <button type="button" class="btn btn-danger btn-sm" data-cat-index="${index}">
-        <i class="ph ph-trash" aria-hidden="true"></i>
-        <span>Eliminar</span>
-      </button>
-    `;
+    item.className = "category-list-item" + (cat.id === categoryEditingId ? " is-editing" : "");
+
+    if (cat.id === categoryEditingId) {
+      // Modo ediciÃ³n inline: reemplaza el prompt nativo del navegador.
+      item.innerHTML = `
+        <div class="category-list-edit">
+          <input type="text" class="category-name-input" value="${escapeHTML(cat.label)}" maxlength="40" aria-label="Nombre de categorÃ­a">
+          <div class="category-list-edit-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-cat-save="${escapeHTML(cat.id)}"><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-cat-cancel title="Cancelar" aria-label="Cancelar"><i class="ph ph-x" aria-hidden="true"></i></button>
+          </div>
+        </div>
+      `;
+    } else {
+      item.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span class="category-list-label">${escapeHTML(cat.label)}</span>
+          <span style="font-family:var(--font-mono);font-size:.6875rem;color:var(--ink-3);font-weight:600">${escapeHTML(cat.id)} Â· ${count} prod</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button type="button" class="btn btn-secondary btn-sm" data-cat-edit="${escapeHTML(cat.id)}" title="Renombrar categorÃ­a">
+            <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+            <span>Editar</span>
+          </button>
+          <button type="button" class="btn btn-danger btn-sm" data-cat-index="${index}">
+            <i class="ph ph-trash" aria-hidden="true"></i>
+            <span>Eliminar</span>
+          </button>
+        </div>
+      `;
+    }
+
     list.appendChild(item);
+
+    const inputEl = item.querySelector(".category-name-input");
+    if (inputEl) {
+      inputEl.focus();
+      inputEl.select();
+      inputEl.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); item.querySelector("[data-cat-save]")?.click(); }
+        else if (ev.key === "Escape") { categoryEditingId = null; renderCategoryList(); }
+      });
+    }
+    item.querySelector("[data-cat-cancel]")?.addEventListener("click", () => { categoryEditingId = null; renderCategoryList(); });
+    item.querySelector("[data-cat-save]")?.addEventListener("click", () => {
+      const name = item.querySelector(".category-name-input")?.value.trim() || "";
+      if (!name) { showAlert("El nombre no puede estar vacÃ­o.", "error"); return; }
+      if (name === cat.label) { categoryEditingId = null; renderCategoryList(); return; }
+      setDoc(doc(db, "categorias", cat.id), { label: name }, { merge: true })
+        .then(() => { categoryEditingId = null; showAlert("CategorÃ­a actualizada correctamente", "success"); })
+        .catch((err) => showAlert("Error al actualizar categorÃ­a: " + err.message, "error"));
+    });
+  });
+  list.querySelectorAll("[data-cat-edit]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      categoryEditingId = btn.dataset.catEdit;
+      renderCategoryList();
+    });
   });
   list.querySelectorAll("[data-cat-index]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const index = parseInt(btn.dataset.catIndex);
       const catId = categories[index].id;
+      const catLabel = categories[index].label;
       const productsUsing = products.filter(p => p.category === catId);
       if (productsUsing.length > 0) {
-        showAlert(`No se puede eliminar "${categories[index].label}": ${productsUsing.length} producto(s) la usan.`, "error");
+        showAlert(`No se puede eliminar "${catLabel}": ${productsUsing.length} producto(s) la usan.`, "error");
         return;
       }
-      try {
-        await deleteDoc(doc(db, "categories", catId));
-      } catch (err) {
-        showAlert("Error al eliminar categoría: " + err.message, "error");
-      }
+      showConfirm(
+        "Eliminar categorÃ­a",
+        `Â¿Seguro que deseas eliminar la categorÃ­a "<strong>${escapeHTML(catLabel)}</strong>"? Esta acciÃ³n no se puede deshacer.`,
+        async () => {
+          try {
+            await deleteDoc(doc(db, "categorias", catId));
+            showAlert("CategorÃ­a eliminada correctamente", "success");
+          } catch (err) {
+            showAlert("Error al eliminar categorÃ­a: " + err.message, "error");
+          }
+        },
+        { tone: "danger", okLabel: "SÃ­, eliminar" }
+      );
     });
   });
 }
 
 function openCategoryModal() {
+  categoryEditingId = null;
   renderCategoryList();
   const catModal = document.getElementById("category-modal");
   if (catModal) catModal.hidden = false;
 }
 
 function closeCategoryModal() {
+  categoryEditingId = null;
   const catModal = document.getElementById("category-modal");
   if (catModal) catModal.hidden = true;
 }
@@ -162,14 +345,14 @@ function closeCategoryModal() {
 let products = [];
 let editingProductId = null;
 let confirmCallback = null;
-let unsubscribeFirestore = null;
+let unsubscribeRealtime = null;
 
 /* Estado temporal del editor multimedia. No se persiste hasta guardar. */
 let existingImageUrls = [];
 let pendingImageFiles = [];
 let pendingImagesFirst = false;
 let previewObjectUrls = [];
-/* Detección de cambios sin guardar del Drawer de producto. */
+/* DetecciÃ³n de cambios sin guardar del Drawer de producto. */
 let formSnapshot = null;
 let formIsDirty = false;
 const migratedProductIds = new Set();
@@ -214,7 +397,7 @@ const productImageFileInput = document.getElementById("product-image-file");
 const productImageUrlsInput = document.getElementById("product-image");
 const productImagesPreview = document.getElementById("product-images-preview");
 const productImagesCount = document.getElementById("product-images-count");
-// Drawer de producto: elementos del rediseño
+// Drawer de producto: elementos del rediseÃ±o
 const drawerModeChip = document.getElementById("drawer-mode-chip");
 const drawerModeCopy = document.getElementById("drawer-mode-copy");
 const drawerUpdateNotice = document.getElementById("drawer-update-notice");
@@ -234,22 +417,44 @@ function init() {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        const userData = userDoc.data();
-        if (!userData || userData.role !== 'admin') {
+        const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+        let userData = userDoc.exists() ? userDoc.data() : null;
+        // Fallback: si el usuario existe en Auth pero no en la colecciÃ³n usuarios,
+        // sincronizarlo para conservar el acceso de cuentas legadas.
+        if (!userData) {
+          await syncUserToSupabase(user);
+          const usuariosCol = collection(db, 'usuarios');
+          const match = await getDocs(query(usuariosCol, where('uid', '==', user.uid)));
+          if (match.empty) {
+            await signOut(auth);
+            window.location.href = 'login.html';
+            return;
+          }
+          userData = match.docs[0].data();
+        }
+        if (!userData || !['admin', 'editor'].includes(userData.rol || userData.role) || userData.activo === false) {
           await signOut(auth);
           window.location.href = 'login.html';
           return;
         }
+
+        // Estado de rol para permisos de interfaz (admin vs editor).
+        rolUsuarioActual = userData.rol || userData.role || 'admin';
+        permisosUsuario = null;
+        document.body.dataset.rol = rolUsuarioActual;
+
+        adminApp.hidden = false;
+        listenToProducts();
+        listenToCategories();
+        // MigraciÃ³n de estructura ya realizada (IDs secuenciales producto-N / Usuario-Admin-N).
+        // MigraciÃ³n desactivada (ya migrado a Postgres).
+        // Defensa de duplicados desactivada (Supabase trigger lo maneja)
+        // repararUsuariosDuplicados();
       } catch (err) {
         await signOut(auth);
         window.location.href = 'login.html';
         return;
       }
-
-      adminApp.hidden = false;
-      listenToProducts();
-      listenToCategories();
 
       const sidebarUserName = document.getElementById("sidebar-user-name");
       if (sidebarUserName) {
@@ -257,9 +462,9 @@ function init() {
       }
     } else {
       window.location.href = 'login.html';
-      if (unsubscribeFirestore) {
-        unsubscribeFirestore();
-        unsubscribeFirestore = null;
+      if (unsubscribeRealtime) {
+        unsubscribeRealtime();
+        unsubscribeRealtime = null;
       }
       if (unsubscribeCategories) {
         unsubscribeCategories();
@@ -312,7 +517,7 @@ function init() {
     closeConfirm();
   });
 
-  // Diálogo de cambios sin guardar (pertenece al Drawer de producto)
+  // DiÃ¡logo de cambios sin guardar (pertenece al Drawer de producto)
   unsavedStayBtn?.addEventListener("click", closeUnsavedDialog);
   unsavedOverlay?.addEventListener("click", closeUnsavedDialog);
   unsavedDiscardBtn?.addEventListener("click", () => {
@@ -321,7 +526,7 @@ function init() {
     action?.();
   });
 
-  // Protección al abandonar la página con el Drawer abierto y cambios pendientes.
+  // ProtecciÃ³n al abandonar la pÃ¡gina con el Drawer abierto y cambios pendientes.
   window.addEventListener("beforeunload", (event) => {
     if (productModal && !productModal.hidden && isProductFormDirty()) {
       event.preventDefault();
@@ -353,7 +558,7 @@ function init() {
     });
   }
 
-  // Galería múltiple: selector, drag & drop, validación y vista previa.
+  // GalerÃ­a mÃºltiple: selector, drag & drop, validaciÃ³n y vista previa.
   if (fileDropzone && productImageFileInput) {
     fileDropzone.addEventListener("dragover", (event) => {
       event.preventDefault();
@@ -393,7 +598,7 @@ function init() {
     if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
       storeLink.href = "http://localhost:5173/";
     } else {
-      storeLink.href = "/";
+      storeLink.href = "https://mi-phone-hn.web.app/";
     }
   }
 
@@ -413,19 +618,19 @@ function init() {
     if (!name) return;
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     if (!id) {
-      showAlert("Ingresa un nombre válido para la categoría.", "error");
+      showAlert("Ingresa un nombre vÃ¡lido para la categorÃ­a.", "error");
       return;
     }
     if (categories.some(c => c.id === id)) {
-      showAlert(`La categoría "${name}" ya existe.`, "error");
+      showAlert(`La categorÃ­a "${name}" ya existe.`, "error");
       return;
     }
     try {
-      await setDoc(doc(db, "categories", id), { label: name });
+      await setDoc(doc(db, "categorias", id), { label: name });
       if (newCategoryName) newCategoryName.value = "";
-      showAlert(`Categoría "${name}" creada.`, "success");
+      showAlert("CategorÃ­a creada correctamente", "success");
     } catch (err) {
-      showAlert("Error al crear categoría: " + err.message, "error");
+      showAlert("Error al crear categorÃ­a: " + err.message, "error");
     }
   });
 
@@ -447,14 +652,14 @@ function init() {
     }
   });
 }
-/* Sesión y Autenticación */
+/* SesiÃ³n y AutenticaciÃ³n */
 
 async function handleLogout() {
   try {
     await signOut(auth);
     window.location.href = 'login.html';
   } catch (err) {
-    showAlert("Error al cerrar sesión: " + err.message, "error");
+    showAlert("Error al cerrar sesiÃ³n: " + err.message, "error");
   }
 }
 
@@ -466,11 +671,11 @@ function showLogin() {
   window.location.href = 'login.html';
 }
 
-/* Firestore: Lectura en Tiempo Real (R) & Auto-Importación Garantizada */
+/* Supabase: Lectura en Tiempo Real (R) & Auto-ImportaciÃ³n Garantizada */
 
 const SEED_PRODUCTS = [
   {
-    "id": "1",
+    "id": "iphone-15-pro-max",
     "title": "iPhone 15 Pro Max",
     "brand": "Apple",
     "price": 29500,
@@ -479,11 +684,11 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-15-pro-max-1.jpg",
-    "description": "iPhone premium con titanio, chip A17 Pro y cámara avanzada.",
+    "description": "iPhone premium con titanio, chip A17 Pro y cÃ¡mara avanzada.",
     "specs": [
       "Pantalla Super Retina XDR de 6.7 pulgadas",
       "Chip A17 Pro",
-      "Cámara principal de 48 MP",
+      "CÃ¡mara principal de 48 MP",
       "USB-C",
       "Face ID"
     ],
@@ -501,7 +706,7 @@ const SEED_PRODUCTS = [
     }
   },
   {
-    "id": "2",
+    "id": "iphone-13-pro-max",
     "title": "iPhone 13 Pro",
     "brand": "Apple",
     "price": 15900,
@@ -515,7 +720,7 @@ const SEED_PRODUCTS = [
       "Pantalla Super Retina XDR de 6.1 pulgadas",
       "ProMotion 120Hz",
       "Chip A15 Bionic",
-      "Triple cámara Pro",
+      "Triple cÃ¡mara Pro",
       "Face ID"
     ],
     "variants": {
@@ -531,7 +736,7 @@ const SEED_PRODUCTS = [
     }
   },
   {
-    "id": "3",
+    "id": "iphone-14",
     "title": "iPhone 14",
     "brand": "Apple",
     "price": 18500,
@@ -540,11 +745,11 @@ const SEED_PRODUCTS = [
     "condition": "seminuevo",
     "badge": "Seminuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-14-1.jpg",
-    "description": "iPhone moderno con excelente cámara, batería y rendimiento.",
+    "description": "iPhone moderno con excelente cÃ¡mara, baterÃ­a y rendimiento.",
     "specs": [
       "Pantalla OLED de 6.1 pulgadas",
       "Chip A15 Bionic",
-      "Cámara dual de 12 MP",
+      "CÃ¡mara dual de 12 MP",
       "Face ID",
       "Carga MagSafe"
     ],
@@ -561,7 +766,7 @@ const SEED_PRODUCTS = [
     }
   },
   {
-    "id": "4",
+    "id": "iphone-12",
     "title": "iPhone 12",
     "brand": "Apple",
     "price": 10500,
@@ -570,11 +775,11 @@ const SEED_PRODUCTS = [
     "condition": "seminuevo",
     "badge": "Seminuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-12-1.jpg",
-    "description": "Diseño clásico con bordes planos, pantalla OLED y conectividad 5G.",
+    "description": "DiseÃ±o clÃ¡sico con bordes planos, pantalla OLED y conectividad 5G.",
     "specs": [
       "Pantalla Super Retina XDR",
       "Chip A14 Bionic",
-      "Cámara dual",
+      "CÃ¡mara dual",
       "5G",
       "Face ID"
     ],
@@ -591,7 +796,7 @@ const SEED_PRODUCTS = [
     }
   },
   {
-    "id": "5",
+    "id": "samsung-galaxy-s24-ultra",
     "title": "Samsung Galaxy S24 Ultra",
     "brand": "Samsung",
     "price": 27900,
@@ -600,13 +805,13 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/samsung/samsung-galaxy-s24-ultra-5g-0.jpg",
-    "description": "Samsung premium con Galaxy AI, cámara de 200 MP y S Pen.",
+    "description": "Samsung premium con Galaxy AI, cÃ¡mara de 200 MP y S Pen.",
     "specs": [
       "Pantalla Dynamic AMOLED 2X",
       "Snapdragon 8 Gen 3",
-      "Cámara de 200 MP",
+      "CÃ¡mara de 200 MP",
       "S Pen integrado",
-      "Batería de 5000 mAh"
+      "BaterÃ­a de 5000 mAh"
     ],
     "variants": {
       "colors": [
@@ -621,7 +826,7 @@ const SEED_PRODUCTS = [
     }
   },
   {
-    "id": "6",
+    "id": "samsung-galaxy-s23-ultra",
     "title": "Samsung Galaxy S23 Ultra",
     "brand": "Samsung",
     "price": 22500,
@@ -634,9 +839,9 @@ const SEED_PRODUCTS = [
     "specs": [
       "Pantalla AMOLED de 6.8 pulgadas",
       "Snapdragon 8 Gen 2",
-      "Cámara de 200 MP",
+      "CÃ¡mara de 200 MP",
       "S Pen",
-      "Carga rápida"
+      "Carga rÃ¡pida"
     ],
     "variants": {
       "colors": [
@@ -650,7 +855,7 @@ const SEED_PRODUCTS = [
     }
   },
   {
-    "id": "7",
+    "id": "samsung-galaxy-a55-5g",
     "title": "Samsung Galaxy A55 5G",
     "brand": "Samsung",
     "price": 9500,
@@ -659,11 +864,11 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/samsung/samsung-galaxy-a55-1.jpg",
-    "description": "Excelente opción gama media con pantalla AMOLED y 5G.",
+    "description": "Excelente opciÃ³n gama media con pantalla AMOLED y 5G.",
     "specs": [
       "Pantalla Super AMOLED 120Hz",
-      "Cámara principal de 50 MP",
-      "Batería de 5000 mAh",
+      "CÃ¡mara principal de 50 MP",
+      "BaterÃ­a de 5000 mAh",
       "5G",
       "Resistencia IP67"
     ],
@@ -679,8 +884,8 @@ const SEED_PRODUCTS = [
     }
   },
   {
-    "id": "8",
-    "title": "iPad Air 5ta Generación",
+    "id": "ipad-air-5ta-generacion",
+    "title": "iPad Air 5ta GeneraciÃ³n",
     "brand": "Apple",
     "price": 12900,
     "oldPrice": 14500,
@@ -688,19 +893,19 @@ const SEED_PRODUCTS = [
     "condition": "seminuevo",
     "badge": "Seminuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/apple/apple-ipad-air-2022-1.jpg",
-    "description": "iPad con chip M1, ideal para estudio, diseño y productividad.",
+    "description": "iPad con chip M1, ideal para estudio, diseÃ±o y productividad.",
     "specs": [
       "Pantalla Liquid Retina de 10.9 pulgadas",
       "Chip M1",
       "Compatible con Apple Pencil",
       "USB-C",
-      "Cámara frontal ultra gran angular"
+      "CÃ¡mara frontal ultra gran angular"
     ],
     "variants": {
       "colors": [
         { "name": "Gris Espacial", "value": "#4e4f50" },
         { "name": "Azul", "value": "#a7c1d6" },
-        { "name": "Púrpura", "value": "#d7c3eb" }
+        { "name": "PÃºrpura", "value": "#d7c3eb" }
       ],
       "storage": [
         { "name": "64GB", "price": 12900, "oldPrice": 14500 },
@@ -709,8 +914,8 @@ const SEED_PRODUCTS = [
     }
   },
   {
-    "id": "9",
-    "title": "AirPods Pro 2da Generación",
+    "id": "airpods-pro-2da",
+    "title": "AirPods Pro 2da GeneraciÃ³n",
     "brand": "Apple",
     "price": 5900,
     "oldPrice": 6800,
@@ -718,25 +923,25 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR8QiKJZ_WGAAnfJ1jRV5X-jGrpCnHykAZ_yITbM8nAcw&s=10",
-    "description": "Audífonos premium con cancelación activa de ruido y audio espacial.",
+    "description": "AudÃ­fonos premium con cancelaciÃ³n activa de ruido y audio espacial.",
     "specs": [
       "Chip H2",
-      "Cancelación activa de ruido",
+      "CancelaciÃ³n activa de ruido",
       "Audio espacial",
       "Estuche MagSafe",
-      "Hasta 6 horas de reproducción"
+      "Hasta 6 horas de reproducciÃ³n"
     ],
     "variants": {
       "colors": [
         { "name": "Blanco", "value": "#ffffff" }
       ],
       "storage": [
-        { "name": "Estándar", "price": 5900, "oldPrice": 6800 }
+        { "name": "EstÃ¡ndar", "price": 5900, "oldPrice": 6800 }
       ]
     }
   },
   {
-    "id": "10",
+    "id": "cargador-apple-usb-c-40w",
     "title": "Cargador Apple USB-C 20W",
     "brand": "Apple",
     "price": 750,
@@ -745,20 +950,20 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MHJA3?wid=572&hei=572&fmt=jpeg&qlt=95&.v=1603730167000",
-    "description": "Adaptador de carga rápida USB-C compatible con iPhone y iPad.",
+    "description": "Adaptador de carga rÃ¡pida USB-C compatible con iPhone y iPad.",
     "specs": [
-      "Carga rápida de 20W",
+      "Carga rÃ¡pida de 20W",
       "Puerto USB-C",
       "Compatible con iPhone",
       "Compatible con iPad",
-      "Diseño compacto"
+      "DiseÃ±o compacto"
     ],
     "variants": {
       "colors": [
         { "name": "Blanco", "value": "#ffffff" }
       ],
       "storage": [
-        { "name": "Estándar", "price": 750, "oldPrice": 950 }
+        { "name": "EstÃ¡ndar", "price": 750, "oldPrice": 950 }
       ]
     }
   }
@@ -766,23 +971,66 @@ const SEED_PRODUCTS = [
 
 let isImportingProducts = false;
 
+
+// ReparaciÃ³n idempotente: elimina documentos de usuarios duplicados por uid de
+// Auth. Corre en cada carga del panel; es no-op cuando no hay duplicados.
+async function repararUsuariosDuplicados() {
+  try {
+    const snap = await getDocs(collection(db, 'usuarios'));
+    const grupos = new Map();
+    for (const d of snap.docs) {
+      const uid = d.data().uid;
+      if (!uid) continue;
+      if (!grupos.has(uid)) grupos.set(uid, []);
+      grupos.get(uid).push(d);
+    }
+    let eliminados = 0;
+    for (const [, docs] of grupos) {
+      if (docs.length < 2) continue;
+      docs.sort((a, b) => {
+        const n = Object.keys(b.data()).length - Object.keys(a.data()).length;
+        if (n !== 0) return n;
+        return String(a.data().createdAt || a.data().fechaCreacion || '').localeCompare(String(b.data().createdAt || b.data().fechaCreacion || ''));
+      });
+      for (let i = 1; i < docs.length; i++) {
+        await deleteDoc(docs[i].ref);
+        eliminados++;
+      }
+      console.log(`ReparaciÃ³n: duplicados de uid ${String(docs[0].data().uid).slice(0, 8)}â€¦ â†’ se conserva ${docs[0].id}.`);
+    }
+    if (eliminados > 0) console.log(`ReparaciÃ³n de usuarios completada: ${eliminados} duplicado(s) eliminado(s).`);
+  } catch (err) {
+    console.warn('ReparaciÃ³n de usuarios duplicados fallÃ³ (se reintentarÃ¡):', err.message);
+  }
+}
+
+
 async function autoImportProductsJson() {
   if (isImportingProducts) return;
   isImportingProducts = true;
 
   try {
+    // Solo sembrar productos de demostraciÃ³n si la colecciÃ³n estÃ¡ completamente vacÃ­a.
+    // Esto evita recrear documentos con IDs antiguos tras una migraciÃ³n a slugs.
+    const existingSnap = await getDocs(collection(db, "productos"));
+    if (!existingSnap.empty) {
+      isImportingProducts = false;
+      return;
+    }
+
     let importedCount = 0;
     for (const item of SEED_PRODUCTS) {
       if (!item || item.id === undefined) continue;
-      const docId = String(item.id);
-      const docRef = doc(db, "products", docId);
+      // Estructura de productos: IDs secuenciales (producto-N), nunca IDs automÃ¡ticos.
+      const nuevoId = await obtenerSiguienteId("productos", "contador_productos", "producto-");
+      const docRef = doc(db, "productos", nuevoId);
 
       try {
         const docSnap = await getDoc(docRef);
-        // Crear en Firestore únicamente si el documento no existe para evitar duplicados y no borrar productos modificados
+        // Crear en Supabase Ãºnicamente si el documento no existe para evitar duplicados y no borrar productos modificados
         if (!docSnap.exists()) {
           const productPayload = {
-            id: docId,
+            id: nuevoId,
             title: item.title || "",
             brand: item.brand || "Apple",
             price: Number(item.price) || 0,
@@ -806,16 +1054,16 @@ async function autoImportProductsJson() {
           importedCount++;
         }
       } catch (docErr) {
-        console.warn(`No se pudo verificar o importar el producto ID ${docId}:`, docErr.message);
+        console.warn(`No se pudo verificar o importar el producto ID ${nuevoId}:`, docErr.message);
       }
     }
 
     if (importedCount > 0) {
-      console.log(`${importedCount} productos sincronizados automáticamente hacia Cloud Firestore.`);
-      showAlert(`Se importaron ${importedCount} productos a Firestore.`, "success");
+      console.log(`${importedCount} productos sincronizados automÃ¡ticamente hacia Supabase.`);
+      showAlert(`Se importaron ${importedCount} productos a Supabase.`, "success");
     }
   } catch (err) {
-    console.warn("Error durante la sincronización inicial de productos con Firestore:", err.message);
+    console.warn("Error durante la sincronizaciÃ³n inicial de productos con Supabase:", err.message);
   } finally {
     isImportingProducts = false;
   }
@@ -823,18 +1071,18 @@ async function autoImportProductsJson() {
 
 function listenToProducts() {
   setLoading(true);
-  const productsRef = collection(db, "products");
+  const productsRef = collection(db, "productos");
 
-  if (unsubscribeFirestore) {
-    try { unsubscribeFirestore(); } catch(e) {}
-    unsubscribeFirestore = null;
+  if (unsubscribeRealtime) {
+    try { unsubscribeRealtime(); } catch(e) {}
+    unsubscribeRealtime = null;
   }
 
-  // Sincronizar automáticamente productos.json si la colección no contiene los productos iniciales
+  // Sincronizar automÃ¡ticamente productos.json si la colecciÃ³n no contiene los productos iniciales
   autoImportProductsJson();
 
   try {
-    unsubscribeFirestore = onSnapshot(productsRef, (snapshot) => {
+    unsubscribeRealtime = onSnapshot(productsRef, (snapshot) => {
       products = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data()
@@ -855,7 +1103,7 @@ function listenToProducts() {
 
 async function fetchProductsFallback() {
   try {
-    const productsRef = collection(db, "products");
+    const productsRef = collection(db, "productos");
     const snapshot = await getDocs(productsRef);
     products = snapshot.docs.map((docSnap) => ({
       id: docSnap.id,
@@ -865,8 +1113,8 @@ async function fetchProductsFallback() {
     renderProductsTable();
     updateDashboardMetrics();
   } catch (err) {
-    console.error("Error al obtener productos vía fallback:", err);
-    showAlert("Conexión bloqueada por el navegador.", "error");
+    console.error("Error al obtener productos vÃ­a fallback:", err);
+    showAlert("ConexiÃ³n bloqueada por el navegador.", "error");
   } finally {
     setLoading(false);
   }
@@ -911,12 +1159,12 @@ function getFilteredProducts() {
 }
 
 function renderProductsTable() {
-  // FLAT OPS v7 — Rework total de renderizado: colores planos, sin círculos infantiles, jerarquía editorial
+  // FLAT OPS v7 â€” Rework total de renderizado: colores planos, sin cÃ­rculos infantiles, jerarquÃ­a editorial
   const filtered = getFilteredProducts();
 
   const countChip = document.getElementById("table-count-chip");
   if (countChip) {
-    countChip.textContent = `${filtered.length} ítems`;
+    countChip.textContent = `${filtered.length} Ã­tems`;
   }
 
   productsTableBody.innerHTML = "";
@@ -1003,7 +1251,7 @@ function getBasePrice(product) {
 /* Modal / Slide-Over Drawer de producto */
 
 function openProductModal(productId) {
-  // Si el Drawer ya está abierto con cambios sin guardar, pedir confirmación
+  // Si el Drawer ya estÃ¡ abierto con cambios sin guardar, pedir confirmaciÃ³n
   // antes de cambiar de producto.
   if (productModal && !productModal.hidden && isProductFormDirty()) {
     openUnsavedDialog(() => {
@@ -1019,7 +1267,7 @@ function openProductModal(productId) {
 
   resetMediaEditor();
   const dropzoneText = fileDropzone?.querySelector(".dropzone-text");
-  if (dropzoneText) dropzoneText.textContent = "Arrastra tus imágenes aquí o haz clic para explorar";
+  if (dropzoneText) dropzoneText.textContent = "Arrastra tus imÃ¡genes aquÃ­ o haz clic para explorar";
 
   const isEditing = productId !== null;
 
@@ -1034,17 +1282,17 @@ function openProductModal(productId) {
     fillProductForm(product);
   }
 
-  // Estados visuales del rediseño: chip de modo, aviso y zona de riesgo.
+  // Estados visuales del rediseÃ±o: chip de modo, aviso y zona de riesgo.
   deleteProductBtn.hidden = !isEditing;
   if (drawerDangerZone) drawerDangerZone.hidden = !isEditing;
   if (drawerUpdateNotice) drawerUpdateNotice.hidden = !isEditing;
   if (drawerModeChip) {
-    drawerModeChip.textContent = isEditing ? "Edición" : "Nuevo";
+    drawerModeChip.textContent = isEditing ? "EdiciÃ³n" : "Nuevo";
     drawerModeChip.classList.toggle("is-editing", isEditing);
   }
   if (drawerModeCopy) {
     drawerModeCopy.textContent = isEditing
-      ? "Los cambios reemplazarán la información publicada"
+      ? "Los cambios reemplazarÃ¡n la informaciÃ³n publicada"
       : "Completa las secciones y guarda para publicar";
   }
 
@@ -1059,7 +1307,7 @@ function openProductModal(productId) {
   captureFormBaseline();
 }
 
-/* Cierre con protección de cambios sin guardar */
+/* Cierre con protecciÃ³n de cambios sin guardar */
 function closeProductModal() {
   if (isProductFormDirty()) {
     openUnsavedDialog(forceCloseProductModal);
@@ -1078,7 +1326,7 @@ function forceCloseProductModal() {
   clearPreviewObjectUrls();
 }
 
-/* ---- Detección de cambios sin guardar (solo Drawer de producto) ---- */
+/* ---- DetecciÃ³n de cambios sin guardar (solo Drawer de producto) ---- */
 
 function computeFormSnapshot() {
   if (!productForm) return "";
@@ -1090,26 +1338,26 @@ function computeFormSnapshot() {
       parts.push(document.getElementById(id)?.value ?? "");
     });
 
-  parts.push([...(includesList?.querySelectorAll(".include-input") || [])].map((i) => i.value).join("¦"));
-  parts.push([...(specsList?.querySelectorAll(".spec-input") || [])].map((i) => i.value).join("¦"));
+  parts.push([...(includesList?.querySelectorAll(".include-input") || [])].map((i) => i.value).join("Â¦"));
+  parts.push([...(specsList?.querySelectorAll(".spec-input") || [])].map((i) => i.value).join("Â¦"));
   parts.push([...(colorsList?.querySelectorAll(".color-row") || [])].map((row) => [
     row.querySelector(".color-name")?.value,
     row.querySelector(".color-hex")?.value,
     row.querySelector(".color-rgb")?.value,
     row.querySelector(".color-hsl")?.value,
     row.querySelector(".color-oklch")?.value
-  ].join("·")).join("¦"));
+  ].join("Â·")).join("Â¦"));
   parts.push([...(storageList?.querySelectorAll(".dynamic-row") || [])].map((row) => [
     row.querySelector(".storage-name")?.value,
     row.querySelector(".storage-old-price")?.value,
     row.querySelector(".storage-price")?.value,
     row.querySelector(".storage-stock")?.value
-  ].join("·")).join("¦"));
+  ].join("Â·")).join("Â¦"));
 
-  parts.push(existingImageUrls.join("¦"));
+  parts.push(existingImageUrls.join("Â¦"));
   parts.push(String(pendingImageFiles.length));
 
-  return parts.join("‖");
+  return parts.join("?");
 }
 
 function captureFormBaseline() {
@@ -1127,7 +1375,7 @@ let unsavedDialogAction = null;
 
 function openUnsavedDialog(onDiscard) {
   if (!unsavedDialog) {
-    // Respaldo defensivo: sin diálogo disponible, no bloquear al usuario.
+    // Respaldo defensivo: sin diÃ¡logo disponible, no bloquear al usuario.
     onDiscard?.();
     return;
   }
@@ -1140,7 +1388,7 @@ function closeUnsavedDialog() {
   unsavedDialogAction = null;
 }
 
-/* ---- Validación visual por campo (solo Drawer de producto) ---- */
+/* ---- ValidaciÃ³n visual por campo (solo Drawer de producto) ---- */
 
 function setFieldError(targetId, message) {
   const slot = productForm?.querySelector(`[data-error-for="${targetId}"]`);
@@ -1252,7 +1500,7 @@ function addIncludeRow(value = "") {
   const row = document.createElement("div");
   row.className = "dynamic-row include-row";
   row.innerHTML = `
-    <input type="text" class="include-input" value="${escapeHTML(value)}" placeholder="Cable USB-C original, cargador 25W…" aria-label="Elemento incluido">
+    <input type="text" class="include-input" value="${escapeHTML(value)}" placeholder="Cable USB-C original, cargador 25Wâ€¦" aria-label="Elemento incluido">
     <div class="include-order-actions" aria-label="Cambiar orden">
       <button type="button" class="move-row-btn" data-move="up" aria-label="Mover hacia arriba" title="Mover hacia arriba"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
       <button type="button" class="move-row-btn" data-move="down" aria-label="Mover hacia abajo" title="Mover hacia abajo"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
@@ -1286,7 +1534,7 @@ function addSpecRow(value = "") {
   const row = document.createElement("div");
   row.className = "dynamic-row";
   row.innerHTML = `
-    <input type="text" class="spec-input" value="${escapeHTML(value)}" placeholder="Chip A17 Pro, pantalla 6.7” OLED 120 Hz…">
+    <input type="text" class="spec-input" value="${escapeHTML(value)}" placeholder="Chip A17 Pro, pantalla 6.7â€ OLED 120 Hzâ€¦">
     <button type="button" class="remove-row-btn">Quitar</button>
   `;
   row.querySelector(".remove-row-btn")?.addEventListener("click", () => row.remove());
@@ -1366,7 +1614,7 @@ function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
     <div class="color-row-summary">
       <label class="variant-field">
         <span>Nombre del color</span>
-        <input type="text" class="color-name" value="${escapeHTML(color.name)}" placeholder="Titanio natural, Negro fantasma…">
+        <input type="text" class="color-name" value="${escapeHTML(color.name)}" placeholder="Titanio natural, Negro fantasmaâ€¦">
       </label>
       <div class="color-primary-control">
         <span class="compact-field-label">Color y Hex</span>
@@ -1380,8 +1628,8 @@ function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
     <details class="color-advanced">
       <summary>
         <i class="ph ph-sliders-horizontal" aria-hidden="true"></i>
-        Más información del color
-        <span class="color-advanced-hint">RGB · HSL · OKLCH</span>
+        MÃ¡s informaciÃ³n del color
+        <span class="color-advanced-hint">RGB Â· HSL Â· OKLCH</span>
         <i class="ph ph-caret-down" aria-hidden="true"></i>
       </summary>
       <div class="color-advanced-grid">
@@ -1448,7 +1696,7 @@ function addStorageRow(name = "128GB", price = 0, oldPrice = 0, stock = null) {
   storageList.appendChild(row);
 }
 
-/* Multimedia, compatibilidad y normalización */
+/* Multimedia, compatibilidad y normalizaciÃ³n */
 
 function uniqueImageUrls(urls) {
   return [...new Set((Array.isArray(urls) ? urls : [])
@@ -1517,13 +1765,13 @@ function addPendingImageFiles(fileList) {
   });
 
   if (rejected > 0) {
-    showAlert(`Se omitieron ${rejected} archivo(s). Usa imágenes válidas de hasta 8 MB y un máximo de ${MAX_PRODUCT_IMAGES}.`, "error");
+    showAlert(`Se omitieron ${rejected} archivo(s). Usa imÃ¡genes vÃ¡lidas de hasta 8 MB y un mÃ¡ximo de ${MAX_PRODUCT_IMAGES}.`, "error");
   }
 
   const textLabel = fileDropzone?.querySelector(".dropzone-text");
   if (textLabel) {
     const total = existingImageUrls.length + pendingImageFiles.length;
-    textLabel.textContent = `${total} ${total === 1 ? "imagen lista" : "imágenes listas"} para la galería`;
+    textLabel.textContent = `${total} ${total === 1 ? "imagen lista" : "imÃ¡genes listas"} para la galerÃ­a`;
   }
 
   renderProductImagesPreview();
@@ -1536,13 +1784,13 @@ function renderProductImagesPreview() {
 
   const total = existingImageUrls.length + pendingImageFiles.length;
   if (productImagesCount) {
-    productImagesCount.textContent = `${total} ${total === 1 ? "imagen" : "imágenes"}`;
+    productImagesCount.textContent = `${total} ${total === 1 ? "imagen" : "imÃ¡genes"}`;
   }
 
   if (total === 0) {
     pendingImagesFirst = false;
     productImagesPreview.innerHTML = `
-      <div class="media-preview-empty"><i class="ph ph-images" aria-hidden="true"></i> Aún no hay imágenes seleccionadas.</div>
+      <div class="media-preview-empty"><i class="ph ph-images" aria-hidden="true"></i> AÃºn no hay imÃ¡genes seleccionadas.</div>
     `;
     return;
   }
@@ -1624,13 +1872,14 @@ async function uploadProductImages(files, submitBtn) {
 
   for (let index = 0; index < files.length; index += 1) {
     const file = files[index];
-    if (submitBtn) setButtonLabel(submitBtn, `Comprimiendo imagen ${index + 1} de ${files.length}...`, "spinner-gap");
+    if (submitBtn) setButtonLabel(submitBtn, `Subiendo imagen ${index + 1} de ${files.length} a Cloudinary...`, "spinner-gap");
 
     try {
-      urls.push(await compressAndReadImage(file, 640, 0.62));
+      const finalUrl = await uploadToCloudinary(file);
+      urls.push(finalUrl);
     } catch (err) {
-      console.error(`Error al procesar imagen ${file.name}:`, err);
-      throw new Error(`No se pudo procesar la imagen ${file.name}`);
+      console.error(`Error al subir imagen ${file.name} a Cloudinary:`, err);
+      throw new Error(`No se pudo subir la imagen ${file.name} a Cloudinary`);
     }
   }
 
@@ -1646,30 +1895,30 @@ async function migrateLegacyProductImages(items) {
     const productId = String(product.id);
     migratedProductIds.add(productId);
     try {
-      await setDoc(doc(db, "products", productId), {
+      await setDoc(doc(db, "productos", productId), {
         images: [String(product.image)],
         updatedAt: new Date().toISOString()
       }, { merge: true });
     } catch (error) {
       migratedProductIds.delete(productId);
-      console.warn(`No se pudo migrar la galería del producto ${productId}:`, error);
+      console.warn(`No se pudo migrar la galerÃ­a del producto ${productId}:`, error);
     }
   }
 }
 
-/* Firestore: Crear, Editar, Eliminar */
+/* Supabase: Crear, Editar, Eliminar */
 
 async function handleProductSubmit(event) {
   event.preventDefault();
 
-  // Al actualizar un producto publicado, pedir confirmación visual elegante
-  // antes de reemplazar la información actual.
+  // Al actualizar un producto publicado, pedir confirmaciÃ³n visual elegante
+  // antes de reemplazar la informaciÃ³n actual.
   if (editingProductId) {
     showConfirm(
       "Actualizar producto",
-      "Los cambios reemplazarán la información actual del producto publicado en la tienda.",
+      "Los cambios reemplazarÃ¡n la informaciÃ³n actual del producto publicado en la tienda.",
       () => submitProductForm(),
-      { tone: "primary", okLabel: "Sí, actualizar" }
+      { tone: "primary", okLabel: "SÃ­, actualizar" }
     );
     return;
   }
@@ -1694,13 +1943,13 @@ async function submitProductForm() {
     const brand = document.getElementById("product-brand").value.trim();
     const category = document.getElementById("product-category").value;
     const condition = document.getElementById("product-condition").value;
-    // La etiqueta se deriva de la condición (el campo manual fue retirado del formulario).
+    // La etiqueta se deriva de la condiciÃ³n (el campo manual fue retirado del formulario).
     const badge = condition === "nuevo" ? "Nuevo" : "Seminuevo";
     const batteryHealth = normalizeBatteryHealth(document.getElementById("product-battery-health").value);
     const description = document.getElementById("product-description").value.trim();
     const directImageUrls = parseImageUrls(document.getElementById("product-image").value).slice(0, MAX_PRODUCT_IMAGES);
 
-    // Validación visual por campo, con desplazamiento al primer error.
+    // ValidaciÃ³n visual por campo, con desplazamiento al primer error.
     let firstInvalidId = null;
     if (!title) {
       setFieldError("product-title", "Escribe el nombre comercial del producto.");
@@ -1716,7 +1965,7 @@ async function submitProductForm() {
       throw new Error("Revisa los campos marcados para continuar.");
     }
 
-    // Subida múltiple. Las URLs ya guardadas se conservan y los archivos nuevos
+    // Subida mÃºltiple. Las URLs ya guardadas se conservan y los archivos nuevos
     // se agregan al array en el mismo orden mostrado por la vista previa.
     let uploadedImageUrls = [];
     if (pendingImageFiles.length > 0) {
@@ -1730,7 +1979,7 @@ async function submitProductForm() {
     if (images.length === 0) {
       setFieldError("fs-gallery", "Agrega al menos una imagen: sube un archivo o pega una URL.");
       document.getElementById("fs-gallery")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      throw new Error("La galería necesita al menos una imagen.");
+      throw new Error("La galerÃ­a necesita al menos una imagen.");
     }
 
     const includes = [...includesList.querySelectorAll(".include-input")]
@@ -1787,35 +2036,39 @@ async function submitProductForm() {
       condition,
       badge,
       images,
-      // Alias legado: mantiene operativos clientes que todavía leen image.
+      // Alias legado: mantiene operativos clientes que todavÃ­a leen image.
       image: images[0],
       batteryHealth,
       description,
       includes,
       specs,
       variants: {
-        colors: colors.length ? colors : [{ name: "Estándar", value: defaultColorValues.hex, ...defaultColorValues }],
+        colors: colors.length ? colors : [{ name: "EstÃ¡ndar", value: defaultColorValues.hex, ...defaultColorValues }],
         storage: storageVars
       },
       updatedAt: new Date().toISOString()
     };
 
-    if (submitBtn) setButtonLabel(submitBtn, "Guardando en Firestore...", "cloud-arrow-up");
+    if (submitBtn) setButtonLabel(submitBtn, "Guardando en Supabase...", "cloud-arrow-up");
 
     if (editingProductId) {
       // Actualizar documento existente
-      const productRef = doc(db, "products", String(editingProductId));
+      productData.id = String(editingProductId);
+      const productRef = doc(db, "productos", String(editingProductId));
       await setDoc(productRef, productData, { merge: true });
-      showAlert("Producto actualizado con éxito en Firestore.", "success");
+      showAlert("Producto actualizado con Ã©xito en Supabase.", "success");
     } else {
-      // Crear nuevo documento
+      // Crear nuevo documento: la estructura de productos usa IDs secuenciales
+      // (producto-N), NUNCA IDs automÃ¡ticos.
       productData.createdAt = new Date().toISOString();
-      const colRef = collection(db, "products");
-      await addDoc(colRef, productData);
-      showAlert("Nuevo producto agregado con éxito a Firestore.", "success");
+      const nuevoId = await obtenerSiguienteId("productos", "contador_productos", "producto-");
+      productData.id = nuevoId;
+      const colRef = doc(db, "productos", nuevoId);
+      await setDoc(colRef, productData);
+      showAlert("Nuevo producto agregado con Ã©xito a Supabase.", "success");
     }
 
-    // Guardado exitoso: no hay cambios pendientes, cerrar sin confirmación.
+    // Guardado exitoso: no hay cambios pendientes, cerrar sin confirmaciÃ³n.
     formSnapshot = null;
     formIsDirty = false;
     forceCloseProductModal();
@@ -1823,7 +2076,7 @@ async function submitProductForm() {
     console.error("Error al guardar producto:", error);
     let msg = error.message;
     if (error.code === "permission-denied" || error.message.includes("permissions")) {
-      msg = "Permisos insuficientes en Firebase: Revisa las Reglas de Seguridad en tu Consola de Firebase para la colección 'products'.";
+      msg = "Permisos insuficientes en Supabase: Revisa las polÃ­ticas RLS de la tabla 'productos'.";
     }
     formError.textContent = msg;
     formError.hidden = false;
@@ -1841,18 +2094,18 @@ async function handleDeleteProduct() {
 
   showConfirm(
     "Eliminar producto",
-    "Esta acción eliminará permanentemente el producto del catálogo y de la tienda. No se puede deshacer.",
+    "Esta acciÃ³n eliminarÃ¡ permanentemente el producto del catÃ¡logo y de la tienda. No se puede deshacer.",
     async () => {
       try {
-        const productRef = doc(db, "products", String(editingProductId));
+        const productRef = doc(db, "productos", String(editingProductId));
         await deleteDoc(productRef);
         forceCloseProductModal();
-        showAlert("Producto eliminado de Firestore.", "success");
+        showAlert("Producto eliminado de Supabase.", "success");
       } catch (error) {
         showAlert("Error al eliminar producto: " + error.message, "error");
       }
     },
-    { tone: "danger", okLabel: "Sí, eliminar" }
+    { tone: "danger", okLabel: "SÃ­, eliminar" }
   );
 }
 
@@ -1879,7 +2132,7 @@ function showConfirm(title, message, callback, options = {}) {
   confirmMessage.textContent = message;
   confirmCallback = callback;
 
-  // Tono visual del diálogo: "danger" (predeterminado) o "primary".
+  // Tono visual del diÃ¡logo: "danger" (predeterminado) o "primary".
   const tone = options.tone === "primary" ? "primary" : "danger";
   const icon = confirmDialog.querySelector(".confirm-icon");
   const iconGlyph = confirmDialog.querySelector(".confirm-icon i");
@@ -1950,8 +2203,8 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 }
 
 /* ==========================================================================
-   OBSIDIAN PRISM v6 — VISUAL ENHANCEMENTS LAYER
-   Solo estética — No modifica Firebase, Auth, CRUD, Validaciones.
+   OBSIDIAN PRISM v6 â€” VISUAL ENHANCEMENTS LAYER
+   Solo estÃ©tica â€” No modifica Supabase, Auth, CRUD, Validaciones.
    ========================================================================== */
 (() => {
   // ---------- Metrics Count Animation ----------
@@ -2035,7 +2288,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     return res;
   };
   try {
-    // Replace local reference — JS closure cannot be overwritten from outer, so we patch global if exported
+    // Replace local reference â€” JS closure cannot be overwritten from outer, so we patch global if exported
     // We'll also use MutationObserver fallback
     window.renderProductsTable = wrappedRender;
   } catch(e){}
@@ -2152,14 +2405,14 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     }
   });
 
-  console.log('[Obsidian Prism v6] Visual enhancements loaded — logic intact.');
+  console.log('[Obsidian Prism v6] Visual enhancements loaded â€” logic intact.');
 })();
 
 /* ==========================================================================
-   FLAT OPS v7 — VISUAL ENHANCEMENTS REALES (colores planos + movimiento perceptible)
+   FLAT OPS v7 â€” VISUAL ENHANCEMENTS REALES (colores planos + movimiento perceptible)
    ========================================================================== */
 (() => {
-  // Grid speed boost for flat ops — make animation perceptible
+  // Grid speed boost for flat ops â€” make animation perceptible
   const grids = document.querySelectorAll('.login-grid');
   grids.forEach(g=>{ g.style.animationDuration = '12s'; });
 
@@ -2216,18 +2469,18 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     setInterval(updateSync, 3600000);
   }
 
-  // Input flat focus — border 2px animation
+  // Input flat focus â€” border 2px animation
   document.addEventListener('focusin', e=>{
     if(e.target.matches('input,select,textarea')){
       e.target.style.transition='border-color 160ms ease,box-shadow 160ms ease';
     }
   });
 
-  console.log('[Flat Ops v7] Flat colors + real motion loaded — logic intact.');
+  console.log('[Flat Ops v7] Flat colors + real motion loaded â€” logic intact.');
 })();
 
 /* ==========================================================================
-   v8 FINAL — Sidebar imágenes + promo card útil
+   v8 FINAL â€” Sidebar imÃ¡genes + promo card Ãºtil
    ========================================================================== */
 (() => {
   const tryLoadImage = (base, exts, onSuccess, onFail) => {
@@ -2355,15 +2608,15 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   console.log('[v8 Final] Sidebar imagen + promo tarjeta integrada lista');
 })();
 
-// Sidebar footer image loader — busca imagen_barra con cualquier extensión
+// Sidebar footer image loader â€” busca imagen_barra con cualquier extensiÃ³n
 (() => {
   const img = document.getElementById('imagen-barra');
   if (!img) return;
   const exts = ['jpg','jpeg','png','webp','gif','svg','JPG','JPEG','PNG','WEBP'];
   let i = 0;
-  const fromFirestore = () => window.__imagenesFirestore && window.__imagenesFirestore.barra;
+  const fromSupabase = () => window.__imagenesSupabase && (window.__imagenesSupabase.imagen_barra_principal || window.__imagenesSupabase.barra);
   const tryNext = () => {
-    if (fromFirestore()) return;
+    if (fromSupabase()) return;
     if (i >= exts.length) { img.style.display = 'none'; return; }
     const src = 'imagen_barra.' + exts[i++];
     const test = new Image();
@@ -2377,7 +2630,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 })();
 
 // ==========================================================================
-// SETTINGS MODULE — Navegación + Gestión de Imágenes (base64 en Firestore)
+// SETTINGS MODULE â€” NavegaciÃ³n + GestiÃ³n de ImÃ¡genes (Supabase + Cloudinary)
 // ==========================================================================
 (() => {
   const settingsLink = document.getElementById('settings-link');
@@ -2391,17 +2644,19 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 
   const IMAGENES_COLLECTION = 'imagenes';
 
-  const IMAGE_KEYS = ['banner', 'login', 'sidebar', 'tarjeta', 'barra'];
+  const IMAGE_KEYS = ['imagen_banner_panel', 'imagen_login', 'imagen_sidebar', 'imagen_tarjeta_promocional', 'imagen_barra_principal'];
+  // Alias legacy â†’ nueva key (compatibilidad con datos anteriores)
+  const LEGACY_KEY_MAP = { banner: 'imagen_banner_panel', login: 'imagen_login', sidebar: 'imagen_sidebar', tarjeta: 'imagen_tarjeta_promocional', barra: 'imagen_barra_principal' };
 
   const imageMeta = {
-    banner:  { label: 'Banner del panel' },
-    login:   { label: 'Imagen de login' },
-    sidebar: { label: 'Imagen de la sidebar' },
-    tarjeta: { label: 'Imagen para tarjeta' },
-    barra:   { label: 'Imagen de barra' }
+    imagen_banner_panel:          { label: 'Banner del panel' },
+    imagen_login:                 { label: 'Imagen de login' },
+    imagen_sidebar:               { label: 'Imagen de la sidebar' },
+    imagen_tarjeta_promocional:   { label: 'Imagen para tarjeta' },
+    imagen_barra_principal:       { label: 'Imagen de barra' }
   };
 
-  // ---- Navegación ----
+  // ---- NavegaciÃ³n ----
   function showCatalog() {
     if (catalogSection) catalogSection.hidden = false;
     if (overviewSection) overviewSection.hidden = false;
@@ -2423,11 +2678,18 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     settingsLink.classList.add('active');
   }
 
-  settingsLink.addEventListener('click', (e) => { e.preventDefault(); showSettings(); });
+  settingsLink.addEventListener('click', async (e) => {
+    e.preventDefault();
+    // Los editores deben ingresar la llave de acceso antes de entrar a Configuración.
+    if (!esAdmin() && !(await pedirLlave('Acceso a Configuración', 'Introduce la llave de acceso generada en Configuración → Llaves para continuar.'))) {
+      return;
+    }
+    showSettings();
+  });
   const catLink = document.querySelector('a[href="#catalog"]');
   if (catLink) catLink.addEventListener('click', (e) => { e.preventDefault(); showCatalog(); });
 
-  // ---- State: mapa de key → { url, file?, urlInput? } ----
+  // ---- State: mapa de key ? { url, file?, urlInput? } ----
   const state = {};
   IMAGE_KEYS.forEach(k => { state[k] = { url: '', file: null, urlValue: '', changed: false }; });
 
@@ -2471,50 +2733,54 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     cancelBtn.disabled = !changed;
   }
 
-  async function loadFromFirestore() {
+  async function loadImagesFromSupabase() {
     try {
       const snapshot = await getDocs(collection(db, IMAGENES_COLLECTION));
       snapshot.forEach(docSnap => {
-        const key = docSnap.id;
+        const rawKey = docSnap.id;
         const docData = docSnap.data();
-        if (IMAGE_KEYS.includes(key)) {
-          const imageData = docData.data || docData.url;
-          if (imageData) {
-            state[key].url = imageData;
-            setPreview(key, imageData);
-            applySitePreview(key, imageData);
-          }
+        // Resolver key: si es legacy, mapear a la nueva; si ya es nueva, usarla directa.
+        const key = LEGACY_KEY_MAP[rawKey] || (IMAGE_KEYS.includes(rawKey) ? rawKey : null);
+        if (!key) return;
+        // Priorizar la URL (Cloudinary) sobre el base64 legado que puede seguir en la BD.
+        const imageData = docData.url || docData.data;
+        if (imageData) {
+          state[key].url = imageData;
+          setPreview(key, imageData);
+          applySitePreview(key, imageData);
+          const urlInput = document.querySelector(`.settings-image-card[data-key="${key}"] .settings-url-input`);
+          if (urlInput && !imageData.startsWith('data:')) urlInput.value = imageData;
         }
       });
     } catch (err) {
-      console.warn('[Settings] Firestore no disponible.');
+      console.warn('[Settings] Supabase no disponible.');
     }
   }
 
   // ---- Aplicar preview en todo el sitio ----
   function applySitePreview(key, url) {
     if (!url) return;
-    window.__imagenesFirestore = window.__imagenesFirestore || {};
-    window.__imagenesFirestore[key] = true;
+    window.__imagenesSupabase = window.__imagenesSupabase || {};
+    window.__imagenesSupabase[key] = true;
     const finalUrl = url.startsWith('data:') ? url : url + '?t=' + Date.now();
     switch (key) {
-      case 'banner':
+      case 'imagen_banner_panel':
         const bannerImg = document.querySelector('#admin-banner');
         if (bannerImg) bannerImg.style.backgroundImage = `url('${finalUrl}')`;
         break;
-      case 'sidebar':
+      case 'imagen_sidebar':
         const sidebarBg = document.getElementById('sidebar-bg');
         if (sidebarBg) sidebarBg.style.backgroundImage = `url('${finalUrl}')`;
         break;
-      case 'tarjeta':
+      case 'imagen_tarjeta_promocional':
         const promoBg = document.getElementById('promo-bg');
         if (promoBg) promoBg.style.backgroundImage = `url('${finalUrl}')`;
         break;
-      case 'barra':
+      case 'imagen_barra_principal':
         const barraImg = document.getElementById('imagen-barra');
         if (barraImg) { barraImg.src = finalUrl; barraImg.style.display = 'block'; }
         break;
-      case 'login':
+      case 'imagen_login':
         break;
     }
   }
@@ -2532,31 +2798,29 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     setStatus(key, 'loading', 'Guardando...');
     const file = state[key].file;
     const urlValue = state[key].urlValue;
-    let finalData;
+    let finalUrl;
 
     try {
       if (file) {
-        finalData = await readAsDataURL(file);
+        finalUrl = await uploadToCloudinary(file);
       } else if (urlValue) {
-        const resp = await fetch(urlValue);
-        const blob = await resp.blob();
-        finalData = await readAsDataURL(blob);
+        finalUrl = await uploadToCloudinary(urlValue);
       } else {
         setStatus(key, 'error', 'No hay datos para guardar');
         return;
       }
 
       const docRef = doc(db, IMAGENES_COLLECTION, key);
-      await setDoc(docRef, { data: finalData, updatedAt: new Date().toISOString() });
+      await setDoc(docRef, { url: finalUrl, type: 'upload', updatedAt: new Date().toISOString() });
 
-      state[key].url = finalData;
+      state[key].url = finalUrl;
       state[key].file = null;
       state[key].urlValue = '';
       state[key].changed = false;
       updateButtons(key);
 
-      setPreview(key, finalData);
-      applySitePreview(key, finalData);
+      setPreview(key, finalUrl);
+      applySitePreview(key, finalUrl);
 
       const card = document.querySelector(`.settings-image-card[data-key="${key}"]`);
       if (card) {
@@ -2598,7 +2862,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     setStatus(key, '', '');
   }
 
-  // ---- File picker: solo se abre al hacer clic en el botón ----
+  // ---- File picker: solo se abre al hacer clic en el botÃ³n ----
   document.querySelectorAll('.settings-file-btn').forEach(btn => {
     const card = btn.closest('.settings-image-card');
     if (!card) return;
@@ -2615,7 +2879,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       // Validate type
       const validTypes = ['image/jpeg','image/png','image/webp','image/gif'];
       if (!validTypes.includes(file.type)) {
-        showAlert('Formato no válido. Usa JPG, PNG, WEBP o GIF.', 'error');
+        showAlert('Formato no vÃ¡lido. Usa JPG, PNG, WEBP o GIF.', 'error');
         fileInput.value = '';
         return;
       }
@@ -2680,7 +2944,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     btn.addEventListener('click', () => {
       if (!state[key].changed) return;
       showConfirm('Reemplazar imagen',
-        '¿Estás seguro de que deseas reemplazar esta imagen? La versión anterior será sobrescrita.',
+        'Â¿EstÃ¡s seguro de que deseas reemplazar esta imagen? La versiÃ³n anterior serÃ¡ sobrescrita.',
         () => doSave(key));
     });
   });
@@ -2693,7 +2957,1713 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   });
 
   // ---- Cargar datos al iniciar ----
-  loadFromFirestore();
+  loadImagesFromSupabase();
 
-  console.log('[Settings v2] Módulo de configuración con Firestore listo');
+  console.log('[Settings v2] MÃ³dulo de configuraciÃ³n con Supabase listo');
 })();
+
+// ==========================================================================
+// SETTINGS CONTENT MODULE â€” Contenido pÃºblico del sitio
+// Tabla Supabase: configuracion/{empresa, inicio, pie-de-pagina, preguntas-frecuentes, whatsapp} + imagenes/{logo, hero-fondo, nosotros, telefono-*}
+// ==========================================================================
+(() => {
+  const settingsSection = document.getElementById('settings');
+  if (!settingsSection) return;
+
+  const SETTINGS_COLLECTION = 'configuracion';
+  const IMG_COLLECTION = 'imagenes';
+  const TEXT_DOCS = ['empresa', 'inicio', 'pie-de-pagina', 'preguntas-frecuentes', 'whatsapp'];
+  const IMG_KEYS = ['logo', 'hero-fondo', 'nosotros'];
+  const FIELD_PREFIX = { empresa: 'cmp', inicio: 'home', 'pie-de-pagina': 'ftr', whatsapp: 'wa' };
+
+  const DEFAULTS = {
+    empresa: {
+      name: 'Mi Phone HN',
+      description: 'Compra celulares nuevos y seminuevos certificados en Honduras. iPhones, Samsung, iPads y accesorios con garantÃ­a, envÃ­os rÃ¡pidos y pagos flexibles desde Choluteca.',
+      about: '<p>En <strong>Mi Phone HN</strong>, nacimos en la ciudad de <strong>Choluteca</strong> con un propÃ³sito claro: hacer que la tecnologÃ­a mÃ³vil de gama alta sea accesible para todos los hondureÃ±os sin complicaciones.</p><p>Nos especializamos en la comercializaciÃ³n de celulares nuevos y seminuevos certificados de las marcas Apple y Samsung. Cada equipo pasa por una rigurosa inspecciÃ³n tÃ©cnica antes de llegar a tus manos.</p><p>No solo vendemos dispositivos; vendemos la tranquilidad de contar con una garantÃ­a real, mÃºltiples facilidades de pago y una entrega rÃ¡pida respaldada por empresas logÃ­sticas de Honduras.</p>',
+      ubicacion: 'Choluteca, Honduras',
+      telefono: '+504 8823-8432',
+      email: ''
+    },
+    inicio: {
+      announcement: 'EnvÃ­os seguros a nivel nacional vÃ­a RÃ¡pido Cargo desde Choluteca',
+      hero: {
+        tag: 'TecnologÃ­a premium garantizada',
+        title: 'El celular que quieres, con las facilidades que necesitas.',
+        subtitle: 'iPhones y Samsung nuevos y seminuevos certificados. Compra hoy de forma segura desde Choluteca con envÃ­os rÃ¡pidos a toda Honduras.'
+      },
+      cards: [
+        { title: 'GarantÃ­a certificada', description: 'Todos nuestros equipos cuentan con 90 dÃ­as de garantÃ­a escrita por fallas de fÃ¡brica.' },
+        { title: 'Pagos flexibles', description: 'Efectivo, transferencia bancaria y extrafinanciamiento con tarjetas participantes.' },
+        { title: 'EnvÃ­os rÃ¡pidos', description: 'Despachos desde Choluteca a todo el paÃ­s vÃ­a RÃ¡pido Cargo en un plazo estimado de 24 a 48 horas.' }
+      ],
+      stats: [
+        { number: '90', label: 'DÃ­as de garantÃ­a real' },
+        { number: '100%', label: 'InspecciÃ³n de calidad' },
+        { number: '48h', label: 'Tiempo mÃ¡ximo de envÃ­o' },
+        { number: '24/7', label: 'Soporte personalizado' }
+      ]
+    },
+    'pie-de-pagina': {
+      description: 'El distribuidor de confianza para celulares premium nuevos y seminuevos garantizados en la zona sur y a nivel nacional.',
+      location: 'Choluteca, Honduras',
+      phone: '+504 8823-8432',
+      shipping: 'EnvÃ­os vÃ­a RÃ¡pido Cargo',
+      copyright: 'Â© 2026 Mi Phone HN. Todos los derechos reservados.',
+      paymentMethods: ['BAC Credomatic', 'Ficohsa', 'Transferencias', 'Efectivo']
+    },
+    'preguntas-frecuentes': {
+      items: [
+        { q: 'Â¿Tienen tienda fÃ­sica y dÃ³nde estÃ¡n ubicados?', a: '<p>Atendemos principalmente por pedido y envÃ­os desde <strong>Choluteca, Honduras</strong>. EscrÃ­benos por WhatsApp para confirmar disponibilidad, punto de entrega o retiro.</p>' },
+        { q: 'Â¿CÃ³mo funcionan los envÃ­os y cuÃ¡nto tardan?', a: '<p>Enviamos con <strong>RÃ¡pido Cargo</strong> a nivel nacional. El tiempo estimado de entrega es de <strong>24 a 48 horas hÃ¡biles</strong> tras confirmar el pago. Te compartiremos el nÃºmero de guÃ­a para rastrear tu paquete.</p>' },
+        { q: 'Â¿CÃ³mo compro con extrafinanciamiento o cuotas?', a: '<p>Para compras con extrafinanciamiento de <strong>BAC Credomatic</strong> o <strong>Ficohsa</strong>:</p><ol><li>Selecciona el producto y agrÃ©galo al carrito.</li><li>EscrÃ­benos por WhatsApp con tu pedido.</li><li>Nuestro asesor confirmarÃ¡ los requisitos y procesarÃ¡ el pago en 3, 6, 9 o 12 cuotas.</li></ol>' },
+        { q: 'Â¿CuÃ¡les son las cuentas de transferencia disponibles?', a: '<p>Aceptamos transferencias a <strong>BAC Honduras</strong>, <strong>Banco AtlÃ¡ntida</strong>, <strong>Banco de Occidente</strong>, <strong>BanpaÃ­s</strong> y <strong>Davivienda</strong>. EnvÃ­a el comprobante por WhatsApp para procesar tu pedido.</p>' },
+        { q: 'Â¿QuÃ© cubre y quÃ© no cubre la garantÃ­a?', a: '<p><strong>Cubre:</strong> fallas mecÃ¡nicas e internas de fÃ¡brica, como pantalla tÃ¡ctil, micrÃ³fono, cÃ¡maras, seÃ±al, carga y botones.</p><p><strong>No cubre:</strong> daÃ±os fÃ­sicos por caÃ­das, contacto con lÃ­quidos o manipulaciÃ³n de software no autorizada.</p>' }
+      ]
+    },
+    whatsapp: {
+      phone: '50488238432',
+      title: 'NUEVO PEDIDO â€” MI PHONE HN',
+      labels: {
+        cliente: 'Cliente',
+        dni: 'DNI',
+        ciudad: 'Ciudad/EnvÃ­o',
+        productos: 'Productos',
+        cantidad: 'Cantidad',
+        subtotal: 'Subtotal',
+        total: 'TOTAL',
+        despacho: 'Despacho',
+        logistica: 'LogÃ­stica'
+      },
+      despachoValue: 'Choluteca, Honduras',
+      logisticaValue: 'RÃ¡pido Cargo',
+      messageTemplate: '*[TITULO]*\n\n[LABEL_CLIENTE]: [NOMBRE_CLIENTE]\n[LABEL_DNI]: [DNI_CLIENTE]\n[LABEL_CIUDAD]: [CIUDAD_CLIENTE]\n\n*[LABEL_PRODUCTOS]:*\n[LISTA_PRODUCTOS]\n\n*[LABEL_TOTAL]: [TOTAL_PEDIDO]*\n\n[LABEL_DESPACHO]: [DESPACHO]\n[LABEL_LOGISTICA]: [LOGISTICA]',
+      productLineTemplate: '- [NOMBRE_PRODUCTO] ([VARIACION])\n  [LABEL_CANTIDAD]: [CANTIDAD]\n  [LABEL_SUBTOTAL]: [SUBTOTAL]'
+    }
+  };
+
+  const LISTS = [
+    { listKey: 'cards', doc: 'inicio', container: 'home-cards-list', fields: [
+      { key: 'title', label: 'TÃ­tulo', type: 'input' },
+      { key: 'description', label: 'DescripciÃ³n', type: 'input' }
+    ]},
+    { listKey: 'stats', doc: 'inicio', container: 'home-stats-list', fields: [
+      { key: 'number', label: 'Valor', type: 'input' },
+      { key: 'label', label: 'Texto', type: 'input' }
+    ]},
+    { listKey: 'paymentMethods', doc: 'pie-de-pagina', container: 'footer-payments-list', fields: [
+      { key: 'value', label: 'MÃ©todo de pago', type: 'input' }
+    ]},
+    { listKey: 'items', doc: 'preguntas-frecuentes', container: 'faqs-list', fields: [
+      { key: 'q', label: 'Pregunta', type: 'input' },
+      { key: 'a', label: 'Respuesta', type: 'rich' }
+    ]}
+  ];
+
+  const docsState = {};
+  TEXT_DOCS.forEach(d => { docsState[d] = { loaded: null, changed: false }; });
+  const imgState = {};
+  const imgSaved = {};
+  IMG_KEYS.forEach(k => { imgState[k] = { url: '', file: null, changed: false, hasImage: false, source: '' }; imgSaved[k] = ''; });
+
+  function getPath(obj, path) {
+    return path.split('.').reduce((acc, k) => (acc == null ? undefined : acc[k]), obj);
+  }
+
+  function setPath(obj, path, value) {
+    const parts = path.split('.');
+    let cur = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+      cur[parts[i]] = cur[parts[i]] || {};
+      cur = cur[parts[i]];
+    }
+    cur[parts[parts.length - 1]] = value;
+  }
+
+  function deepMerge(base, override) {
+    const out = { ...base };
+    Object.entries(override || {}).forEach(([k, v]) => {
+      if (v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object') {
+        out[k] = deepMerge(base[k], v);
+      } else {
+        out[k] = v;
+      }
+    });
+    return out;
+  }
+
+  function cardStatus(card, type, msg) {
+    const el = card?.querySelector('.settings-upload-status');
+    if (!el) return;
+    if (type === 'loading') {
+      el.innerHTML = `<span class="settings-upload-spinner"></span><span>${escapeHTML(msg)}</span>`;
+      el.className = 'settings-upload-status is-loading';
+    } else if (type === 'success') {
+      el.innerHTML = `<i class="ph ph-check-circle"></i><span>${escapeHTML(msg)}</span>`;
+      el.className = 'settings-upload-status is-success';
+    } else if (type === 'error') {
+      el.innerHTML = `<i class="ph ph-x-circle"></i><span>${escapeHTML(msg)}</span>`;
+      el.className = 'settings-upload-status is-error';
+    } else {
+      el.innerHTML = '';
+      el.className = 'settings-upload-status';
+    }
+  }
+
+  // ---- Tabs ----
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      const content = document.getElementById(`settings-${tab.dataset.tab}-tab`);
+      if (content) content.classList.add('active');
+    });
+  });
+
+  // ---- Botones por documento ----
+  function docButtons(docId) {
+    return {
+      save: Array.from(document.querySelectorAll(`.settings-save-btn[data-save-doc="${docId}"]`)),
+      cancel: Array.from(document.querySelectorAll(`.settings-cancel-btn[data-cancel-doc="${docId}"]`))
+    };
+  }
+
+  function updateDocButtons(docId) {
+    const btns = docButtons(docId);
+    const changed = docsState[docId].changed;
+    btns.save.forEach(b => { b.disabled = !changed; });
+    btns.cancel.forEach(b => { b.disabled = !changed; });
+  }
+
+  function markDocChanged(docId) {
+    docsState[docId].changed = true;
+    updateDocButtons(docId);
+  }
+
+  // ---- Valores de inputs (rutas con puntos) ----
+  function collectDocValues(docId) {
+    const prefix = FIELD_PREFIX[docId];
+    if (!prefix) return {};
+    const values = {};
+    document.querySelectorAll(`[data-${prefix}]`).forEach(el => {
+      setPath(values, el.dataset[prefix], el.value);
+    });
+    return values;
+  }
+
+  function applyDocValues(docId, data) {
+    const prefix = FIELD_PREFIX[docId];
+    if (!prefix) return;
+    document.querySelectorAll(`[data-${prefix}]`).forEach(el => {
+      el.value = getPath(data, el.dataset[prefix]) ?? '';
+    });
+    document.dispatchEvent(new CustomEvent('settings-applied', { detail: { docId, data } }));
+  }
+
+  // ---- Editor enriquecido (sin HTML a la vista) ----
+  const RICH_ALLOWED = new Set(['P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'UL', 'OL', 'LI']);
+
+  function sanitizeRichHTML(html) {
+    const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
+    function clean(node) {
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      if (node.tagName === 'SCRIPT' || node.tagName === 'STYLE') { node.remove(); return; }
+      if (node.tagName === 'DIV') {
+        const p = doc.createElement('p');
+        while (node.firstChild) p.appendChild(node.firstChild);
+        node.parentNode.replaceChild(p, node);
+        clean(p);
+        return;
+      }
+      if (!RICH_ALLOWED.has(node.tagName)) {
+        while (node.firstChild) node.parentNode.insertBefore(node.firstChild, node);
+        node.parentNode.removeChild(node);
+        return;
+      }
+      Array.from(node.attributes).forEach(a => node.removeAttribute(a.name));
+      Array.from(node.childNodes).forEach(clean);
+    }
+    Array.from(doc.body.childNodes).forEach(clean);
+    doc.body.querySelectorAll('p').forEach(p => { if (!p.innerHTML.trim()) p.remove(); });
+    return doc.body.innerHTML.trim();
+  }
+
+  function richHidden(editor) {
+    return editor.closest('.settings-rich')?.querySelector('.settings-rich-hidden');
+  }
+
+  function initRichFields(scope, docId) {
+    scope.querySelectorAll('.settings-rich-editor').forEach(ed => {
+      if (ed.dataset.bound) return;
+      ed.dataset.bound = '1';
+      const container = ed.closest('.settings-rich');
+      if (container?.dataset.richPlaceholder) ed.dataset.placeholder = container.dataset.richPlaceholder;
+      ed.addEventListener('input', () => {
+        const hidden = richHidden(ed);
+        if (hidden) hidden.value = sanitizeRichHTML(ed.innerHTML);
+        markDocChanged(docId);
+      });
+    });
+  }
+
+  function syncRichFields() {
+    document.querySelectorAll('.settings-rich').forEach(rich => {
+      const hidden = rich.querySelector('.settings-rich-hidden');
+      const editor = rich.querySelector('.settings-rich-editor');
+      if (!hidden || !editor) return;
+      const val = hidden.value ? sanitizeRichHTML(hidden.value) : '';
+      if (editor.innerHTML !== val) editor.innerHTML = val;
+    });
+  }
+
+  function wrapSelection(editor, wrapperTag) {
+    const sel = window.getSelection();
+    const range = sel.rangeCount ? sel.getRangeAt(0) : null;
+    if (!range || range.collapsed || !range.toString().trim()) return;
+    const frag = range.extractContents();
+    const wrapper = document.createElement(wrapperTag);
+    wrapper.appendChild(frag);
+    range.insertNode(wrapper);
+    const r = document.createRange();
+    r.selectNodeContents(wrapper);
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+
+  function applyList(editor, tag) {
+    const sel = window.getSelection();
+    const range = sel.rangeCount ? sel.getRangeAt(0) : null;
+    let targets = [];
+    if (range && !range.collapsed && range.toString().trim()) {
+      targets = Array.from(editor.querySelectorAll('p, ul, ol, div')).filter(b => {
+        if (b.closest('li')) return false;
+        return range.intersectsNode(b);
+      });
+    }
+    if (!targets.length) targets = Array.from(editor.children).filter(c => /^P|UL|OL|DIV$/.test(c.tagName));
+    const list = document.createElement(tag);
+    targets.forEach(block => {
+      const li = document.createElement('li');
+      li.innerHTML = block.innerHTML;
+      list.appendChild(li);
+    });
+    if (targets.length) {
+      if (targets[0] === editor) {
+        editor.textContent = '';
+        editor.appendChild(list);
+      } else {
+        editor.insertBefore(list, targets[0]);
+        targets.forEach(block => block.remove());
+      }
+    } else {
+      editor.appendChild(list);
+    }
+  }
+
+  function richCommand(editor, cmd) {
+    editor.focus();
+    let ok = false;
+    try {
+      ok = document.execCommand(cmd, false, null);
+    } catch (e) { /* fallback manual */ }
+    if (!ok) {
+      if (cmd === 'bold') wrapSelection(editor, 'strong');
+      else if (cmd === 'insertUnorderedList') applyList(editor, 'ul');
+      else if (cmd === 'insertOrderedList') applyList(editor, 'ol');
+    }
+    editor.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  }
+
+  settingsSection.addEventListener('click', (e) => {
+    const btn = e.target.closest('.settings-rich-btn');
+    if (!btn) return;
+    const editor = btn.closest('.settings-rich')?.querySelector('.settings-rich-editor');
+    if (!editor) return;
+    richCommand(editor, btn.dataset.cmd);
+  });
+
+  // ---- Listas dinÃ¡micas ----
+  function listCfg(listKey) {
+    return LISTS.find(c => c.listKey === listKey);
+  }
+
+  function listRowHTML(cfg, values) {
+    const fieldsHTML = cfg.fields.map(f => {
+      let val = '';
+      if (values && typeof values === 'object') val = values[f.key] ?? '';
+      else if (cfg.fields.length === 1) val = values ?? '';
+      if (f.type === 'rich') {
+        return `
+        <div class="form-group">
+          <label>${escapeHTML(f.label)}</label>
+          <div class="settings-rich">
+            <div class="settings-rich-toolbar">
+              <button type="button" class="settings-rich-btn" data-cmd="bold" title="Negrita" aria-label="Negrita"><strong>B</strong></button>
+              <button type="button" class="settings-rich-btn" data-cmd="insertUnorderedList" title="Lista con viÃ±etas" aria-label="Lista con viÃ±etas">â€¢ Lista</button>
+              <button type="button" class="settings-rich-btn" data-cmd="insertOrderedList" title="Lista numerada" aria-label="Lista numerada">1. Lista</button>
+            </div>
+            <div class="settings-rich-editor" contenteditable="true" data-placeholder="${escapeHTML(f.label)}"></div>
+            <input type="hidden" class="settings-rich-hidden" data-field="${escapeHTML(f.key)}" value="${escapeHTML(val)}">
+          </div>
+        </div>`;
+      }
+      return `
+        <div class="form-group">
+          <label>${escapeHTML(f.label)}</label>
+          ${f.type === 'textarea'
+            ? `<textarea class="settings-list-input" data-field="${escapeHTML(f.key)}" rows="3" placeholder="${escapeHTML(f.label)}">${escapeHTML(val)}</textarea>`
+            : `<input type="text" class="settings-list-input" data-field="${escapeHTML(f.key)}" value="${escapeHTML(val)}" placeholder="${escapeHTML(f.label)}">`}
+        </div>`;
+    }).join('');
+    return `
+      <div class="settings-list-item">
+        <div class="settings-list-fields">${fieldsHTML}</div>
+        <div class="settings-list-controls">
+          <button type="button" class="settings-list-btn settings-list-btn--up" title="Subir" aria-label="Subir"><i class="ph ph-caret-up" aria-hidden="true"></i></button>
+          <button type="button" class="settings-list-btn settings-list-btn--down" title="Bajar" aria-label="Bajar"><i class="ph ph-caret-down" aria-hidden="true"></i></button>
+          <button type="button" class="settings-list-btn settings-list-btn--del" title="Eliminar" aria-label="Eliminar"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        </div>
+      </div>`;
+  }
+
+  function renderList(cfg, items) {
+    const container = document.getElementById(cfg.container);
+    if (!container) return;
+    container.innerHTML = (items || []).map(item => listRowHTML(cfg, item)).join('');
+    initRichFields(container, cfg.doc);
+    syncRichFields();
+  }
+
+  function collectList(cfg) {
+    const container = document.getElementById(cfg.container);
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.settings-list-item')).map(row => {
+      if (cfg.fields.length === 1) {
+        return row.querySelector(`[data-field="${cfg.fields[0].key}"]`)?.value || '';
+      }
+      const obj = {};
+      cfg.fields.forEach(f => {
+        obj[f.key] = row.querySelector(`[data-field="${f.key}"]`)?.value || '';
+      });
+      return obj;
+    });
+  }
+
+  function bindList(cfg) {
+    const container = document.getElementById(cfg.container);
+    if (!container) return;
+    container.addEventListener('input', () => markDocChanged(cfg.doc));
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.settings-list-btn');
+      if (!btn) return;
+      const row = btn.closest('.settings-list-item');
+      if (!row) return;
+      const rows = Array.from(container.querySelectorAll('.settings-list-item'));
+      const idx = rows.indexOf(row);
+      if (btn.classList.contains('settings-list-btn--up') && idx > 0) {
+        rows[idx - 1].before(row);
+      } else if (btn.classList.contains('settings-list-btn--down') && idx < rows.length - 1) {
+        rows[idx + 1].after(row);
+      } else if (btn.classList.contains('settings-list-btn--del')) {
+        row.remove();
+      } else {
+        return;
+      }
+      markDocChanged(cfg.doc);
+    });
+  }
+
+  document.querySelectorAll('.settings-list-add').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cfg = listCfg(btn.dataset.addItem);
+      if (!cfg) return;
+      const container = document.getElementById(cfg.container);
+      if (!container) return;
+      container.insertAdjacentHTML('beforeend', listRowHTML(cfg, null));
+      markDocChanged(cfg.doc);
+    });
+  });
+
+  LISTS.forEach(bindList);
+
+  // ---- Guardar / Cancelar por documento ----
+  async function doSaveDoc(docId, card) {
+    const values = collectDocValues(docId);
+    LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => {
+      values[cfg.listKey] = collectList(cfg);
+    });
+
+    cardStatus(card, 'loading', 'Guardando...');
+    try {
+      await setDoc(doc(db, SETTINGS_COLLECTION, docId), { ...values, updatedAt: new Date().toISOString() });
+      docsState[docId].loaded = JSON.parse(JSON.stringify(values));
+      docsState[docId].changed = false;
+      updateDocButtons(docId);
+      cardStatus(card, 'success', 'Cambios guardados');
+      showAlert('ConfiguraciÃ³n guardada correctamente', 'success');
+      setTimeout(() => cardStatus(card, '', ''), 3000);
+    } catch (err) {
+      console.error('[Settings Content] Save error:', err);
+      cardStatus(card, 'error', 'Error al guardar');
+      showAlert('Error al guardar la configuraciÃ³n', 'error');
+    }
+  }
+
+  function doCancelDoc(docId, card) {
+    const data = docsState[docId].loaded || DEFAULTS[docId];
+    applyDocValues(docId, data);
+    LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => renderList(cfg, data[cfg.listKey]));
+    syncRichFields();
+    docsState[docId].changed = false;
+    updateDocButtons(docId);
+    if (docId === 'whatsapp') renderWaPreview();
+    cardStatus(card, '', '');
+  }
+
+  document.querySelectorAll('.settings-save-btn[data-save-doc]').forEach(btn => {
+    btn.addEventListener('click', () => doSaveDoc(btn.dataset.saveDoc, btn.closest('.settings-form-card')));
+  });
+
+  document.querySelectorAll('.settings-cancel-btn[data-cancel-doc]').forEach(btn => {
+    btn.addEventListener('click', () => doCancelDoc(btn.dataset.cancelDoc, btn.closest('.settings-form-card')));
+  });
+
+  // ---- Inputs marcan cambio (y preview WhatsApp) ----
+  TEXT_DOCS.forEach(docId => {
+    const prefix = FIELD_PREFIX[docId];
+    if (!prefix) return;
+    document.querySelectorAll(`[data-${prefix}]`).forEach(el => {
+      el.addEventListener('input', () => {
+        markDocChanged(docId);
+        if (docId === 'whatsapp') renderWaPreview();
+      });
+    });
+  });
+
+  // ---- Preview de WhatsApp ----
+  function fillTemplate(tpl, map) {
+    let out = String(tpl || '');
+    Object.entries(map).forEach(([key, value]) => {
+      out = out.split(`[${key}]`).join(String(value ?? ''));
+    });
+    return out;
+  }
+
+  function renderWaPreview() {
+    const pre = document.getElementById('wa-preview');
+    if (!pre) return;
+    const v = { ...DEFAULTS.whatsapp, ...collectDocValues('whatsapp') };
+    const labels = v.labels || {};
+    const line = fillTemplate(v.productLineTemplate, {
+      NOMBRE_PRODUCTO: 'iPhone 15 Pro Max',
+      VARIACION: 'Natural Titanio | 256 GB',
+      LABEL_CANTIDAD: labels.cantidad || 'Cantidad',
+      CANTIDAD: '1',
+      LABEL_SUBTOTAL: labels.subtotal || 'Subtotal',
+      SUBTOTAL: 'L. 23,000'
+    });
+    const sample = fillTemplate(v.messageTemplate, {
+      TITULO: v.title || 'NUEVO PEDIDO',
+      LABEL_CLIENTE: labels.cliente || 'Cliente',
+      NOMBRE_CLIENTE: 'Juan PÃ©rez',
+      LABEL_DNI: labels.dni || 'DNI',
+      DNI_CLIENTE: '0801-1990-12345',
+      LABEL_CIUDAD: labels.ciudad || 'Ciudad/EnvÃ­o',
+      CIUDAD_CLIENTE: 'Choluteca',
+      LABEL_PRODUCTOS: labels.productos || 'Productos',
+      LISTA_PRODUCTOS: line,
+      LABEL_TOTAL: labels.total || 'TOTAL',
+      TOTAL_PEDIDO: 'L. 23,000',
+      LABEL_DESPACHO: labels.despacho || 'Despacho',
+      DESPACHO: v.despachoValue || '',
+      LABEL_LOGISTICA: labels.logistica || 'LogÃ­stica',
+      LOGISTICA: v.logisticaValue || ''
+    });
+    pre.textContent = sample;
+  }
+
+  // ---- ImÃ¡genes (logo, hero, about) ----
+  function imgCard(key) {
+    return document.querySelector(`.settings-img-card[data-img-doc="${key}"]`);
+  }
+
+  function imgSourceOf(url) {
+    return /^https?:/i.test(url) ? 'url' : (url ? 'file' : '');
+  }
+
+  function updateImgPreview(key) {
+    const card = imgCard(key);
+    if (!card) return;
+    const img = card.querySelector('.settings-image-preview img');
+    const ph = card.querySelector('.settings-image-placeholder');
+    const url = imgState[key].url;
+    if (img) {
+      if (url) { img.src = url.startsWith('data:') ? url : url + '?t=' + Date.now(); img.style.display = 'block'; }
+      else { img.src = ''; img.style.display = 'none'; }
+    }
+    if (ph) ph.style.display = url ? 'none' : 'flex';
+    const removeBtn = card.querySelector('.settings-remove-btn');
+    if (removeBtn) removeBtn.disabled = !imgState[key].hasImage && !imgState[key].changed;
+  }
+
+  function updateImgUrlInput(key) {
+    const input = imgCard(key)?.querySelector('.settings-site-url');
+    if (!input) return;
+    const st = imgState[key];
+    const desired = st.source === 'url' ? st.url : '';
+    if ((input.value || '').trim() !== desired) input.value = desired;
+  }
+
+  function updateImgButtons(key) {
+    const card = imgCard(key);
+    if (!card) return;
+    const saveBtn = card.querySelector('.settings-save-btn');
+    const cancelBtn = card.querySelector('.settings-cancel-btn');
+    const changed = imgState[key].changed;
+    saveBtn.disabled = !changed;
+    cancelBtn.disabled = !changed;
+  }
+
+  function resetImgCardFields(card) {
+    const fi = card.querySelector('.settings-file-input');
+    if (fi) fi.value = '';
+    const fnEl = card.querySelector('.settings-file-name');
+    if (fnEl) fnEl.textContent = '';
+  }
+
+  async function loadImg(key) {
+    try {
+      const snap = await getDoc(doc(db, IMG_COLLECTION, key));
+      if (snap.exists()) {
+        const data = snap.data();
+        const url = data.url || data.data || '';
+        if (url) {
+          imgState[key].url = url;
+          imgState[key].hasImage = true;
+          imgState[key].source = imgSourceOf(url);
+          imgSaved[key] = url;
+          updateImgPreview(key);
+          updateImgUrlInput(key);
+        }
+      }
+    } catch (err) {
+      console.warn(`[Settings Content] No se pudo cargar la imagen "${key}".`);
+    }
+  }
+
+  async function doSaveImg(key) {
+    const card = imgCard(key);
+    const st = imgState[key];
+    if (!st.changed) return;
+    cardStatus(card, 'loading', 'Guardando...');
+    try {
+      let finalUrl = '';
+      if (st.file) {
+        const dataUrl = await compressAndReadImage(st.file, 1600, 0.8);
+        await setDoc(doc(db, IMG_COLLECTION, key), { data: dataUrl, type: 'upload', updatedAt: new Date().toISOString() });
+        finalUrl = dataUrl;
+      } else if (st.source === 'url' && st.url) {
+        await setDoc(doc(db, IMG_COLLECTION, key), { url: st.url, type: 'url', updatedAt: new Date().toISOString() });
+        finalUrl = st.url;
+      }
+      if (!finalUrl) return;
+      st.url = finalUrl;
+      st.file = null;
+      st.changed = false;
+      st.hasImage = true;
+      imgSaved[key] = finalUrl;
+      updateImgButtons(key);
+      updateImgPreview(key);
+      updateImgUrlInput(key);
+      resetImgCardFields(card);
+      cardStatus(card, 'success', 'Imagen guardada');
+      showAlert('Imagen actualizada correctamente', 'success');
+      setTimeout(() => cardStatus(card, '', ''), 3000);
+    } catch (err) {
+      console.error('[Settings Content] Save image error:', err);
+      cardStatus(card, 'error', 'Error al guardar');
+      showAlert('Error al guardar la imagen', 'error');
+    }
+  }
+
+  function doCancelImg(key) {
+    const card = imgCard(key);
+    const saved = imgSaved[key] || '';
+    imgState[key] = { url: saved, file: null, changed: false, hasImage: !!saved, source: imgSourceOf(saved) };
+    updateImgButtons(key);
+    updateImgPreview(key);
+    updateImgUrlInput(key);
+    resetImgCardFields(card);
+    cardStatus(card, '', '');
+  }
+
+  async function doRemoveImg(key) {
+    const card = imgCard(key);
+    cardStatus(card, 'loading', 'Eliminando...');
+    try {
+      await deleteDoc(doc(db, IMG_COLLECTION, key));
+      imgState[key] = { url: '', file: null, changed: false, hasImage: false, source: '' };
+      imgSaved[key] = '';
+      updateImgButtons(key);
+      updateImgPreview(key);
+      updateImgUrlInput(key);
+      resetImgCardFields(card);
+      cardStatus(card, 'success', 'Imagen eliminada');
+      showAlert('Imagen eliminada correctamente', 'success');
+      setTimeout(() => cardStatus(card, '', ''), 3000);
+    } catch (err) {
+      console.error('[Settings Content] Remove image error:', err);
+      cardStatus(card, 'error', 'Error al eliminar');
+      showAlert('Error al eliminar la imagen', 'error');
+    }
+  }
+
+  document.querySelectorAll('.settings-img-card').forEach(card => {
+    const key = card.dataset.imgDoc;
+    if (!key) return;
+    const fileBtn = card.querySelector('.settings-file-btn');
+    const fileInput = card.querySelector('.settings-file-input');
+    const saveBtn = card.querySelector('.settings-save-btn');
+    const cancelBtn = card.querySelector('.settings-cancel-btn');
+    const removeBtn = card.querySelector('.settings-remove-btn');
+    const urlInput = card.querySelector('.settings-site-url');
+
+    fileBtn?.addEventListener('click', () => fileInput?.click());
+
+    fileInput?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        showAlert('Formato no vÃ¡lido. Usa JPG, PNG, WEBP o GIF.', 'error');
+        fileInput.value = '';
+        return;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        showAlert('La imagen no puede superar 8MB.', 'error');
+        fileInput.value = '';
+        return;
+      }
+      imgState[key].file = file;
+      imgState[key].changed = true;
+      imgState[key].source = 'file';
+      updateImgButtons(key);
+      updateImgPreview(key);
+      updateImgUrlInput(key);
+      const fnEl = card.querySelector('.settings-file-name');
+      if (fnEl) fnEl.textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = card.querySelector('.settings-image-preview img');
+        const ph = card.querySelector('.settings-image-placeholder');
+        if (img) { img.src = ev.target.result; img.style.display = 'block'; }
+        if (ph) ph.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    ['input', 'change'].forEach(evt => {
+      urlInput?.addEventListener(evt, () => {
+        const st = imgState[key];
+        const value = urlInput.value.trim();
+        if (!value) {
+          if (st.source === 'url' && st.url) {
+            st.url = '';
+            st.file = null;
+            st.changed = true;
+            st.hasImage = false;
+            st.source = '';
+            updateImgPreview(key);
+            updateImgButtons(key);
+          }
+          return;
+        }
+        let valid = false;
+        try {
+          const parsed = new URL(value);
+          valid = parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'data:';
+        } catch (err) { valid = /^data:image\//i.test(value); }
+        if (!valid) return;
+        st.url = value;
+        st.file = null;
+        st.changed = true;
+        st.hasImage = true;
+        st.source = 'url';
+        updateImgPreview(key);
+        updateImgButtons(key);
+      });
+    });
+
+    saveBtn?.addEventListener('click', () => {
+      if (!imgState[key].changed) return;
+      showConfirm('Reemplazar imagen',
+        'Â¿EstÃ¡s seguro de que deseas reemplazar esta imagen? La versiÃ³n anterior serÃ¡ sobrescrita.',
+        () => doSaveImg(key),
+        { tone: 'primary', okLabel: 'Guardar' });
+    });
+
+    cancelBtn?.addEventListener('click', () => doCancelImg(key));
+
+    removeBtn?.addEventListener('click', () => {
+      showConfirm('Eliminar imagen',
+        'La imagen se eliminarÃ¡ del sitio pÃºblico. Esta acciÃ³n no se puede deshacer.',
+        () => doRemoveImg(key));
+    });
+  });
+
+  // ---- TelÃ©fonos del hero (1-5 imÃ¡genes o URLs; un documento por telÃ©fono) ----
+  const HERO_PHONES_MAX = 5;
+  const HERO_PHONES_NAMES = Array.from({ length: HERO_PHONES_MAX }, (_, i) => 'phone' + (i + 1));
+  const HERO_PHONES_DOCS = HERO_PHONES_NAMES.reduce((acc, n, i) => { acc[n] = 'telefono-' + (i + 1); return acc; }, {});
+
+  const phonesState = {};
+  const phonesSaved = {};
+  let phonesAdded = [];
+  HERO_PHONES_NAMES.forEach(n => {
+    phonesState[n] = { url: '', file: null, changed: false, hasImage: false, source: '' };
+    phonesSaved[n] = '';
+  });
+
+  function duoCard() {
+    return document.querySelector('.settings-img-card-duo');
+  }
+
+  function duoSlot(name) {
+    return duoCard()?.querySelector(`.settings-duo-slot[data-slot="${name}"]`);
+  }
+
+  function phoneSlotHtml(name, index) {
+    return `
+      <div class="settings-duo-slot settings-phone-slot" data-slot="${name}">
+        <span class="settings-duo-label">Imagen ${index}</span>
+        <div class="settings-image-preview settings-image-preview--phone">
+          <img src="" alt="Imagen ${index}">
+          <div class="settings-image-placeholder"><i class="ph ph-device-mobile" aria-hidden="true"></i><span>Sin imagen</span></div>
+        </div>
+        <div class="settings-slot-url-wrap">
+          <i class="ph ph-link-simple" aria-hidden="true"></i>
+          <input type="url" class="settings-slot-url" data-slot-url="${name}" placeholder="O pega una URL de imagen (https://...)" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="settings-file-wrap">
+          <button type="button" class="settings-file-btn" data-slot-btn="${name}"><i class="ph ph-upload-simple" aria-hidden="true"></i> Subir archivo</button>
+          <input type="file" accept=".png,.webp,.jpg,.jpeg,.gif" class="settings-file-input" data-slot-input="${name}" hidden>
+          <span class="settings-file-name"></span>
+          <button type="button" class="btn btn-danger-ghost btn-sm settings-slot-remove" data-slot-remove="${name}" disabled><i class="ph ph-trash" aria-hidden="true"></i> Quitar</button>
+        </div>
+      </div>`;
+  }
+
+  function renderPhonesList() {
+    const card = duoCard();
+    if (!card) return;
+    const list = card.querySelector('#phones-list');
+    const empty = card.querySelector('#phones-empty');
+    const addBtn = card.querySelector('#phones-add-btn');
+    if (!list) return;
+    list.innerHTML = phonesAdded.map((n, i) => phoneSlotHtml(n, i + 1)).join('');
+    if (empty) empty.style.display = phonesAdded.length ? 'none' : 'flex';
+    if (addBtn) {
+      addBtn.hidden = phonesAdded.length >= HERO_PHONES_MAX;
+      addBtn.disabled = phonesAdded.length >= HERO_PHONES_MAX;
+    }
+    phonesAdded.forEach(syncPhoneSlot);
+    bindPhoneSlots();
+    updatePhoneButtons();
+  }
+
+  function updatePhonePreview(name) {
+    const slot = duoSlot(name);
+    if (!slot) return;
+    const st = phonesState[name];
+    const img = slot.querySelector('.settings-image-preview img');
+    const ph = slot.querySelector('.settings-image-placeholder');
+    if (img) {
+      if (st.url) { img.src = st.url.startsWith('data:') ? st.url : st.url + '?t=' + Date.now(); img.style.display = 'block'; }
+      else { img.src = ''; img.style.display = 'none'; }
+    }
+    if (ph) ph.style.display = st.url ? 'none' : 'flex';
+  }
+
+  function updatePhoneUrlInput(name) {
+    const input = duoSlot(name)?.querySelector('.settings-slot-url');
+    if (!input) return;
+    const st = phonesState[name];
+    const desired = st.source === 'url' ? st.url : '';
+    if ((input.value || '').trim() !== desired) input.value = desired;
+  }
+
+  function updatePhoneButtons() {
+    const card = duoCard();
+    if (!card) return;
+    const changed = phonesAdded.some(n => phonesState[n].changed);
+    const saveBtn = card.querySelector('.settings-duo-save');
+    const cancelBtn = card.querySelector('.settings-duo-cancel');
+    if (saveBtn) saveBtn.disabled = !changed;
+    if (cancelBtn) cancelBtn.disabled = !changed;
+    card.querySelectorAll('.settings-slot-remove').forEach(btn => {
+      btn.disabled = false;
+    });
+  }
+
+  function resetPhoneSlotInputs(name) {
+    const slot = duoSlot(name);
+    const fi = slot?.querySelector('.settings-file-input');
+    if (fi) fi.value = '';
+    const fnEl = slot?.querySelector('.settings-file-name');
+    if (fnEl) fnEl.textContent = '';
+  }
+
+  function applyPhonesSaved(name) {
+    const saved = phonesSaved[name] || '';
+    phonesState[name] = { url: saved, file: null, changed: false, hasImage: !!saved, source: /^https?:/i.test(saved) ? 'url' : (saved ? 'file' : '') };
+    resetPhoneSlotInputs(name);
+    updatePhonePreview(name);
+    updatePhoneUrlInput(name);
+  }
+
+  function syncPhoneSlot(name) {
+    if (phonesState[name].changed || phonesState[name].file) {
+      resetPhoneSlotInputs(name);
+      updatePhonePreview(name);
+      updatePhoneUrlInput(name);
+    } else {
+      applyPhonesSaved(name);
+    }
+  }
+
+  function bindPhoneSlots() {
+    const card = duoCard();
+    if (!card) return;
+    card.querySelectorAll('.settings-file-btn[data-slot-btn]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => duoSlot(btn.dataset.slotBtn)?.querySelector('.settings-file-input')?.click());
+    });
+
+    card.querySelectorAll('.settings-file-input').forEach(input => {
+      if (input.dataset.bound) return;
+      input.dataset.bound = '1';
+      input.addEventListener('change', (e) => {
+        const slotEl = input.closest('.settings-duo-slot');
+        const name = slotEl?.dataset.slot;
+        const file = e.target.files[0];
+        if (!name || !file) return;
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+          showAlert('Formato no vÃ¡lido. Usa PNG, WebP, JPG o GIF.', 'error');
+          input.value = '';
+          return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+          showAlert('La imagen no puede superar 8MB.', 'error');
+          input.value = '';
+          return;
+        }
+        phonesState[name].file = file;
+        phonesState[name].changed = true;
+        phonesState[name].source = 'file';
+        const fnEl = slotEl.querySelector('.settings-file-name');
+        if (fnEl) fnEl.textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          phonesState[name].url = ev.target.result;
+          updatePhonePreview(name);
+        };
+        reader.readAsDataURL(file);
+        updatePhoneUrlInput(name);
+        updatePhoneButtons();
+      });
+    });
+
+    card.querySelectorAll('.settings-slot-url').forEach(input => {
+      if (input.dataset.bound) return;
+      input.dataset.bound = '1';
+      ['input', 'change'].forEach(evt => {
+        input.addEventListener(evt, () => {
+          const slotEl = input.closest('.settings-duo-slot');
+          const name = slotEl?.dataset.slot;
+          if (!name) return;
+          const st = phonesState[name];
+          const value = input.value.trim();
+          if (!value) {
+            if (st.source === 'url' && st.url) {
+              st.url = '';
+              st.file = null;
+              st.changed = true;
+              st.hasImage = false;
+              st.source = '';
+              updatePhonePreview(name);
+              updatePhoneButtons();
+            }
+            return;
+          }
+          let valid = false;
+          try {
+            const parsed = new URL(value);
+            valid = parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'data:';
+          } catch (err) { valid = /^data:image\//i.test(value); }
+          if (!valid) return;
+          st.url = value;
+          st.file = null;
+          st.changed = true;
+          st.hasImage = true;
+          st.source = 'url';
+          updatePhonePreview(name);
+          updatePhoneButtons();
+        });
+      });
+    });
+
+    card.querySelectorAll('.settings-slot-remove').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const name = btn.dataset.slotRemove;
+        const st = phonesState[name];
+        if (!st.hasImage && !st.changed && !phonesSaved[name]) {
+          phonesAdded = phonesAdded.filter(n => n !== name);
+          renderPhonesList();
+          return;
+        }
+        st.url = '';
+        st.file = null;
+        st.changed = true;
+        st.hasImage = false;
+        st.source = '';
+        resetPhoneSlotInputs(name);
+        updatePhonePreview(name);
+        updatePhoneUrlInput(name);
+        updatePhoneButtons();
+      });
+    });
+  }
+
+  duoCard()?.querySelector('#phones-add-btn')?.addEventListener('click', () => {
+    const next = HERO_PHONES_NAMES.find(n => !phonesAdded.includes(n));
+    if (!next) return;
+    phonesAdded.push(next);
+    renderPhonesList();
+  });
+
+  async function loadHeroPhones() {
+    try {
+      const docs = await Promise.all(HERO_PHONES_NAMES.map(n => getDoc(doc(db, IMG_COLLECTION, HERO_PHONES_DOCS[n]))));
+      HERO_PHONES_NAMES.forEach((n, i) => {
+        const d = docs[i].exists() ? docs[i].data() : {};
+        phonesSaved[n] = d.url || d.data || '';
+      });
+      phonesAdded = HERO_PHONES_NAMES.filter(n => phonesSaved[n]);
+      renderPhonesList();
+      updatePhoneButtons();
+    } catch (err) {
+      console.warn('[Settings Content] No se pudieron cargar los telÃ©fonos del hero.');
+      renderPhonesList();
+    }
+  }
+
+  async function compressPhoneImage(file) {
+    const readAsDataURL = (blob) => new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error('No se pudo leer el archivo'));
+      r.readAsDataURL(blob);
+    });
+    const decode = (src) => new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('No se pudo decodificar la imagen'));
+      el.src = src;
+    });
+    const MAX_LEN = 950000;
+    try {
+      const rawUrl = await readAsDataURL(file);
+      const img = await decode(rawUrl);
+      const ladder = [
+        { maxDim: 2400, quality: 0.92 },
+        { maxDim: 2400, quality: 0.85 },
+        { maxDim: 2400, quality: 0.78 },
+        { maxDim: 1600, quality: 0.85 },
+        { maxDim: 1600, quality: 0.72 },
+        { maxDim: 1200, quality: 0.75 },
+        { maxDim: 900, quality: 0.65 }
+      ];
+      for (const step of ladder) {
+        const scale = Math.min(1, step.maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        let out = canvas.toDataURL('image/webp', step.quality);
+        if (!out.startsWith('data:image/webp')) out = canvas.toDataURL('image/jpeg', step.quality);
+        if (out.length <= MAX_LEN) return out;
+      }
+      throw new Error('La imagen no se puede reducir por debajo del lÃ­mite');
+    } catch (err) {
+      const raw = await readAsDataURL(file);
+      if (raw.length <= MAX_LEN) return raw;
+      throw new Error('La imagen es demasiado grande incluso comprimida');
+    }
+  }
+
+  async function doSavePhones() {
+    const card = duoCard();
+    cardStatus(card, 'loading', 'Guardando...');
+    try {
+      for (const name of phonesAdded) {
+        const st = phonesState[name];
+        const ref = doc(db, IMG_COLLECTION, HERO_PHONES_DOCS[name]);
+        if (st.file) {
+          const finalUrl = await uploadToCloudinary(st.file);
+          await setDoc(ref, { url: finalUrl, type: 'upload', updatedAt: new Date().toISOString() });
+          phonesSaved[name] = finalUrl;
+        } else if (st.source === 'url' && st.url) {
+          const finalUrl = await uploadToCloudinary(st.url);
+          await setDoc(ref, { url: finalUrl, type: 'url', updatedAt: new Date().toISOString() });
+          phonesSaved[name] = finalUrl;
+        } else if (st.changed) {
+          await deleteDoc(ref);
+          phonesSaved[name] = '';
+        }
+      }
+      phonesAdded.forEach(applyPhonesSaved);
+      updatePhoneButtons();
+      cardStatus(card, 'success', 'ImÃ¡genes guardadas');
+      showAlert('ImÃ¡genes del hero actualizadas correctamente', 'success');
+      setTimeout(() => cardStatus(card, '', ''), 3000);
+    } catch (err) {
+      console.error('[Settings Content] Save hero phones error:', err);
+      cardStatus(card, 'error', 'Error al guardar');
+      showAlert('Error al guardar las imÃ¡genes del hero', 'error');
+    }
+  }
+
+  function doCancelPhones() {
+    phonesAdded.forEach(applyPhonesSaved);
+    phonesAdded = HERO_PHONES_NAMES.filter(n => phonesSaved[n]);
+    renderPhonesList();
+    updatePhoneButtons();
+    const card = duoCard();
+    if (card) cardStatus(card, '', '');
+  }
+
+  duoCard()?.querySelector('.settings-duo-save')?.addEventListener('click', () => {
+    if (phonesAdded.some(n => phonesState[n].changed)) doSavePhones();
+  });
+  duoCard()?.querySelector('.settings-duo-cancel')?.addEventListener('click', doCancelPhones);
+
+  // ---- Carga inicial ----
+  async function loadDoc(docId) {
+    let data = DEFAULTS[docId];
+    try {
+      const snap = await getDoc(doc(db, SETTINGS_COLLECTION, docId));
+      if (snap.exists()) data = deepMerge(DEFAULTS[docId], snap.data());
+    } catch (err) {
+      console.warn(`[Settings Content] No se pudo cargar "${docId}".`);
+    }
+    docsState[docId].loaded = data;
+    applyDocValues(docId, data);
+    LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => renderList(cfg, data[cfg.listKey]));
+    syncRichFields();
+    updateDocButtons(docId);
+    if (docId === 'whatsapp') renderWaPreview();
+  }
+
+  document.addEventListener('settings-applied', () => syncRichFields());
+  initRichFields(settingsSection, 'empresa');
+
+  TEXT_DOCS.forEach(loadDoc);
+  IMG_KEYS.forEach(loadImg);
+  loadHeroPhones();
+  setTimeout(renderWaPreview, 0);
+
+  console.log('[Settings Content v1] MÃ³dulo de contenido pÃºblico con Supabase listo');
+})();
+
+// ==========================================================================
+// MÓDULO DE LLAVES DE ACCESO — Gestión de códigos alfanuméricos de 8 caracteres
+// Tabla Supabase: configuracion/llaves-acceso
+// ==========================================================================
+(() => {
+  const llavesSection = document.getElementById('settings-llaves-tab');
+  if (!llavesSection) return;
+
+  let llaves = [];
+  let loaded = false;
+
+  // Código alfanumérico de 8 caracteres (sin caracteres ambiguos 0/O y 1/I),
+  // generado con RNG criptográfico: 32^8 combinaciones, imposible de adivinar.
+  function genCodigo() {
+    const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    let codigo = '';
+    for (let i = 0; i < 8; i++) codigo += alfabeto[bytes[i] % alfabeto.length];
+    return codigo;
+  }
+
+  function escapeStr(s) {
+    return String(s || '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[c]));
+  }
+
+  function setStatus(type, msg) {
+    const el = document.getElementById('status-llaves');
+    if (!el) return;
+    if (type === 'loading') {
+      el.innerHTML = '<span class="settings-upload-spinner"></span><span>' + escapeStr(msg) + '</span>';
+      el.className = 'settings-upload-status is-loading';
+    } else if (type === 'success') {
+      el.innerHTML = '<i class="ph ph-check-circle"></i><span>' + escapeStr(msg) + '</span>';
+      el.className = 'settings-upload-status is-success';
+      setTimeout(() => { el.className = 'settings-upload-status'; el.innerHTML = ''; }, 3000);
+    } else if (type === 'error') {
+      el.innerHTML = '<i class="ph ph-x-circle"></i><span>' + escapeStr(msg) + '</span>';
+      el.className = 'settings-upload-status is-error';
+      setTimeout(() => { el.className = 'settings-upload-status'; el.innerHTML = ''; }, 4000);
+    } else {
+      el.innerHTML = ''; el.className = 'settings-upload-status';
+    }
+  }
+
+  async function cargarLlaves() {
+    try {
+      const snap = await getDoc(doc(db, 'configuracion', 'llaves-acceso'));
+      if (snap.exists()) {
+        llaves = Array.isArray(snap.data().llaves) ? snap.data().llaves : [];
+        // MigraciÃ³n segura: cÃ³digos guardados en texto plano â†’ hash SHA-256.
+        let huboMigracion = false;
+        for (const l of llaves) {
+          if (l.codigo && !l.hash) {
+            l.hash = await sha256Hex(l.codigo);
+            delete l.codigo;
+            huboMigracion = true;
+          }
+        }
+        if (huboMigracion) await guardarLlavesSilencioso();
+      } else { llaves = []; }
+      loaded = true;
+      renderLlaves();
+    } catch (err) {
+      console.warn('[Llaves] No se pudieron cargar:', err);
+      llaves = []; renderLlaves();
+    }
+  }
+
+  async function guardarLlavesSilencioso() {
+    try {
+      await setDoc(doc(db, 'configuracion', 'llaves-acceso'), { llaves, updatedAt: new Date().toISOString() });
+    } catch (err) {
+      console.warn('[Llaves] Error al migrar hash:', err);
+    }
+  }
+
+  async function guardarLlaves() {
+    setStatus('loading', 'Guardando...');
+    try {
+      await setDoc(doc(db, 'configuracion', 'llaves-acceso'), { llaves, updatedAt: new Date().toISOString() });
+      setStatus('success', 'Llaves guardadas');
+      renderLlaves();
+    } catch (err) {
+      console.error('[Llaves] Error al guardar:', err);
+      setStatus('error', 'Error al guardar las llaves');
+    }
+  }
+
+  // Acciones sensibles de llaves: siempre se revalida la llave de acceso.
+  async function conAccesoLlaves(accion) {
+    const ok = await pedirLlave('Acción sensible', 'Para modificar llaves debes volver a ingresar la llave de acceso.', { incluirInactivas: true });
+    if (!ok) { setStatus('error', 'AcciÃ³n cancelada: llave incorrecta.'); return; }
+    return accion();
+  }
+
+  // Registro temporal de códigos reales (solo en el navegador, nunca en la BD):
+  // permite al ojo revelar y al botón copiar la llave completa en cualquier momento.
+  const codigosGenerados = new Map();
+  const codigosRevelados = new Set();
+  const SS_KEY = 'miphone_llaves_codigos_v1';
+
+  function persistirCodigos() {
+    try { localStorage.setItem(SS_KEY, JSON.stringify([...codigosGenerados])); } catch (err) {}
+  }
+
+  function cargarCodigos() {
+    let datos = [];
+    try { datos = JSON.parse(localStorage.getItem(SS_KEY) || '[]'); } catch (err) {}
+    if (!datos.length) {
+      // Migración: versión anterior guardaba los códigos en sessionStorage.
+      try { datos = JSON.parse(sessionStorage.getItem(SS_KEY) || '[]'); } catch (err) {}
+      if (datos.length) {
+        try { localStorage.setItem(SS_KEY, JSON.stringify(datos)); } catch (err) {}
+      }
+    }
+    for (const [h, c] of datos) codigosGenerados.set(h, c);
+  }
+
+  async function copiarTexto(texto) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try { await navigator.clipboard.writeText(texto); return true; } catch (err) {}
+    }
+    const ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) {}
+    ta.remove();
+    return ok;
+  }
+
+  // Recuperación: solo aplica a llaves legadas de 6 dígitos numéricos, cuyo
+  // hash SHA-256 se puede reconstruir por búsqueda rápida en el navegador.
+  // Las llaves nuevas (8 caracteres alfanuméricos) no se pueden recuperar.
+  let recuperando = false;
+
+  async function recuperarCodigoDeHash(hashKey) {
+    const hashMin = String(hashKey || '').toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(hashMin)) return null;
+    setStatus('loading', 'Buscando el código de la llave…');
+    const bytes = new Uint8Array(32);
+    for (let i = 0; i < 64; i += 2) bytes[i >> 1] = parseInt(hashMin.slice(i, i + 2), 16);
+    const tail = [bytes[30], bytes[31]];
+    const enc = new TextEncoder();
+    const BATCH = 400;
+    let candidatos = 0;
+    for (let start = 100000; start <= 999999; start += BATCH) {
+      const nums = [];
+      for (let n = start; n < start + BATCH && n <= 999999; n++) nums.push(String(n));
+      const bufs = await Promise.all(nums.map(t => crypto.subtle.digest('SHA-256', enc.encode(t))));
+      for (let i = 0; i < bufs.length; i++) {
+        const d = new Uint8Array(bufs[i]);
+        if (d[30] === tail[0] && d[31] === tail[1]) {
+          candidatos++;
+          let igual = true;
+          for (let j = 0; j < 32; j++) { if (d[j] !== bytes[j]) { igual = false; break; } }
+          if (igual) return nums[i];
+        }
+      }
+      if (candidatos >= 128) break;
+      if (start % 100000 === 0) {
+        const pct = Math.min(99, Math.round(((start - 100000) / 899999) * 100));
+        setStatus('loading', `Buscando el código de la llave… ${pct}%`);
+      }
+    }
+    return null;
+  }
+
+  function codigoEnmascarado(hash) {
+    if (!hash || hash.length < 8) return '••••••';
+    return '••••••' + hash.slice(-4).toUpperCase();
+  }
+
+  // Vista oculta consistente: enmascara el código REAL dejando visibles los
+  // últimos 4 caracteres (respaldo: hash, solo para llaves sin código).
+  function textoEnmascarado(codigoReal, hashKey) {
+    if (codigoReal) {
+      const c = String(codigoReal);
+      return '•'.repeat(Math.max(0, c.length - 4)) + c.slice(-4);
+    }
+    return codigoEnmascarado(hashKey);
+  }
+
+  function renderLlaves() {
+    const list = document.getElementById('llaves-list');
+    if (!list) return;
+    if (llaves.length === 0) {
+      list.innerHTML = '<div class="settings-phones-empty"><i class="ph ph-key" aria-hidden="true"></i><span>No hay llaves creadas. Genera una para empezar.</span></div>';
+      return;
+    }
+    list.innerHTML = llaves.map((l, i) => {
+      const activa = l.activa !== false;
+      const hashKey = l.hash || l.codigo;
+      const codigoReal = codigosGenerados.get(hashKey) || l.codigo;
+      const revelado = codigosRevelados.has(hashKey);
+      const texto = revelado && codigoReal ? escapeStr(codigoReal) : escapeStr(textoEnmascarado(codigoReal, hashKey));
+      const hayCodigo = Boolean(codigoReal);
+      return `<div class="settings-list-item" data-llave-index="${i}">
+        <div class="settings-list-fields">
+          <div class="llave-codigo-row"><code class="llave-codigo" data-llave-code="${i}">${texto}</code>
+          <button type="button" class="settings-list-btn llave-accion-btn" data-llave-eye="${i}" title="${hayCodigo ? (revelado ? 'Ocultar llave' : 'Mostrar llave completa') : 'Código no disponible: se mostró una sola vez al generarla'}"><i class="ph ${revelado && hayCodigo ? 'ph-eye-slash' : 'ph-eye'}" aria-hidden="true"></i></button>
+          <button type="button" class="settings-list-btn llave-accion-btn" data-llave-copy="${i}" title="${hayCodigo ? 'Copiar llave' : 'Código no disponible: se mostró una sola vez al generarla'}"><i class="ph ph-copy" aria-hidden="true"></i></button>
+          ${hayCodigo ? '' : `<button type="button" class="settings-list-btn llave-accion-btn" data-llave-recover="${i}" title="Recuperar código de esta llave"><i class="ph ph-key" aria-hidden="true"></i></button>`}
+          <span class="llave-estado ${activa ? 'is-active' : 'is-inactive'}">${activa ? 'Activa' : 'Inactiva'}</span></div>
+          <input type="text" class="llave-desc-input" value="${escapeStr(l.descripcion || '')}" placeholder="Descripción (ej. Llave principal)" data-llave-desc="${i}" maxlength="60">
+        </div>
+        <div class="settings-list-controls">
+          <button type="button" class="settings-list-btn" data-llave-toggle="${i}" title="${activa ? 'Desactivar' : 'Activar'}"><i class="ph ${activa ? 'ph-power' : 'ph-play'}" aria-hidden="true"></i></button>
+          <button type="button" class="settings-list-btn settings-list-btn--del" data-llave-delete="${i}" title="Eliminar"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        </div></div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-llave-eye]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const idx = +e.currentTarget.dataset.llaveEye;
+        const l = llaves[idx];
+        if (!l) return;
+        const hashKey = l.hash || l.codigo;
+        const codeEl = list.querySelector(`[data-llave-code="${idx}"]`);
+        const icon = e.currentTarget.querySelector('.ph');
+        if (codigosRevelados.has(hashKey)) {
+          codigosRevelados.delete(hashKey);
+          const codigoOculto = codigosGenerados.get(hashKey) || l.codigo || null;
+          if (codeEl) codeEl.textContent = textoEnmascarado(codigoOculto, hashKey);
+          if (icon) icon.className = 'ph ph-eye';
+          e.currentTarget.title = 'Mostrar llave completa';
+        } else {
+          const codigoReal = codigosGenerados.get(hashKey) || l.codigo;
+          if (!codigoReal) { setStatus('error', 'Código no disponible en esta sesión. Usa el botón de llave para recuperarlo.'); return; }
+          codigosRevelados.add(hashKey);
+          if (codeEl) codeEl.textContent = codigoReal;
+          if (icon) icon.className = 'ph ph-eye-slash';
+          e.currentTarget.title = 'Ocultar llave';
+        }
+      });
+    });
+    list.querySelectorAll('[data-llave-copy]').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        const idx = +e.currentTarget.dataset.llaveCopy;
+        const l = llaves[idx];
+        if (!l) return;
+        const codigoReal = codigosGenerados.get(l.hash || l.codigo) || l.codigo;
+        if (!codigoReal) { setStatus('error', 'Código no disponible en esta sesión. Usa el botón de llave para recuperarlo.'); return; }
+        const ok = await copiarTexto(codigoReal);
+        if (!ok) { setStatus('error', 'No se pudo copiar la llave'); return; }
+        const icon = e.currentTarget.querySelector('.ph');
+        if (icon) icon.className = 'ph ph-check';
+        e.currentTarget.title = 'Llave copiada';
+        setStatus('success', 'Llave copiada al portapapeles');
+        setTimeout(() => {
+          if (icon) icon.className = 'ph ph-copy';
+          e.currentTarget.title = 'Copiar llave';
+        }, 1500);
+      });
+    });
+
+    list.querySelectorAll('[data-llave-recover]').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        const idx = +e.currentTarget.dataset.llaveRecover;
+        const l = llaves[idx];
+        if (!l) return;
+        const hashKey = l.hash || l.codigo;
+        if (recuperando) { setStatus('error', 'Ya hay una recuperación en curso'); return; }
+        if (codigosGenerados.has(hashKey)) return;
+        recuperando = true;
+        try {
+          const codigo = await recuperarCodigoDeHash(hashKey);
+          if (!codigo) { setStatus('error', 'No se pudo recuperar: las llaves nuevas (8 caracteres) no son recuperables. Solo las antiguas de 6 dígitos.'); return; }
+          codigosGenerados.set(hashKey, codigo);
+          persistirCodigos();
+          codigosRevelados.add(hashKey);
+          setStatus('success', `Código recuperado: ${codigo}`);
+          renderLlaves();
+        } catch (err) {
+          setStatus('error', 'No se pudo recuperar el código de esta llave');
+        } finally {
+          recuperando = false;
+        }
+      });
+    });
+    list.querySelectorAll('[data-llave-desc]').forEach(input => {
+      input.addEventListener('input', e => { const idx = +e.target.dataset.llaveDesc; if (llaves[idx]) llaves[idx].descripcion = e.target.value; });
+      input.addEventListener('change', () => conAccesoLlaves(guardarLlaves));
+    });
+    list.querySelectorAll('[data-llave-toggle]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const idx = +e.currentTarget.dataset.llaveToggle;
+        if (!llaves[idx]) return;
+        conAccesoLlaves(() => { llaves[idx].activa = llaves[idx].activa === false; return guardarLlaves(); });
+      });
+    });
+    list.querySelectorAll('[data-llave-delete]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const idx = +e.currentTarget.dataset.llaveDelete;
+        if (llaves[idx] === undefined) return;
+        conAccesoLlaves(() => { llaves.splice(idx, 1); return guardarLlaves(); });
+      });
+    });
+  }
+
+  async function generarCodigoUnico() {
+    const existentes = new Set(llaves.filter(l => l.hash).map(l => l.hash));
+    let codigo, intentos = 0;
+    do { codigo = genCodigo(); intentos++; } while (existentes.has(await sha256Hex(codigo)) && intentos < 100);
+    return codigo;
+  }
+
+  document.getElementById('llave-add-btn')?.addEventListener('click', () => {
+    conAccesoLlaves(async () => {
+      const codigo = await generarCodigoUnico();
+      const hash = await sha256Hex(codigo);
+      codigosGenerados.set(hash, codigo);
+      persistirCodigos();
+      llaves.push({ hash, activa: true, descripcion: '', createdAt: new Date().toISOString() });
+      await guardarLlaves();
+      // La llave se muestra una sola vez (los códigos no se guardan en texto plano).
+      showAlert(`Llave generada: ${codigo}. Cópiala ahora: no volverá a mostrarse.`, 'success');
+    });
+  });
+
+  cargarCodigos();
+  cargarLlaves();
+  console.log('[Llaves] MÃ³dulo de llaves de acceso listo');
+})();
+
+// ==========================================================================
+// MÃ“DULO DE USUARIOS â€” AdministraciÃ³n de informaciÃ³n y permisos
+// Tabla Supabase: usuarios/Usuario-Admin-N (IDs secuenciales)
+// IMPORTANTE: las contraseÃ±as NUNCA se guardan en la BD; la cuenta se
+// crea en Supabase Auth y el registro de la tabla referencia su UID.
+// ==========================================================================
+(() => {
+  const usuariosSection = document.getElementById('settings-usuarios-tab');
+  if (!usuariosSection) return;
+  // Este mÃ³dulo es exclusivo de administradores.
+  if (document.body.dataset.rol === 'editor') {
+    usuariosSection.hidden = true;
+    return;
+  }
+
+  let usuarios = [];
+
+  function esc(s) {
+    return String(s || '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[c]));
+  }
+
+  function normalizar(u, docId) {
+    return {
+      id: docId,                                // Usuario-Admin-N (doc id)
+      uid: u.uid || u.uidAuth || '',            // UID de Supabase Auth
+      nombre: u.nombre || u.displayName || '',
+      correo: u.correo || u.email || '',
+      rol: u.rol || u.role || 'editor',
+      estado: u.estado || 'activo',
+      activo: typeof u.activo === 'boolean' ? u.activo : (u.estado !== 'bloqueado' && u.estado !== 'eliminado'),
+      fechaCreacion: u.fechaCreacion || u.createdAt || ''
+    };
+  }
+
+  function fmtFecha(iso) {
+    if (!iso) return 'â€”';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return 'â€”';
+      return d.toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) { return 'â€”'; }
+  }
+
+  function rolLabel(rol) {
+    const r = String(rol || 'editor').toLowerCase();
+    if (r === 'admin' || r === 'administrador') return { texto: 'Administrador', clase: 'rol-admin', icon: 'ph-user-gear' };
+    if (r === 'editor' || r === 'vendedor') return { texto: 'Editor', clase: 'rol-editor', icon: 'ph-user' };
+    return { texto: rol || 'Usuario', clase: 'rol-user', icon: 'ph-user-circle' };
+  }
+
+  function esYo(u) {
+    return !!auth.currentUser && !!u.uid && u.uid === auth.currentUser.uid;
+  }
+
+  function renderTabla() {
+    const tbody = document.getElementById('usuarios-tbody');
+    const empty = document.getElementById('usuarios-empty');
+    const count = document.getElementById('usuarios-count');
+    if (!tbody) return;
+
+    const visibles = usuarios.filter(u => u.estado !== 'eliminado');
+    const total = visibles.length;
+    if (count) count.innerHTML = `<i></i> ${total} usuario(s)`;
+
+    if (total === 0) { tbody.innerHTML = ''; if (empty) empty.hidden = false; return; }
+    if (empty) empty.hidden = true;
+
+    tbody.innerHTML = visibles.map((u) => {
+      const rl = rolLabel(u.rol);
+      const activo = u.activo;
+      const nombre = u.nombre || u.correo || 'â€”';
+      const yo = esYo(u);
+      return `
+        <tr data-id="${esc(u.id)}">
+          <td>
+            <div class="usuario-cell">
+              <span class="usuario-avatar">${esc((nombre.trim()[0] || '?').toUpperCase())}</span>
+              <div class="usuario-cell-info"><strong>${esc(nombre)}</strong>${yo ? '<em class="usuario-yo">(tÃº)</em>' : ''}</div>
+            </div>
+          </td>
+          <td>${esc(u.correo) || 'â€”'}</td>
+          <td><span class="rol-pill ${rl.clase}"><i class="ph ${rl.icon}" aria-hidden="true"></i>${esc(rl.texto)}</span></td>
+          <td><span class="estado-pill ${activo ? 'is-active' : 'is-inactive'}">${activo ? 'Activo' : 'Bloqueado'}</span></td>
+          <td>${fmtFecha(u.fechaCreacion)}</td>
+          <td class="ta-right">
+            <div class="table-actions">
+              <button type="button" class="table-action-btn table-action-btn--edit" data-usuario-edit="${esc(u.id)}" title="Editar usuario">
+                <i class="ph ph-pencil-simple" aria-hidden="true"></i><span>Editar</span>
+              </button>
+              <button type="button" class="table-action-btn table-action-btn--del" data-usuario-delete="${esc(u.id)}" title="Eliminar usuario">
+                <i class="ph ph-trash" aria-hidden="true"></i><span>Eliminar</span>
+              </button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('[data-usuario-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const u = usuarios.find(x => x.id === btn.dataset.usuarioEdit);
+        if (u) abrirEditor(u);
+      });
+    });
+    tbody.querySelectorAll('[data-usuario-delete]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const u = usuarios.find(x => x.id === btn.dataset.usuarioDelete);
+        if (u) eliminarUsuario(u);
+      });
+    });
+  }
+
+  function abrirEditor(u) {
+    const tr = document.querySelector(`#usuarios-tbody tr[data-id="${CSS.escape(u.id)}"]`);
+    if (!tr) return;
+    const yo = esYo(u);
+    const nombreCell = tr.querySelector('.usuario-cell-info');
+    nombreCell.innerHTML = `<input type="text" class="usuario-edit-nombre" value="${esc(u.nombre)}" maxlength="80" aria-label="Nombre del usuario">`;
+
+    const rolCell = tr.children[2];
+    rolCell.innerHTML = yo
+      ? `<span class="rol-pill rol-admin"><i class="ph ph-user-gear" aria-hidden="true"></i>Administrador</span>`
+      : `<select class="usuario-edit-rol" aria-label="Rol">
+        <option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Administrador</option>
+        <option value="editor" ${u.rol === 'editor' ? 'selected' : ''}>Editor</option>
+      </select>`;
+
+    const estadoCell = tr.children[3];
+    estadoCell.innerHTML = yo
+      ? `<span class="estado-pill is-active">Activo</span>`
+      : `<label class="switch"><input type="checkbox" class="usuario-edit-activo" ${u.activo ? 'checked' : ''}><span class="switch-slider"></span></label><span class="switch-label">${u.activo ? 'Activo' : 'Bloqueado'}</span>`;
+
+    const accionesCell = tr.children[5];
+    accionesCell.innerHTML = `
+      <div class="table-actions">
+        <button type="button" class="table-action-btn" data-usuario-save="${esc(u.id)}"><i class="ph ph-check" aria-hidden="true"></i><span>Guardar</span></button>
+        <button type="button" class="table-action-btn" data-usuario-cancel><i class="ph ph-x" aria-hidden="true"></i><span>Cancelar</span></button>
+      </div>`;
+
+    tr.querySelector('[data-usuario-cancel]').addEventListener('click', renderTabla);
+    tr.querySelector('[data-usuario-save]').addEventListener('click', async () => {
+      const nombre = (tr.querySelector('.usuario-edit-nombre')?.value || '').trim();
+      const rolSelect = tr.querySelector('.usuario-edit-rol');
+      const rolFinal = rolSelect ? (rolSelect.value === 'editor' ? 'editor' : 'admin') : u.rol;
+      const activoCheck = tr.querySelector('.usuario-edit-activo');
+      const activo = activoCheck ? activoCheck.checked : u.activo;
+      try {
+        await setDoc(doc(db, 'usuarios', u.id), {
+          nombre,
+          rol: rolFinal,
+          role: rolFinal,
+          activo,
+          estado: activo ? 'activo' : 'bloqueado',
+          permisos: permisosPorRol(rolFinal),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        const idx = usuarios.findIndex(x => x.id === u.id);
+        if (idx >= 0) { usuarios[idx] = { ...usuarios[idx], nombre, rol: rolFinal, activo, estado: activo ? 'activo' : 'bloqueado' }; }
+        renderTabla();
+        showAlert('Usuario actualizado correctamente', 'success');
+      } catch (err) {
+        showAlert('Error al actualizar usuario: ' + err.message, 'error');
+      }
+    });
+  }
+
+  function eliminarUsuario(u) {
+    if (esYo(u)) { showAlert('No puedes eliminar tu propia cuenta.', 'error'); return; }
+    showConfirm(
+      'Eliminar usuario',
+      `Se bloquearÃ¡ el acceso de <strong>${esc(u.nombre || u.correo)}</strong>. Su perfil se marca como eliminado y el documento permanece oculto. La cuenta de Authentication se conserva (solo la consola de Supabase puede borrarla definitivamente).`,
+      async () => {
+        try {
+          await setDoc(doc(db, 'usuarios', u.id), {
+            activo: false,
+            estado: 'eliminado',
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+          showAlert('Usuario eliminado y acceso bloqueado', 'success');
+          await cargarUsuarios();
+        } catch (err) {
+          showAlert('Error al eliminar usuario: ' + err.message, 'error');
+        }
+      },
+      { tone: 'danger', okLabel: 'Eliminar' }
+    );
+  }
+
+  async function cargarUsuarios() {
+    try {
+      const snap = await getDocs(collection(db, 'usuarios'));
+      usuarios = snap.docs.map(d => normalizar(d.data(), d.id));
+      usuarios.sort((a, b) => String(a.nombre || a.correo).localeCompare(String(b.nombre || b.correo), 'es'));
+      renderTabla();
+    } catch (err) {
+      console.warn('[Usuarios] No se pudieron cargar:', err);
+      usuarios = []; renderTabla();
+    }
+  }
+
+  // ---- Crear usuario desde el panel: Auth + Supabase ----
+  const crearDialog = document.getElementById('usuario-create-dialog');
+  const crearOverlay = document.getElementById('usuario-create-overlay');
+  const crearForm = document.getElementById('usuario-create-form');
+  const crearError = document.getElementById('usuario-create-error');
+  const crearSubmitBtn = document.getElementById('usuario-create-submit');
+
+  function abrirCrearDialog() {
+    if (crearForm) crearForm.reset();
+    if (crearError) { crearError.hidden = true; crearError.textContent = ''; }
+    if (crearDialog) crearDialog.hidden = false;
+  }
+  function cerrarCrearDialog() {
+    if (crearDialog) crearDialog.hidden = true;
+  }
+
+  document.getElementById('usuario-add-btn')?.addEventListener('click', abrirCrearDialog);
+  document.getElementById('usuario-create-cancel')?.addEventListener('click', cerrarCrearDialog);
+  crearOverlay?.addEventListener('click', cerrarCrearDialog);
+
+  crearForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = (document.getElementById('usuario-create-nombre')?.value || '').trim();
+    const correo = (document.getElementById('usuario-create-correo')?.value || '').trim().toLowerCase();
+    const password = document.getElementById('usuario-create-password')?.value || '';
+    const rol = document.getElementById('usuario-create-rol')?.value === 'admin' ? 'admin' : 'editor';
+
+    if (!nombre || !correo || !password) { mostrarErrorCrear('Completa todos los campos.'); return; }
+
+    try {
+      // El trigger handle_new_user de Supabase crea automÃ¡ticamente el doc en
+      // public.usuarios con el id secuencial (Usuario-Admin-N), rol, nombre y
+      // permisos correctos, usando la metadata pasada al signUp. No se necesita
+      // setDoc manual (evita doble inserciÃ³n y huecos de contador).
+      await crearUsuarioTemporal(correo, password, { rol, nombre });
+      cerrarCrearDialog();
+      showAlert(`Usuario <strong>${esc(nombre)}</strong> creado correctamente`, 'success');
+      await cargarUsuarios();
+    } catch (err) {
+      let msg = err.message || 'Error desconocido';
+      if (err.code === 'auth/email-already-in-use' || (err.message && err.message.includes('already'))) msg = 'Ese correo ya tiene una cuenta. Usa otro o contacta al administrador.';
+      else if (err.code === 'auth/invalid-email' || (err.message && err.message.includes('email'))) msg = 'El correo no es vÃ¡lido.';
+      else if (err.code === 'auth/weak-password' || (err.message && err.message.includes('password'))) msg = 'La contraseÃ±a debe tener al menos 6 caracteres.';
+      else if (err.code === 'auth/operation-not-allowed') msg = 'El registro de correo/contraseÃ±a no estÃ¡ habilitado en Supabase Authentication.';
+      console.error('[Usuarios] Error al crear:', err.code, err.message);
+      mostrarErrorCrear(msg);
+    }
+  });
+
+  function mostrarErrorCrear(msg) {
+    if (crearError) { crearError.textContent = msg; crearError.hidden = false; }
+  }
+
+  cargarUsuarios();
+  console.log('[Usuarios] MÃ³dulo de usuarios listo');
+})();
+

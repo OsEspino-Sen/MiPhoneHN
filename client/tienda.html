@@ -18,7 +18,7 @@
       <nav class="nav-menu">
         <a href="index.html" class="nav-link">Inicio</a>
         <a href="tienda.html" class="nav-link active">Tienda</a>
-        <a href="nosotros.html" class="nav-link">Nosotros</a>
+        <a href="index.html#about-section" class="nav-link">Nosotros</a>
         <a href="soporte.html" class="nav-link">Soporte</a>
       </nav>
       <div class="header-actions">
@@ -62,16 +62,49 @@
     </section>
   </main>
 
-  <div id="cart-drawer" class="cart-drawer">
+  <div id="product-modal" class="product-modal" role="dialog" aria-modal="true" aria-label="Detalle de producto">
+    <div class="product-modal-overlay" id="product-modal-overlay"></div>
+    <div class="product-modal-content">
+      <button type="button" id="product-modal-close" class="product-modal-close-btn icon-btn" aria-label="Cerrar detalle de producto">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <div class="product-modal-body" id="product-modal-body"></div>
+    </div>
+  </div>
+
+  <div id="cart-drawer" class="cart-drawer" aria-label="Carrito de compras">
     <div class="cart-drawer-overlay" id="cart-drawer-overlay"></div>
-    <aside class="cart-drawer-content">
+    <aside class="cart-drawer-content" aria-label="Contenido del carrito">
       <div class="cart-drawer-header">
         <h2>Tu carrito</h2>
-        <button type="button" id="cart-close" class="icon-btn">✕</button>
+        <button type="button" id="cart-close" class="icon-btn" aria-label="Cerrar carrito">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
       </div>
-      <div class="cart-items-container" id="cart-items-container"></div>
+
+      <div class="cart-items-container" id="cart-items-container" aria-live="polite"></div>
+
       <div class="cart-drawer-footer">
         <div class="cart-summary-row"><span>Subtotal:</span><span id="cart-subtotal">L. 0</span></div>
+        <div class="cart-summary-row shipping-row"><span>Envío (Rápido Cargo):</span><span>Coordinado por WhatsApp</span></div>
+
+        <form id="cart-checkout-form" class="cart-checkout-form" style="display: none;" novalidate>
+          <h3 class="checkout-form-title">Datos para la entrega</h3>
+          <p class="checkout-form-error" id="checkout-form-error" role="alert" hidden>Todos los campos son obligatorios.</p>
+          <div class="form-group" id="group-client-name">
+            <label for="client-name">Nombre completo: <span class="req" aria-hidden="true">*</span></label>
+            <input type="text" id="client-name" placeholder="Ej. Juan Pérez" autocomplete="name">
+          </div>
+          <div class="form-group" id="group-client-dni">
+            <label for="client-dni">DNI / identidad: <span class="req" aria-hidden="true">*</span></label>
+            <input type="text" id="client-dni" placeholder="Ej. 0601-1990-12345">
+          </div>
+          <div class="form-group" id="group-client-location">
+            <label for="client-location">Localidad / ciudad de envío: <span class="req" aria-hidden="true">*</span></label>
+            <input type="text" id="client-location" placeholder="Ej. Tegucigalpa, Col. Kennedy" autocomplete="street-address">
+          </div>
+        </form>
+
         <button type="button" id="checkout-whatsapp-btn" class="btn btn-primary btn-block checkout-btn" style="display: none;">Pedir por WhatsApp</button>
       </div>
     </aside>
@@ -79,7 +112,7 @@
 
   <footer class="site-footer" style="margin-top: 50px;">
     <div class="section-container" style="text-align: center; padding: 20px;">
-      <p>&copy; 2026 Mi Phone HN. Todos los derechos reservados. | <a href="../admin/login.html" style="color: var(--color-accent); text-decoration: none;">Acceso Administrador</a></p>
+      <p>&copy; 2026 Mi Phone HN. Todos los derechos reservados.</p>
     </div>
   </footer>
 </body>

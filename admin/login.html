@@ -22,7 +22,7 @@
       <!-- Left: Image -->
       <div class="login-visual" aria-hidden="true">
         <div class="login-image-wrapper" id="login-image-wrapper">
-          <img id="login-custom-image" src="imagen-login.jpg" alt="Visual administracion" loading="eager">
+          <img id="login-custom-image" src="imagen-login.jpeg" alt="Visual administracion" loading="eager">
           <div class="login-image-placeholder" id="login-image-placeholder">
             <span class="placeholder-icon"><i class="ph ph-image" aria-hidden="true"></i></span>
             <strong>Tu imagen 3D aquí</strong>
@@ -72,7 +72,7 @@
 
           <div class="login-footer">
             <span class="secure-note"><i class="ph ph-shield-check" aria-hidden="true"></i> Sesión protegida</span>
-            <a href="../index.html" class="back-link">Ver tienda <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+            <a href="https://mi-phone-hn.web.app/" class="back-link">Ver tienda <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
           </div>
         </div>
       </div>
@@ -86,11 +86,13 @@
       const placeholder = document.getElementById('login-image-placeholder');
       if (!wrapper || !img) return;
 
-      // Primer intento: leer desde Firestore
-      import('./firebase-config.js').then(async ({ db, collection, getDocs, getDoc, doc }) => {
+      // Primer intento: leer desde Supabase
+      import('./supabase-config.js').then(async ({ db, collection, getDocs, getDoc, doc }) => {
         try {
-          const docSnap = await getDoc(doc(db, 'imagenes', 'login'));
-          const docData = docSnap.exists() ? docSnap.data() : null;
+          // Primer intento: leer desde Supabase (nueva key, con fallback a la legacy)
+          const docSnap = await getDoc(doc(db, 'imagenes', 'imagen_login'));
+          const docSnapLegacy = docSnap.exists() ? null : await getDoc(doc(db, 'imagenes', 'login'));
+          const docData = docSnap.exists() ? docSnap.data() : (docSnapLegacy && docSnapLegacy.exists() ? docSnapLegacy.data() : null);
           const loginSrc = docData ? (docData.data || docData.url) : null;
           if (loginSrc) {
             img.src = loginSrc;
@@ -147,7 +149,7 @@
     })();
   </script>
   <script type="module">
-    import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, syncUserToFirestore } from './firebase-config.js';
+    import { auth, signInWithEmailAndPassword, syncUserToSupabase } from './supabase-config.js';
 
     document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -161,30 +163,19 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = "<span>Validando acceso…</span>";
 
-        let userCred;
-        try {
-          userCred = await signInWithEmailAndPassword(auth, email, password);
-        } catch (err) {
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-            try {
-              userCred = await createUserWithEmailAndPassword(auth, email, password);
-            } catch (createErr) {
-              if (createErr.code === 'auth/email-already-in-use') {
-                throw new Error("Contraseña incorrecta.");
-              }
-              throw createErr;
-            }
-          } else {
-            throw err;
-          }
-        }
-
+        // Solo inicio de sesión: no se crean cuentas automáticamente desde el login.
+        // La creación de administradores debe realizarse desde el panel o la consola de Supabase.
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
-        await syncUserToFirestore(user);
+        await syncUserToSupabase(user);
         window.location.href = 'index.html';
 
       } catch (err) {
-        errorEl.innerText = err.message || 'Credenciales no válidas.';
+        let msg = err.message || 'Credenciales no válidas.';
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          msg = 'Correo o contraseña incorrectos. Si no tienes cuenta, contacta al administrador del sistema.';
+        }
+        errorEl.innerText = msg;
         errorEl.hidden = false;
         submitBtn.disabled = false;
         submitBtn.innerHTML = "<span>Entrar al panel</span><i class=\"ph ph-arrow-right\" aria-hidden=\"true\"></i>";

@@ -1,4 +1,4 @@
-// Módulo de configuración e inicialización de Firebase para Mi Phone HN
+﻿// M├│dulo de configuraci├│n e inicializaci├│n de Firebase para Mi Phone HN
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   initializeFirestore, 
@@ -14,6 +14,12 @@ import {
   query, 
   orderBy 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+  getStorage, 
+  ref, 
+  uploadBytes, 
+  getDownloadURL 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -34,16 +40,18 @@ export const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Configuración explícita para forzar Long-Polling y evitar bloqueos por AdBlockers / WebChannel (ERR_BLOCKED_BY_CLIENT)
+// Configuraci├│n expl├¡cita para forzar Long-Polling y evitar bloqueos por AdBlockers / WebChannel (ERR_BLOCKED_BY_CLIENT)
 const db = initializeFirestore(app, {
   experimentalForceLongPolling: true
 });
 
+const storage = getStorage(app);
 const auth = getAuth(app);
 
 export { 
   app, 
   db, 
+  storage, 
   auth, 
   collection, 
   doc, 
@@ -56,6 +64,9 @@ export {
   onSnapshot, 
   query, 
   orderBy,
+  ref, 
+  uploadBytes, 
+  getDownloadURL,
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   onAuthStateChanged, 
@@ -73,10 +84,10 @@ export async function syncUserToFirestore(user) {
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString()
       });
-      console.log("✅ Colección de usuarios creada en Firestore:", user.email);
+      console.log("Ô£à Colecci├│n de usuarios creada en Firestore:", user.email);
     } else {
       await setDoc(userRef, { lastLogin: new Date().toISOString() }, { merge: true });
-      console.log("✅ Usuario actualizado en Firestore:", user.email);
+      console.log("Ô£à Usuario actualizado en Firestore:", user.email);
     }
     return true;
   } catch (err) {
