@@ -2,5 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
-  "outputDirectory": "client/dist"
+  "outputDirectory": "client/dist",
+  "redirects": [
+    { "source": "/Panel/Administrador", "destination": "/Panel/Administrador/login.html", "permanent": false }
+  ]
 }

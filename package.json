@@ -9,7 +9,7 @@
     "dev:all": "npm run dev",
     "dev:client": "vite --config vite.client.config.js",
     "dev:admin": "vite --config vite.admin.config.js",
-    "build": "vite build --config vite.client.config.js",
+    "build": "vite build --config vite.client.config.js && vite build --config vite.admin.config.js",
     "build:admin": "vite build --config vite.admin.config.js",
     "preview:client": "vite preview --config vite.client.config.js",
     "preview:admin": "vite preview --config vite.admin.config.js"
