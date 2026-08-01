@@ -3030,3 +3030,120 @@ select:focus-visible {
   }
 }
 
+/* ==========================================================================
+   TIENDA (página de catálogo completo) y carga progresiva
+   ========================================================================== */
+
+.shop-hero {
+  padding: 72px 0 44px;
+  border-bottom: 1px solid var(--border-light);
+  background: linear-gradient(180deg, var(--bg-secondary), var(--bg-primary));
+  text-align: center;
+}
+
+.shop-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.shop-title {
+  margin: 18px 0 12px;
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+
+.shop-subtitle {
+  max-width: 640px;
+  margin: 0 auto;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+}
+
+.shop-count-pill {
+  display: inline-block;
+  margin-top: 22px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.catalog-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-top: 40px;
+  text-align: center;
+}
+
+.catalog-end {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.btn-lg {
+  padding: 14px 32px;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+}
+
+/* Botones de tarjeta en la tienda: acciones lado a lado */
+.product-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.product-actions .btn {
+  width: 100%;
+  padding: 12px 10px;
+  font-size: 0.875rem;
+}
+
+/* Entrada escalonada de tarjetas al renderizar */
+.product-card {
+  animation: card-in 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) backwards;
+}
+
+.products-grid .product-card:nth-child(2) { animation-delay: 0.04s; }
+.products-grid .product-card:nth-child(3) { animation-delay: 0.08s; }
+.products-grid .product-card:nth-child(4) { animation-delay: 0.12s; }
+.products-grid .product-card:nth-child(5) { animation-delay: 0.16s; }
+.products-grid .product-card:nth-child(6) { animation-delay: 0.2s; }
+.products-grid .product-card:nth-child(7) { animation-delay: 0.24s; }
+.products-grid .product-card:nth-child(8) { animation-delay: 0.28s; }
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-card {
+    animation: none;
+  }
+}
+

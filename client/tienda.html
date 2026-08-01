@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Catálogo de celulares iPhones, Samsung y accesorios en Honduras.">
+  <meta name="description" content="Catálogo completo de celulares iPhones, Samsung, iPads y accesorios garantizados en Honduras. Envíos seguros a nivel nacional.">
   <title>Tienda | Mi Phone HN</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,52 +11,109 @@
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
-<body>
+<body data-page="shop">
+  <div class="announcement-bar" id="announcement-bar">
+    <span class="announcement-text" id="announcement-text">Envíos seguros a nivel nacional vía Rápido Cargo desde Choluteca</span>
+  </div>
+
   <header class="site-header">
     <div class="header-container">
-      <a href="index.html" class="logo">Mi Phone <span>HN</span></a>
-      <nav class="nav-menu">
+      <a href="index.html" class="logo" aria-label="Mi Phone HN, inicio">Mi Phone <span>HN</span></a>
+
+      <nav class="nav-menu" id="nav-menu" aria-label="Navegación principal">
         <a href="index.html" class="nav-link">Inicio</a>
         <a href="tienda.html" class="nav-link active">Tienda</a>
         <a href="index.html#about-section" class="nav-link">Nosotros</a>
-        <a href="soporte.html" class="nav-link">Soporte</a>
+        <a href="index.html#faq-section" class="nav-link">Soporte</a>
       </nav>
+
       <div class="header-actions">
+        <button type="button" id="theme-toggle" class="icon-btn" aria-label="Cambiar tema">
+          <span class="sun-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="12" cy="12" r="5" stroke-width="2"/>
+              <path stroke-linecap="round" stroke-width="2" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+          </span>
+          <span class="moon-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+            </svg>
+          </span>
+        </button>
+
         <button type="button" id="cart-toggle" class="icon-btn cart-btn" aria-label="Ver carrito">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+          </svg>
           <span class="cart-badge" id="cart-badge">0</span>
+        </button>
+
+        <button type="button" id="mobile-menu-toggle" class="icon-btn mobile-menu-btn" aria-label="Abrir menú principal" aria-expanded="false">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
         </button>
       </div>
     </div>
   </header>
 
-  <main style="padding-top: 100px;">
+  <main>
+    <section class="shop-hero">
+      <div class="section-container">
+        <span class="shop-eyebrow">Tienda Mi Phone HN</span>
+        <h1 class="shop-title">Catálogo completo de productos</h1>
+        <p class="shop-subtitle">Explora todos nuestros equipos nuevos y seminuevos certificados, con garantía real y envíos a todo Honduras.</p>
+        <span class="shop-count-pill" id="shop-count">Cargando catálogo…</span>
+      </div>
+    </section>
+
     <section id="catalog-section" class="catalog-section">
       <div class="section-container">
-        <div class="section-header">
-          <h1 class="section-title">Catálogo de Productos</h1>
-          <p class="section-subtitle">Explora nuestra selección de celulares, iPads y accesorios garantizados.</p>
-        </div>
-
         <div class="catalog-controls">
           <div class="search-box">
-            <input type="search" id="search-input" placeholder="Buscar por modelo (ej. iPhone 14)...">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" stroke-width="2"/>
+              <path stroke-linecap="round" stroke-width="2" d="M21 21l-4.35-4.35"/>
+            </svg>
+            <label class="sr-only" for="search-input">Buscar productos</label>
+            <input type="search" id="search-input" placeholder="Buscar por modelo o marca (ej. iPhone 13)..." autocomplete="off">
           </div>
-          <div class="filter-groups">
-            <div class="filter-group">
+
+          <div class="filter-groups" aria-label="Filtros de catálogo">
+            <div class="filter-group" aria-label="Categorías">
               <button type="button" class="filter-tab active" data-category="all">Todos</button>
               <button type="button" class="filter-tab" data-category="iphones">iPhones</button>
               <button type="button" class="filter-tab" data-category="samsung">Samsung</button>
               <button type="button" class="filter-tab" data-category="ipads">iPads</button>
               <button type="button" class="filter-tab" data-category="accessories">Accesorios</button>
             </div>
+            <div class="filter-group" aria-label="Condición">
+              <button type="button" class="filter-tag active" data-condition="all">Cualquiera</button>
+              <button type="button" class="filter-tag" data-condition="nuevo">Nuevos</button>
+              <button type="button" class="filter-tag" data-condition="seminuevo">Seminuevos</button>
+            </div>
           </div>
         </div>
 
-        <div class="products-grid" id="products-grid"></div>
+        <div class="products-grid" id="products-grid" aria-live="polite"></div>
+
         <div class="no-results" id="no-results" style="display: none;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
           <h3>No encontramos productos</h3>
-          <p>Intenta cambiar la búsqueda o categoría.</p>
+          <p>Intenta cambiar los filtros o los términos de búsqueda.</p>
+        </div>
+
+        <div class="catalog-footer">
+          <button type="button" id="load-more-btn" class="btn btn-primary btn-lg" hidden>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h16m0 0l-6-6m6 6l-6 6"/>
+            </svg>
+            Cargar más productos
+          </button>
+          <p id="catalog-end" class="catalog-end" hidden></p>
         </div>
       </div>
     </section>
@@ -110,9 +167,50 @@
     </aside>
   </div>
 
-  <footer class="site-footer" style="margin-top: 50px;">
-    <div class="section-container" style="text-align: center; padding: 20px;">
-      <p>&copy; 2026 Mi Phone HN. Todos los derechos reservados.</p>
+  <footer class="site-footer">
+    <div class="section-container">
+      <div class="footer-grid">
+        <div class="footer-col brand-col">
+          <a href="index.html" class="footer-logo">Mi Phone <span>HN</span></a>
+          <p class="footer-desc" id="footer-desc">El distribuidor de confianza para celulares premium nuevos y seminuevos garantizados en la zona sur y a nivel nacional.</p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Navegación</h3>
+          <ul>
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="tienda.html">Tienda</a></li>
+            <li><a href="index.html#about-section">Nosotros</a></li>
+            <li><a href="index.html#faq-section">Preguntas frecuentes</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Contacto y logística</h3>
+          <div class="footer-contact-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span id="footer-location">Choluteca, Honduras</span>
+          </div>
+          <a class="footer-contact-item" id="footer-wa-link" href="https://wa.me/50488238432" target="_blank" rel="noopener noreferrer">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+            <span id="footer-phone">+504 8823-8432</span>
+          </a>
+          <div class="footer-contact-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span id="footer-shipping">Envíos vía Rápido Cargo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p id="footer-copyright">&copy; 2026 Mi Phone HN. Todos los derechos reservados.</p>
+        <div class="payment-methods-logos" id="payment-methods" aria-label="Métodos de pago">
+          <span class="pay-logo-badge">BAC Credomatic</span>
+          <span class="pay-logo-badge">Ficohsa</span>
+          <span class="pay-logo-badge">Transferencias</span>
+          <span class="pay-logo-badge">Efectivo</span>
+        </div>
+      </div>
     </div>
   </footer>
 </body>

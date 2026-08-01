@@ -38,6 +38,12 @@ let modalActiveImageIndex = 0;
 let modalActiveTab = "description";
 let lastProductModalTrigger = null;
 
+// Catálogo con carga progresiva: el Home es vitrina (8 destacados) y la
+// página de Tienda muestra el catálogo completo de 8 en 8.
+const CATALOG_PAGE_SIZE = 8;
+const isShopPage = document.body?.dataset.page === "shop";
+let catalogVisibleCount = CATALOG_PAGE_SIZE;
+
 /* ========================================================================== 
    ELEMENTOS DEL DOM
    ========================================================================== */
@@ -106,6 +112,19 @@ document.addEventListener("DOMContentLoaded", () => {
   calculateFinancing();
   loadProducts();
   loadSiteSettings();
+
+  // Llegada con hash desde otra página (p. ej. Nosotros/Soporte desde la
+  // Tienda): scroll suave a la sección una vez cargado el DOM.
+  if (window.location.hash && !isShopPage) {
+    try {
+      const target = document.querySelector(window.location.hash);
+      if (target) {
+        setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+      }
+    } catch (err) {
+      /* hash inválido: ignorar */
+    }
+  }
 });
 
 /* ========================================================================== 
@@ -176,6 +195,7 @@ function showCatalogError() {
 function setupEventListeners() {
   searchInput?.addEventListener("input", (event) => {
     searchQuery = event.target.value.toLowerCase().trim();
+    resetCatalogPagination();
     renderProducts();
   });
 
@@ -184,6 +204,7 @@ function setupEventListeners() {
       filterTabs.forEach((item) => item.classList.remove("active"));
       tab.classList.add("active");
       activeCategory = tab.dataset.category || "all";
+      resetCatalogPagination();
       renderProducts();
     });
   });
@@ -193,8 +214,14 @@ function setupEventListeners() {
       filterTags.forEach((item) => item.classList.remove("active"));
       tag.classList.add("active");
       activeCondition = tag.dataset.condition || "all";
+      resetCatalogPagination();
       renderProducts();
     });
+  });
+
+  document.getElementById("load-more-btn")?.addEventListener("click", () => {
+    catalogVisibleCount += CATALOG_PAGE_SIZE;
+    renderProducts();
   });
 
   cartToggleBtn?.addEventListener("click", openCart);
@@ -272,6 +299,10 @@ function bindFaqAccordion() {
    CATÁLOGO
    ========================================================================== */
 
+function resetCatalogPagination() {
+  if (isShopPage) catalogVisibleCount = CATALOG_PAGE_SIZE;
+}
+
 function renderProducts() {
   if (!productsGrid) return;
 
@@ -292,12 +323,16 @@ function renderProducts() {
 
   if (filteredProducts.length === 0) {
     if (noResults) noResults.style.display = "block";
+    updateCatalogFooter(false, 0);
     return;
   }
 
   if (noResults) noResults.style.display = "none";
 
-  filteredProducts.forEach((product) => {
+  const maxVisible = isShopPage ? catalogVisibleCount : CATALOG_PAGE_SIZE;
+  const visibleProducts = filteredProducts.slice(0, Math.min(maxVisible, filteredProducts.length));
+
+  visibleProducts.forEach((product) => {
     const card = document.createElement("article");
     card.className = "product-card";
 
@@ -313,6 +348,14 @@ function renderProducts() {
       ? `<span class="price-old">${formatCurrency(baseStorageOption.oldPrice)}</span>`
       : "";
     const priceLabel = `${hasStoragePrices ? "Desde " : ""}${formatCurrency(baseStorageOption.price)}`;
+    const addButton = `
+      <button type="button" class="btn btn-primary" data-add-product="${escapeHTML(productId)}" ${availability.isOut ? "disabled" : ""}>
+        ${availability.isOut ? "Agotado" : "Agregar al carrito"}
+      </button>`;
+    const detailsButton = `
+      <button type="button" class="btn btn-secondary" data-open-product="${escapeHTML(productId)}">
+        Ver detalles
+      </button>`;
 
     card.innerHTML = `
       <span class="product-tag-badge ${badgeClass}">${escapeHTML(product.badge || product.condition || "Disponible")}</span>
@@ -332,9 +375,7 @@ function renderProducts() {
           <span class="price-current">${priceLabel}</span>
           ${oldPriceHTML}
         </div>
-        <button type="button" class="btn btn-primary" data-add-product="${escapeHTML(productId)}" ${availability.isOut ? "disabled" : ""}>
-          ${availability.isOut ? "Agotado" : "Agregar al carrito"}
-        </button>
+        ${isShopPage ? `<div class="product-actions">${detailsButton}${addButton}</div>` : addButton}
       </div>
     `;
 
@@ -351,6 +392,30 @@ function renderProducts() {
 
     productsGrid.appendChild(card);
   });
+
+  updateCatalogFooter(visibleProducts.length < filteredProducts.length, filteredProducts.length);
+}
+
+function updateCatalogFooter(hasMore, total) {
+  const loadMoreBtn = document.getElementById("load-more-btn");
+  const catalogEnd = document.getElementById("catalog-end");
+  const exploreBtn = document.getElementById("explore-catalog-btn");
+  const shopCount = document.getElementById("shop-count");
+
+  if (exploreBtn) exploreBtn.hidden = total === 0;
+  if (loadMoreBtn) loadMoreBtn.hidden = !hasMore;
+  if (catalogEnd) {
+    const reachedEnd = !hasMore && total > 0;
+    catalogEnd.hidden = !reachedEnd;
+    if (reachedEnd) {
+      catalogEnd.textContent = total > CATALOG_PAGE_SIZE
+        ? `Has visto los ${total} productos del catálogo.`
+        : "Este es todo el catálogo disponible por ahora.";
+    }
+  }
+  if (shopCount) {
+    shopCount.textContent = total === 1 ? "1 producto disponible" : `${total} productos disponibles`;
+  }
 }
 
 /* ========================================================================== 
