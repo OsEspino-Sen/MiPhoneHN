@@ -2862,7 +2862,7 @@ select:focus-visible {
 .about-image {
   position: relative;
   margin-top: 24px;
-  padding: 16px;
+  padding: 32px;
   border: 1px solid var(--border-light);
   border-radius: calc(var(--radius-lg) + 10px);
   background: linear-gradient(160deg, var(--bg-secondary), var(--bg-primary) 65%);
@@ -2887,11 +2887,10 @@ select:focus-visible {
 .about-image img {
   display: block;
   width: 100%;
-  max-width: 560px;
-  max-height: 340px;
+  height: auto;
   margin: 0 auto;
   object-fit: contain;
-  border-radius: var(--radius-lg);
+  border-radius: calc(var(--radius-lg) + 10px);
   animation: about-float 7s ease-in-out infinite;
 }
 
