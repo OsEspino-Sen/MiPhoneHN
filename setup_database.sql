@@ -182,6 +182,16 @@ ALTER TABLE public.categorias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.configuracion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.imagenes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public._meta ENABLE ROW LEVEL SECURITY;
+
+-- _meta: sin políticas (denegar acceso directo a todos).
+-- La única vía de acceso es la función obtener_siguiente_id (SECURITY DEFINER),
+-- que corre con privilegios del owner y no necesita RLS.
+REVOKE ALL ON public._meta FROM anon, authenticated;
+
+-- Restringir la ejecución de la función de contadores solo a usuarios autenticados
+REVOKE EXECUTE ON FUNCTION public.obtener_siguiente_id FROM anon;
+GRANT EXECUTE ON FUNCTION public.obtener_siguiente_id TO authenticated;
 
 -- Eliminar políticas previas para evitar duplicados
 DROP POLICY IF EXISTS "Lectura publica de productos" ON public.productos;
