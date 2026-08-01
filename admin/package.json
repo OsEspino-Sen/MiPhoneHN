@@ -1,0 +1,17 @@
+{
+  "name": "miphonehn-admin",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "MiPhone HN - Panel Administrador (proyecto independiente)",
+  "scripts": {
+    "dev": "vite --config ../vite.admin.config.js",
+    "build": "vite build --config ../vite.admin.config.js"
+  },
+  "devDependencies": {
+    "vite": "^5.4.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.111.0"
+  }
+}

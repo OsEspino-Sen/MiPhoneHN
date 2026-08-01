@@ -4,10 +4,7 @@ import { resolve } from 'path';
 export default defineConfig({
   root: resolve(__dirname, 'admin'),
   envDir: resolve(__dirname),
-  base: '/Panel/Administrador/',
   build: {
-    outDir: resolve(__dirname, 'client/dist/Panel/Administrador'),
-    emptyOutDir: false,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'admin/index.html'),
