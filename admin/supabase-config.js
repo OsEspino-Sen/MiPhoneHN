@@ -284,7 +284,12 @@ export async function setDoc(docRef, data, options = {}) {
     if (docRef.id.length === 36 && !docRef.id.includes('-')) {
       payload.uid = docRef.id;
     } else {
-      payload.id = docRef.id;
+      // IDs secuenciales (Usuario-Admin-N): UPDATE por id. Un upsert intentaría
+      // INSERT con uid NULL cuando la fila no coincide por PK/uid, violando la
+      // restricción NOT NULL de la columna uid.
+      const { error: updError } = await supabase.from(table).update(payload).eq('id', docRef.id);
+      if (updError) throw updError;
+      return;
     }
   } else {
     payload.id = docRef.id;

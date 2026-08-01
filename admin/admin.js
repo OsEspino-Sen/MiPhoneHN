@@ -309,7 +309,7 @@ function renderCategoryList() {
       const catLabel = categories[index].label;
       const productsUsing = products.filter(p => p.category === catId);
       if (productsUsing.length > 0) {
-        showAlert(`No se puede eliminar "${catLabel}": ${productsUsing.length} producto(s) la usan.`, "error");
+        showAlert(`No se puede eliminar "${escapeHTML(catLabel)}": ${productsUsing.length} producto(s) la usan.`, "error");
         return;
       }
       showConfirm(
@@ -447,7 +447,7 @@ function init() {
         if (sessionStorage.getItem('miphone_bienvenida')) {
           sessionStorage.removeItem('miphone_bienvenida');
           const nombreUsuario = userData.nombre || user.displayName || user.email || "Administrador";
-          showAlert(`¡Bienvenido de nuevo, ${nombreUsuario}!`, "success");
+          showAlert(`¡Bienvenido de nuevo, ${escapeHTML(nombreUsuario)}!`, "success");
         }
 
         adminApp.hidden = false;
@@ -629,7 +629,7 @@ function init() {
       return;
     }
     if (categories.some(c => c.id === id)) {
-      showAlert(`La categoría "${name}" ya existe.`, "error");
+      showAlert(`La categoría "${escapeHTML(name)}" ya existe.`, "error");
       return;
     }
     try {
@@ -2125,7 +2125,7 @@ function setButtonLabel(button, label, icon = "check") {
 
 function showAlert(message, type = "success") {
   if (!adminAlert) return;
-  adminAlert.textContent = message;
+  adminAlert.innerHTML = message;
   adminAlert.className = `admin-toast admin-alert-${type}`;
   adminAlert.hidden = false;
 
@@ -2136,7 +2136,7 @@ function showAlert(message, type = "success") {
 
 function showConfirm(title, message, callback, options = {}) {
   confirmTitle.textContent = title;
-  confirmMessage.textContent = message;
+  confirmMessage.innerHTML = message;
   confirmCallback = callback;
 
   // Tono visual del diálogo: "danger" (predeterminado) o "primary".
