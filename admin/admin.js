@@ -443,8 +443,12 @@ function init() {
         permisosUsuario = null;
         document.body.dataset.rol = rolUsuarioActual;
 
-        const nombreUsuario = userData.nombre || user.displayName || user.email || "Administrador";
-        showAlert(`¡Bienvenido de nuevo, ${nombreUsuario}!`, "success");
+        // Bienvenida solo tras un inicio de sesión real (flag fijado en login.html).
+        if (sessionStorage.getItem('miphone_bienvenida')) {
+          sessionStorage.removeItem('miphone_bienvenida');
+          const nombreUsuario = userData.nombre || user.displayName || user.email || "Administrador";
+          showAlert(`¡Bienvenido de nuevo, ${nombreUsuario}!`, "success");
+        }
 
         adminApp.hidden = false;
         listenToProducts();

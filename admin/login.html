@@ -168,6 +168,7 @@
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         const user = userCred.user;
         await syncUserToSupabase(user);
+        sessionStorage.setItem('miphone_bienvenida', '1');
         window.location.href = 'index.html';
 
       } catch (err) {
