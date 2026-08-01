@@ -189,9 +189,37 @@ ALTER TABLE public._meta ENABLE ROW LEVEL SECURITY;
 -- que corre con privilegios del owner y no necesita RLS.
 REVOKE ALL ON public._meta FROM anon, authenticated;
 
--- Restringir la ejecución de la función de contadores solo a usuarios autenticados
-REVOKE EXECUTE ON FUNCTION public.obtener_siguiente_id FROM anon;
-GRANT EXECUTE ON FUNCTION public.obtener_siguiente_id TO authenticated;
+-- Restringir la ejecución de la función de contadores solo a usuarios autenticados.
+-- IMPORTANTE: las funciones reciben EXECUTE por defecto al rol PUBLIC; revocar
+-- solo de anon NO basta porque el privilegio llega por herencia de PUBLIC.
+REVOKE ALL ON FUNCTION public.obtener_siguiente_id(text, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.obtener_siguiente_id(text, text, text) TO authenticated;
+
+-- ==========================================
+-- FUNCIONES: search_path fijo y permisos de ejecución
+-- ==========================================
+
+-- Fijar search_path en todas las funciones SECURITY DEFINER.
+-- Los cuerpos usan esquema explícito (public.*), por lo que '' es seguro.
+ALTER FUNCTION public.obtener_siguiente_id(text, text, text) SET search_path = '';
+ALTER FUNCTION public.es_admin(uuid) SET search_path = '';
+ALTER FUNCTION public.es_usuario_activo(uuid) SET search_path = '';
+ALTER FUNCTION public.handle_new_user() SET search_path = '';
+
+-- handle_new_user es solo de trigger (auth.users): nadie debe llamarla por RPC.
+-- Los triggers se ejecutan sin requerir EXECUTE, así que puede quedar sin grants.
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
+
+-- es_admin / es_usuario_activo: las usan las políticas RLS para usuarios
+-- autenticados; anon no debe poder invocarlas.
+REVOKE ALL ON FUNCTION public.es_admin(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.es_usuario_activo(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.es_admin(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.es_usuario_activo(uuid) TO authenticated;
+
+-- NOTA: authenticated SÍ conserva EXECUTE sobre es_admin, es_usuario_activo y
+-- obtener_siguiente_id a propósito: las políticas RLS y el panel admin las
+-- necesitan. El linter las marca como advertidas, pero es intencional.
 
 -- Eliminar políticas previas para evitar duplicados
 DROP POLICY IF EXISTS "Lectura publica de productos" ON public.productos;

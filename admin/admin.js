@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MI PHONE HN â€” PANEL ADMIN SAAS CON SUPABASE + CLOUDINARY
+   MI PHONE HN — PANEL ADMIN SAAS CON SUPABASE + CLOUDINARY
    ========================================================================== */
 
 import { 
@@ -26,8 +26,8 @@ import {
 } from './supabase-config.js';
 
 
-// Rol y permisos del usuario autenticado (ConfiguraciÃ³n â†’ Usuarios).
-// 'admin' tiene acceso completo; 'editor' solo puede ver y editar el catÃ¡logo.
+// Rol y permisos del usuario autenticado (Configuración → Usuarios).
+// 'admin' tiene acceso completo; 'editor' solo puede ver y editar el catálogo.
 let rolUsuarioActual = 'admin';
 let permisosUsuario = null;
 
@@ -41,7 +41,7 @@ function getPermisos() {
 }
 
 /* ==========================================================================
-   LLAVES DE ACCESO â€” validaciÃ³n (ConfiguraciÃ³n â†’ Llaves)
+   LLAVES DE ACCESO — validación (Configuración → Llaves)
    Las llaves se almacenan con hash SHA-256; nunca en texto plano.
    ========================================================================== */
 
@@ -57,14 +57,14 @@ async function sha256Hex(texto) {
 async function validarLlave(codigo, opciones = {}) {
   try {
     const snap = await getDoc(doc(db, 'configuracion', 'llaves-acceso'));
-    if (!snap.exists()) return true; // Bootstrap: sin llaves configuradas aÃºn, acceso libre.
+    if (!snap.exists()) return true; // Bootstrap: sin llaves configuradas aún, acceso libre.
     const llaves = Array.isArray(snap.data().llaves) ? snap.data().llaves : [];
-    if (llaves.length === 0) return true; // Bootstrap: primera llave se crea sin validaciÃ³n previa.
+    if (llaves.length === 0) return true; // Bootstrap: primera llave se crea sin validación previa.
     const texto = String(codigo || '').trim().toUpperCase();
     if (!texto) return false;
     const hash = await sha256Hex(texto);
-    // La confirmaciÃ³n de acciones sensibles acepta llaves inactivas para
-    // evitar encerrar al administrador tras desactivar la Ãºnica llave.
+    // La confirmación de acciones sensibles acepta llaves inactivas para
+    // evitar encerrar al administrador tras desactivar la única llave.
     return llaves.some(l => (l.activa !== false || opciones.incluirInactivas) && (l.hash === hash || l.codigo === texto));
   } catch (err) {
     console.warn('No se pudo validar la llave:', err.message);
@@ -98,7 +98,7 @@ function pedirLlave(titulo, mensaje, opciones = {}) {
     const msgEl = dlg.querySelector('#llave-prompt-message');
     if (!input || !errorEl || !okBtn || !cancelBtn || !tituloEl || !msgEl) { resolve(false); return; }
     tituloEl.textContent = titulo || 'Llave de acceso';
-    msgEl.textContent = mensaje || 'Introduce la llave generada en Configuración → Llaves.';
+    msgEl.textContent = mensaje || 'Introduce la llave generada en Configuración ? Llaves.';
     input.value = '';
     input.disabled = false;
     errorEl.hidden = true;
@@ -164,9 +164,9 @@ async function seedDefaultCategories() {
     for (const cat of defaults) {
       await setDoc(doc(db, "categorias", cat.id), { label: cat.label });
     }
-    console.log("CategorÃ­as predeterminadas creadas en Supabase.");
+    console.log("Categorías predeterminadas creadas en Supabase.");
   } catch (err) {
-    console.warn("Error al crear categorÃ­as predeterminadas:", err);
+    console.warn("Error al crear categorías predeterminadas:", err);
   }
 }
 
@@ -183,7 +183,7 @@ function listenToCategories() {
       renderCategoryFilter();
       renderFormCategories();
       updateDashboardMetrics();
-      // Actualizar la lista del modal en tiempo real si estÃ¡ abierto.
+      // Actualizar la lista del modal en tiempo real si está abierto.
       const catModal = document.getElementById("category-modal");
       if (catModal && !catModal.hidden) renderCategoryList();
     }, async () => {
@@ -202,7 +202,7 @@ async function fetchCategoriesFallback() {
     renderFormCategories();
     updateDashboardMetrics();
   } catch (err) {
-    console.error("Error al obtener categorÃ­as:", err);
+    console.error("Error al obtener categorías:", err);
   }
 }
 
@@ -210,7 +210,7 @@ function renderCategoryFilter() {
   const filter = document.getElementById("admin-category-filter");
   if (!filter) return;
   const currentValue = filter.value;
-  filter.innerHTML = '<option value="all">Todas las CategorÃ­as</option>';
+  filter.innerHTML = '<option value="all">Todas las Categorías</option>';
   categories.forEach(cat => {
     const opt = document.createElement("option");
     opt.value = cat.id;
@@ -234,7 +234,7 @@ function renderFormCategories() {
   if (currentValue) formSelect.value = currentValue;
 }
 
-let categoryEditingId = null; // id de la categorÃ­a en ediciÃ³n inline (null = ninguna)
+let categoryEditingId = null; // id de la categoría en edición inline (null = ninguna)
 
 function renderCategoryList() {
   const list = document.getElementById("category-list");
@@ -246,10 +246,10 @@ function renderCategoryList() {
     item.className = "category-list-item" + (cat.id === categoryEditingId ? " is-editing" : "");
 
     if (cat.id === categoryEditingId) {
-      // Modo ediciÃ³n inline: reemplaza el prompt nativo del navegador.
+      // Modo edición inline: reemplaza el prompt nativo del navegador.
       item.innerHTML = `
         <div class="category-list-edit">
-          <input type="text" class="category-name-input" value="${escapeHTML(cat.label)}" maxlength="40" aria-label="Nombre de categorÃ­a">
+          <input type="text" class="category-name-input" value="${escapeHTML(cat.label)}" maxlength="40" aria-label="Nombre de categoría">
           <div class="category-list-edit-actions">
             <button type="button" class="btn btn-primary btn-sm" data-cat-save="${escapeHTML(cat.id)}"><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
             <button type="button" class="btn btn-secondary btn-sm" data-cat-cancel title="Cancelar" aria-label="Cancelar"><i class="ph ph-x" aria-hidden="true"></i></button>
@@ -260,10 +260,10 @@ function renderCategoryList() {
       item.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
           <span class="category-list-label">${escapeHTML(cat.label)}</span>
-          <span style="font-family:var(--font-mono);font-size:.6875rem;color:var(--ink-3);font-weight:600">${escapeHTML(cat.id)} Â· ${count} prod</span>
+          <span style="font-family:var(--font-mono);font-size:.6875rem;color:var(--ink-3);font-weight:600">${escapeHTML(cat.id)} · ${count} prod</span>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-          <button type="button" class="btn btn-secondary btn-sm" data-cat-edit="${escapeHTML(cat.id)}" title="Renombrar categorÃ­a">
+          <button type="button" class="btn btn-secondary btn-sm" data-cat-edit="${escapeHTML(cat.id)}" title="Renombrar categoría">
             <i class="ph ph-pencil-simple" aria-hidden="true"></i>
             <span>Editar</span>
           </button>
@@ -289,11 +289,11 @@ function renderCategoryList() {
     item.querySelector("[data-cat-cancel]")?.addEventListener("click", () => { categoryEditingId = null; renderCategoryList(); });
     item.querySelector("[data-cat-save]")?.addEventListener("click", () => {
       const name = item.querySelector(".category-name-input")?.value.trim() || "";
-      if (!name) { showAlert("El nombre no puede estar vacÃ­o.", "error"); return; }
+      if (!name) { showAlert("El nombre no puede estar vacío.", "error"); return; }
       if (name === cat.label) { categoryEditingId = null; renderCategoryList(); return; }
       setDoc(doc(db, "categorias", cat.id), { label: name }, { merge: true })
-        .then(() => { categoryEditingId = null; showAlert("CategorÃ­a actualizada correctamente", "success"); })
-        .catch((err) => showAlert("Error al actualizar categorÃ­a: " + err.message, "error"));
+        .then(() => { categoryEditingId = null; showAlert("Categoría actualizada correctamente", "success"); })
+        .catch((err) => showAlert("Error al actualizar categoría: " + err.message, "error"));
     });
   });
   list.querySelectorAll("[data-cat-edit]").forEach(btn => {
@@ -313,17 +313,17 @@ function renderCategoryList() {
         return;
       }
       showConfirm(
-        "Eliminar categorÃ­a",
-        `Â¿Seguro que deseas eliminar la categorÃ­a "<strong>${escapeHTML(catLabel)}</strong>"? Esta acciÃ³n no se puede deshacer.`,
+        "Eliminar categoría",
+        `¿Seguro que deseas eliminar la categoría "<strong>${escapeHTML(catLabel)}</strong>"? Esta acción no se puede deshacer.`,
         async () => {
           try {
             await deleteDoc(doc(db, "categorias", catId));
-            showAlert("CategorÃ­a eliminada correctamente", "success");
+            showAlert("Categoría eliminada correctamente", "success");
           } catch (err) {
-            showAlert("Error al eliminar categorÃ­a: " + err.message, "error");
+            showAlert("Error al eliminar categoría: " + err.message, "error");
           }
         },
-        { tone: "danger", okLabel: "SÃ­, eliminar" }
+        { tone: "danger", okLabel: "Sí, eliminar" }
       );
     });
   });
@@ -352,7 +352,7 @@ let existingImageUrls = [];
 let pendingImageFiles = [];
 let pendingImagesFirst = false;
 let previewObjectUrls = [];
-/* DetecciÃ³n de cambios sin guardar del Drawer de producto. */
+/* Detección de cambios sin guardar del Drawer de producto. */
 let formSnapshot = null;
 let formIsDirty = false;
 const migratedProductIds = new Set();
@@ -397,7 +397,7 @@ const productImageFileInput = document.getElementById("product-image-file");
 const productImageUrlsInput = document.getElementById("product-image");
 const productImagesPreview = document.getElementById("product-images-preview");
 const productImagesCount = document.getElementById("product-images-count");
-// Drawer de producto: elementos del rediseÃ±o
+// Drawer de producto: elementos del rediseño
 const drawerModeChip = document.getElementById("drawer-mode-chip");
 const drawerModeCopy = document.getElementById("drawer-mode-copy");
 const drawerUpdateNotice = document.getElementById("drawer-update-notice");
@@ -419,7 +419,7 @@ function init() {
       try {
         const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
         let userData = userDoc.exists() ? userDoc.data() : null;
-        // Fallback: si el usuario existe en Auth pero no en la colecciÃ³n usuarios,
+        // Fallback: si el usuario existe en Auth pero no en la colección usuarios,
         // sincronizarlo para conservar el acceso de cuentas legadas.
         if (!userData) {
           await syncUserToSupabase(user);
@@ -443,11 +443,14 @@ function init() {
         permisosUsuario = null;
         document.body.dataset.rol = rolUsuarioActual;
 
+        const nombreUsuario = userData.nombre || user.displayName || user.email || "Administrador";
+        showAlert(`¡Bienvenido de nuevo, ${nombreUsuario}!`, "success");
+
         adminApp.hidden = false;
         listenToProducts();
         listenToCategories();
-        // MigraciÃ³n de estructura ya realizada (IDs secuenciales producto-N / Usuario-Admin-N).
-        // MigraciÃ³n desactivada (ya migrado a Postgres).
+        // Migración de estructura ya realizada (IDs secuenciales producto-N / Usuario-Admin-N).
+        // Migración desactivada (ya migrado a Postgres).
         // Defensa de duplicados desactivada (Supabase trigger lo maneja)
         // repararUsuariosDuplicados();
       } catch (err) {
@@ -517,7 +520,7 @@ function init() {
     closeConfirm();
   });
 
-  // DiÃ¡logo de cambios sin guardar (pertenece al Drawer de producto)
+  // Diálogo de cambios sin guardar (pertenece al Drawer de producto)
   unsavedStayBtn?.addEventListener("click", closeUnsavedDialog);
   unsavedOverlay?.addEventListener("click", closeUnsavedDialog);
   unsavedDiscardBtn?.addEventListener("click", () => {
@@ -526,7 +529,7 @@ function init() {
     action?.();
   });
 
-  // ProtecciÃ³n al abandonar la pÃ¡gina con el Drawer abierto y cambios pendientes.
+  // Protección al abandonar la página con el Drawer abierto y cambios pendientes.
   window.addEventListener("beforeunload", (event) => {
     if (productModal && !productModal.hidden && isProductFormDirty()) {
       event.preventDefault();
@@ -558,7 +561,7 @@ function init() {
     });
   }
 
-  // GalerÃ­a mÃºltiple: selector, drag & drop, validaciÃ³n y vista previa.
+  // Galería múltiple: selector, drag & drop, validación y vista previa.
   if (fileDropzone && productImageFileInput) {
     fileDropzone.addEventListener("dragover", (event) => {
       event.preventDefault();
@@ -618,19 +621,19 @@ function init() {
     if (!name) return;
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     if (!id) {
-      showAlert("Ingresa un nombre vÃ¡lido para la categorÃ­a.", "error");
+      showAlert("Ingresa un nombre válido para la categoría.", "error");
       return;
     }
     if (categories.some(c => c.id === id)) {
-      showAlert(`La categorÃ­a "${name}" ya existe.`, "error");
+      showAlert(`La categoría "${name}" ya existe.`, "error");
       return;
     }
     try {
       await setDoc(doc(db, "categorias", id), { label: name });
       if (newCategoryName) newCategoryName.value = "";
-      showAlert("CategorÃ­a creada correctamente", "success");
+      showAlert("Categoría creada correctamente", "success");
     } catch (err) {
-      showAlert("Error al crear categorÃ­a: " + err.message, "error");
+      showAlert("Error al crear categoría: " + err.message, "error");
     }
   });
 
@@ -652,14 +655,14 @@ function init() {
     }
   });
 }
-/* SesiÃ³n y AutenticaciÃ³n */
+/* Sesión y Autenticación */
 
 async function handleLogout() {
   try {
     await signOut(auth);
     window.location.href = 'login.html';
   } catch (err) {
-    showAlert("Error al cerrar sesiÃ³n: " + err.message, "error");
+    showAlert("Error al cerrar sesión: " + err.message, "error");
   }
 }
 
@@ -671,7 +674,7 @@ function showLogin() {
   window.location.href = 'login.html';
 }
 
-/* Supabase: Lectura en Tiempo Real (R) & Auto-ImportaciÃ³n Garantizada */
+/* Supabase: Lectura en Tiempo Real (R) & Auto-Importación Garantizada */
 
 const SEED_PRODUCTS = [
   {
@@ -684,11 +687,11 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-15-pro-max-1.jpg",
-    "description": "iPhone premium con titanio, chip A17 Pro y cÃ¡mara avanzada.",
+    "description": "iPhone premium con titanio, chip A17 Pro y cámara avanzada.",
     "specs": [
       "Pantalla Super Retina XDR de 6.7 pulgadas",
       "Chip A17 Pro",
-      "CÃ¡mara principal de 48 MP",
+      "Cámara principal de 48 MP",
       "USB-C",
       "Face ID"
     ],
@@ -720,7 +723,7 @@ const SEED_PRODUCTS = [
       "Pantalla Super Retina XDR de 6.1 pulgadas",
       "ProMotion 120Hz",
       "Chip A15 Bionic",
-      "Triple cÃ¡mara Pro",
+      "Triple cámara Pro",
       "Face ID"
     ],
     "variants": {
@@ -745,11 +748,11 @@ const SEED_PRODUCTS = [
     "condition": "seminuevo",
     "badge": "Seminuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-14-1.jpg",
-    "description": "iPhone moderno con excelente cÃ¡mara, baterÃ­a y rendimiento.",
+    "description": "iPhone moderno con excelente cámara, batería y rendimiento.",
     "specs": [
       "Pantalla OLED de 6.1 pulgadas",
       "Chip A15 Bionic",
-      "CÃ¡mara dual de 12 MP",
+      "Cámara dual de 12 MP",
       "Face ID",
       "Carga MagSafe"
     ],
@@ -775,11 +778,11 @@ const SEED_PRODUCTS = [
     "condition": "seminuevo",
     "badge": "Seminuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-12-1.jpg",
-    "description": "DiseÃ±o clÃ¡sico con bordes planos, pantalla OLED y conectividad 5G.",
+    "description": "Diseño clásico con bordes planos, pantalla OLED y conectividad 5G.",
     "specs": [
       "Pantalla Super Retina XDR",
       "Chip A14 Bionic",
-      "CÃ¡mara dual",
+      "Cámara dual",
       "5G",
       "Face ID"
     ],
@@ -805,13 +808,13 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/samsung/samsung-galaxy-s24-ultra-5g-0.jpg",
-    "description": "Samsung premium con Galaxy AI, cÃ¡mara de 200 MP y S Pen.",
+    "description": "Samsung premium con Galaxy AI, cámara de 200 MP y S Pen.",
     "specs": [
       "Pantalla Dynamic AMOLED 2X",
       "Snapdragon 8 Gen 3",
-      "CÃ¡mara de 200 MP",
+      "Cámara de 200 MP",
       "S Pen integrado",
-      "BaterÃ­a de 5000 mAh"
+      "Batería de 5000 mAh"
     ],
     "variants": {
       "colors": [
@@ -839,9 +842,9 @@ const SEED_PRODUCTS = [
     "specs": [
       "Pantalla AMOLED de 6.8 pulgadas",
       "Snapdragon 8 Gen 2",
-      "CÃ¡mara de 200 MP",
+      "Cámara de 200 MP",
       "S Pen",
-      "Carga rÃ¡pida"
+      "Carga rápida"
     ],
     "variants": {
       "colors": [
@@ -864,11 +867,11 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/samsung/samsung-galaxy-a55-1.jpg",
-    "description": "Excelente opciÃ³n gama media con pantalla AMOLED y 5G.",
+    "description": "Excelente opción gama media con pantalla AMOLED y 5G.",
     "specs": [
       "Pantalla Super AMOLED 120Hz",
-      "CÃ¡mara principal de 50 MP",
-      "BaterÃ­a de 5000 mAh",
+      "Cámara principal de 50 MP",
+      "Batería de 5000 mAh",
       "5G",
       "Resistencia IP67"
     ],
@@ -885,7 +888,7 @@ const SEED_PRODUCTS = [
   },
   {
     "id": "ipad-air-5ta-generacion",
-    "title": "iPad Air 5ta GeneraciÃ³n",
+    "title": "iPad Air 5ta Generación",
     "brand": "Apple",
     "price": 12900,
     "oldPrice": 14500,
@@ -893,19 +896,19 @@ const SEED_PRODUCTS = [
     "condition": "seminuevo",
     "badge": "Seminuevo",
     "image": "https://fdn2.gsmarena.com/vv/pics/apple/apple-ipad-air-2022-1.jpg",
-    "description": "iPad con chip M1, ideal para estudio, diseÃ±o y productividad.",
+    "description": "iPad con chip M1, ideal para estudio, diseño y productividad.",
     "specs": [
       "Pantalla Liquid Retina de 10.9 pulgadas",
       "Chip M1",
       "Compatible con Apple Pencil",
       "USB-C",
-      "CÃ¡mara frontal ultra gran angular"
+      "Cámara frontal ultra gran angular"
     ],
     "variants": {
       "colors": [
         { "name": "Gris Espacial", "value": "#4e4f50" },
         { "name": "Azul", "value": "#a7c1d6" },
-        { "name": "PÃºrpura", "value": "#d7c3eb" }
+        { "name": "Púrpura", "value": "#d7c3eb" }
       ],
       "storage": [
         { "name": "64GB", "price": 12900, "oldPrice": 14500 },
@@ -915,7 +918,7 @@ const SEED_PRODUCTS = [
   },
   {
     "id": "airpods-pro-2da",
-    "title": "AirPods Pro 2da GeneraciÃ³n",
+    "title": "AirPods Pro 2da Generación",
     "brand": "Apple",
     "price": 5900,
     "oldPrice": 6800,
@@ -923,20 +926,20 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR8QiKJZ_WGAAnfJ1jRV5X-jGrpCnHykAZ_yITbM8nAcw&s=10",
-    "description": "AudÃ­fonos premium con cancelaciÃ³n activa de ruido y audio espacial.",
+    "description": "Audífonos premium con cancelación activa de ruido y audio espacial.",
     "specs": [
       "Chip H2",
-      "CancelaciÃ³n activa de ruido",
+      "Cancelación activa de ruido",
       "Audio espacial",
       "Estuche MagSafe",
-      "Hasta 6 horas de reproducciÃ³n"
+      "Hasta 6 horas de reproducción"
     ],
     "variants": {
       "colors": [
         { "name": "Blanco", "value": "#ffffff" }
       ],
       "storage": [
-        { "name": "EstÃ¡ndar", "price": 5900, "oldPrice": 6800 }
+        { "name": "Estándar", "price": 5900, "oldPrice": 6800 }
       ]
     }
   },
@@ -950,20 +953,20 @@ const SEED_PRODUCTS = [
     "condition": "nuevo",
     "badge": "Nuevo",
     "image": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MHJA3?wid=572&hei=572&fmt=jpeg&qlt=95&.v=1603730167000",
-    "description": "Adaptador de carga rÃ¡pida USB-C compatible con iPhone y iPad.",
+    "description": "Adaptador de carga rápida USB-C compatible con iPhone y iPad.",
     "specs": [
-      "Carga rÃ¡pida de 20W",
+      "Carga rápida de 20W",
       "Puerto USB-C",
       "Compatible con iPhone",
       "Compatible con iPad",
-      "DiseÃ±o compacto"
+      "Diseño compacto"
     ],
     "variants": {
       "colors": [
         { "name": "Blanco", "value": "#ffffff" }
       ],
       "storage": [
-        { "name": "EstÃ¡ndar", "price": 750, "oldPrice": 950 }
+        { "name": "Estándar", "price": 750, "oldPrice": 950 }
       ]
     }
   }
@@ -972,7 +975,7 @@ const SEED_PRODUCTS = [
 let isImportingProducts = false;
 
 
-// ReparaciÃ³n idempotente: elimina documentos de usuarios duplicados por uid de
+// Reparación idempotente: elimina documentos de usuarios duplicados por uid de
 // Auth. Corre en cada carga del panel; es no-op cuando no hay duplicados.
 async function repararUsuariosDuplicados() {
   try {
@@ -996,11 +999,11 @@ async function repararUsuariosDuplicados() {
         await deleteDoc(docs[i].ref);
         eliminados++;
       }
-      console.log(`ReparaciÃ³n: duplicados de uid ${String(docs[0].data().uid).slice(0, 8)}â€¦ â†’ se conserva ${docs[0].id}.`);
+      console.log(`Reparación: duplicados de uid ${String(docs[0].data().uid).slice(0, 8)}… → se conserva ${docs[0].id}.`);
     }
-    if (eliminados > 0) console.log(`ReparaciÃ³n de usuarios completada: ${eliminados} duplicado(s) eliminado(s).`);
+    if (eliminados > 0) console.log(`Reparación de usuarios completada: ${eliminados} duplicado(s) eliminado(s).`);
   } catch (err) {
-    console.warn('ReparaciÃ³n de usuarios duplicados fallÃ³ (se reintentarÃ¡):', err.message);
+    console.warn('Reparación de usuarios duplicados falló (se reintentará):', err.message);
   }
 }
 
@@ -1010,8 +1013,8 @@ async function autoImportProductsJson() {
   isImportingProducts = true;
 
   try {
-    // Solo sembrar productos de demostraciÃ³n si la colecciÃ³n estÃ¡ completamente vacÃ­a.
-    // Esto evita recrear documentos con IDs antiguos tras una migraciÃ³n a slugs.
+    // Solo sembrar productos de demostración si la colección está completamente vacía.
+    // Esto evita recrear documentos con IDs antiguos tras una migración a slugs.
     const existingSnap = await getDocs(collection(db, "productos"));
     if (!existingSnap.empty) {
       isImportingProducts = false;
@@ -1021,13 +1024,13 @@ async function autoImportProductsJson() {
     let importedCount = 0;
     for (const item of SEED_PRODUCTS) {
       if (!item || item.id === undefined) continue;
-      // Estructura de productos: IDs secuenciales (producto-N), nunca IDs automÃ¡ticos.
+      // Estructura de productos: IDs secuenciales (producto-N), nunca IDs automáticos.
       const nuevoId = await obtenerSiguienteId("productos", "contador_productos", "producto-");
       const docRef = doc(db, "productos", nuevoId);
 
       try {
         const docSnap = await getDoc(docRef);
-        // Crear en Supabase Ãºnicamente si el documento no existe para evitar duplicados y no borrar productos modificados
+        // Crear en Supabase únicamente si el documento no existe para evitar duplicados y no borrar productos modificados
         if (!docSnap.exists()) {
           const productPayload = {
             id: nuevoId,
@@ -1059,11 +1062,11 @@ async function autoImportProductsJson() {
     }
 
     if (importedCount > 0) {
-      console.log(`${importedCount} productos sincronizados automÃ¡ticamente hacia Supabase.`);
+      console.log(`${importedCount} productos sincronizados automáticamente hacia Supabase.`);
       showAlert(`Se importaron ${importedCount} productos a Supabase.`, "success");
     }
   } catch (err) {
-    console.warn("Error durante la sincronizaciÃ³n inicial de productos con Supabase:", err.message);
+    console.warn("Error durante la sincronización inicial de productos con Supabase:", err.message);
   } finally {
     isImportingProducts = false;
   }
@@ -1078,7 +1081,7 @@ function listenToProducts() {
     unsubscribeRealtime = null;
   }
 
-  // Sincronizar automÃ¡ticamente productos.json si la colecciÃ³n no contiene los productos iniciales
+  // Sincronizar automáticamente productos.json si la colección no contiene los productos iniciales
   autoImportProductsJson();
 
   try {
@@ -1113,8 +1116,8 @@ async function fetchProductsFallback() {
     renderProductsTable();
     updateDashboardMetrics();
   } catch (err) {
-    console.error("Error al obtener productos vÃ­a fallback:", err);
-    showAlert("ConexiÃ³n bloqueada por el navegador.", "error");
+    console.error("Error al obtener productos vía fallback:", err);
+    showAlert("Conexión bloqueada por el navegador.", "error");
   } finally {
     setLoading(false);
   }
@@ -1159,12 +1162,12 @@ function getFilteredProducts() {
 }
 
 function renderProductsTable() {
-  // FLAT OPS v7 â€” Rework total de renderizado: colores planos, sin cÃ­rculos infantiles, jerarquÃ­a editorial
+  // FLAT OPS v7 — Rework total de renderizado: colores planos, sin círculos infantiles, jerarquía editorial
   const filtered = getFilteredProducts();
 
   const countChip = document.getElementById("table-count-chip");
   if (countChip) {
-    countChip.textContent = `${filtered.length} Ã­tems`;
+    countChip.textContent = `${filtered.length} ítems`;
   }
 
   productsTableBody.innerHTML = "";
@@ -1251,7 +1254,7 @@ function getBasePrice(product) {
 /* Modal / Slide-Over Drawer de producto */
 
 function openProductModal(productId) {
-  // Si el Drawer ya estÃ¡ abierto con cambios sin guardar, pedir confirmaciÃ³n
+  // Si el Drawer ya está abierto con cambios sin guardar, pedir confirmación
   // antes de cambiar de producto.
   if (productModal && !productModal.hidden && isProductFormDirty()) {
     openUnsavedDialog(() => {
@@ -1267,7 +1270,7 @@ function openProductModal(productId) {
 
   resetMediaEditor();
   const dropzoneText = fileDropzone?.querySelector(".dropzone-text");
-  if (dropzoneText) dropzoneText.textContent = "Arrastra tus imÃ¡genes aquÃ­ o haz clic para explorar";
+  if (dropzoneText) dropzoneText.textContent = "Arrastra tus imágenes aquí o haz clic para explorar";
 
   const isEditing = productId !== null;
 
@@ -1282,17 +1285,17 @@ function openProductModal(productId) {
     fillProductForm(product);
   }
 
-  // Estados visuales del rediseÃ±o: chip de modo, aviso y zona de riesgo.
+  // Estados visuales del rediseño: chip de modo, aviso y zona de riesgo.
   deleteProductBtn.hidden = !isEditing;
   if (drawerDangerZone) drawerDangerZone.hidden = !isEditing;
   if (drawerUpdateNotice) drawerUpdateNotice.hidden = !isEditing;
   if (drawerModeChip) {
-    drawerModeChip.textContent = isEditing ? "EdiciÃ³n" : "Nuevo";
+    drawerModeChip.textContent = isEditing ? "Edición" : "Nuevo";
     drawerModeChip.classList.toggle("is-editing", isEditing);
   }
   if (drawerModeCopy) {
     drawerModeCopy.textContent = isEditing
-      ? "Los cambios reemplazarÃ¡n la informaciÃ³n publicada"
+      ? "Los cambios reemplazarán la información publicada"
       : "Completa las secciones y guarda para publicar";
   }
 
@@ -1307,7 +1310,7 @@ function openProductModal(productId) {
   captureFormBaseline();
 }
 
-/* Cierre con protecciÃ³n de cambios sin guardar */
+/* Cierre con protección de cambios sin guardar */
 function closeProductModal() {
   if (isProductFormDirty()) {
     openUnsavedDialog(forceCloseProductModal);
@@ -1326,7 +1329,7 @@ function forceCloseProductModal() {
   clearPreviewObjectUrls();
 }
 
-/* ---- DetecciÃ³n de cambios sin guardar (solo Drawer de producto) ---- */
+/* ---- Detección de cambios sin guardar (solo Drawer de producto) ---- */
 
 function computeFormSnapshot() {
   if (!productForm) return "";
@@ -1338,23 +1341,23 @@ function computeFormSnapshot() {
       parts.push(document.getElementById(id)?.value ?? "");
     });
 
-  parts.push([...(includesList?.querySelectorAll(".include-input") || [])].map((i) => i.value).join("Â¦"));
-  parts.push([...(specsList?.querySelectorAll(".spec-input") || [])].map((i) => i.value).join("Â¦"));
+  parts.push([...(includesList?.querySelectorAll(".include-input") || [])].map((i) => i.value).join("¦"));
+  parts.push([...(specsList?.querySelectorAll(".spec-input") || [])].map((i) => i.value).join("¦"));
   parts.push([...(colorsList?.querySelectorAll(".color-row") || [])].map((row) => [
     row.querySelector(".color-name")?.value,
     row.querySelector(".color-hex")?.value,
     row.querySelector(".color-rgb")?.value,
     row.querySelector(".color-hsl")?.value,
     row.querySelector(".color-oklch")?.value
-  ].join("Â·")).join("Â¦"));
+  ].join("·")).join("¦"));
   parts.push([...(storageList?.querySelectorAll(".dynamic-row") || [])].map((row) => [
     row.querySelector(".storage-name")?.value,
     row.querySelector(".storage-old-price")?.value,
     row.querySelector(".storage-price")?.value,
     row.querySelector(".storage-stock")?.value
-  ].join("Â·")).join("Â¦"));
+  ].join("·")).join("¦"));
 
-  parts.push(existingImageUrls.join("Â¦"));
+  parts.push(existingImageUrls.join("¦"));
   parts.push(String(pendingImageFiles.length));
 
   return parts.join("?");
@@ -1375,7 +1378,7 @@ let unsavedDialogAction = null;
 
 function openUnsavedDialog(onDiscard) {
   if (!unsavedDialog) {
-    // Respaldo defensivo: sin diÃ¡logo disponible, no bloquear al usuario.
+    // Respaldo defensivo: sin diálogo disponible, no bloquear al usuario.
     onDiscard?.();
     return;
   }
@@ -1388,7 +1391,7 @@ function closeUnsavedDialog() {
   unsavedDialogAction = null;
 }
 
-/* ---- ValidaciÃ³n visual por campo (solo Drawer de producto) ---- */
+/* ---- Validación visual por campo (solo Drawer de producto) ---- */
 
 function setFieldError(targetId, message) {
   const slot = productForm?.querySelector(`[data-error-for="${targetId}"]`);
@@ -1500,7 +1503,7 @@ function addIncludeRow(value = "") {
   const row = document.createElement("div");
   row.className = "dynamic-row include-row";
   row.innerHTML = `
-    <input type="text" class="include-input" value="${escapeHTML(value)}" placeholder="Cable USB-C original, cargador 25Wâ€¦" aria-label="Elemento incluido">
+    <input type="text" class="include-input" value="${escapeHTML(value)}" placeholder="Cable USB-C original, cargador 25W…" aria-label="Elemento incluido">
     <div class="include-order-actions" aria-label="Cambiar orden">
       <button type="button" class="move-row-btn" data-move="up" aria-label="Mover hacia arriba" title="Mover hacia arriba"><i class="ph ph-arrow-up" aria-hidden="true"></i></button>
       <button type="button" class="move-row-btn" data-move="down" aria-label="Mover hacia abajo" title="Mover hacia abajo"><i class="ph ph-arrow-down" aria-hidden="true"></i></button>
@@ -1534,7 +1537,7 @@ function addSpecRow(value = "") {
   const row = document.createElement("div");
   row.className = "dynamic-row";
   row.innerHTML = `
-    <input type="text" class="spec-input" value="${escapeHTML(value)}" placeholder="Chip A17 Pro, pantalla 6.7â€ OLED 120 Hzâ€¦">
+    <input type="text" class="spec-input" value="${escapeHTML(value)}" placeholder="Chip A17 Pro, pantalla 6.7″ OLED 120 Hz…">
     <button type="button" class="remove-row-btn">Quitar</button>
   `;
   row.querySelector(".remove-row-btn")?.addEventListener("click", () => row.remove());
@@ -1614,7 +1617,7 @@ function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
     <div class="color-row-summary">
       <label class="variant-field">
         <span>Nombre del color</span>
-        <input type="text" class="color-name" value="${escapeHTML(color.name)}" placeholder="Titanio natural, Negro fantasmaâ€¦">
+        <input type="text" class="color-name" value="${escapeHTML(color.name)}" placeholder="Titanio natural, Negro fantasma…">
       </label>
       <div class="color-primary-control">
         <span class="compact-field-label">Color y Hex</span>
@@ -1628,8 +1631,8 @@ function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
     <details class="color-advanced">
       <summary>
         <i class="ph ph-sliders-horizontal" aria-hidden="true"></i>
-        MÃ¡s informaciÃ³n del color
-        <span class="color-advanced-hint">RGB Â· HSL Â· OKLCH</span>
+        Más información del color
+        <span class="color-advanced-hint">RGB · HSL · OKLCH</span>
         <i class="ph ph-caret-down" aria-hidden="true"></i>
       </summary>
       <div class="color-advanced-grid">
@@ -1696,7 +1699,7 @@ function addStorageRow(name = "128GB", price = 0, oldPrice = 0, stock = null) {
   storageList.appendChild(row);
 }
 
-/* Multimedia, compatibilidad y normalizaciÃ³n */
+/* Multimedia, compatibilidad y normalización */
 
 function uniqueImageUrls(urls) {
   return [...new Set((Array.isArray(urls) ? urls : [])
@@ -1765,13 +1768,13 @@ function addPendingImageFiles(fileList) {
   });
 
   if (rejected > 0) {
-    showAlert(`Se omitieron ${rejected} archivo(s). Usa imÃ¡genes vÃ¡lidas de hasta 8 MB y un mÃ¡ximo de ${MAX_PRODUCT_IMAGES}.`, "error");
+    showAlert(`Se omitieron ${rejected} archivo(s). Usa imágenes válidas de hasta 8 MB y un máximo de ${MAX_PRODUCT_IMAGES}.`, "error");
   }
 
   const textLabel = fileDropzone?.querySelector(".dropzone-text");
   if (textLabel) {
     const total = existingImageUrls.length + pendingImageFiles.length;
-    textLabel.textContent = `${total} ${total === 1 ? "imagen lista" : "imÃ¡genes listas"} para la galerÃ­a`;
+    textLabel.textContent = `${total} ${total === 1 ? "imagen lista" : "imágenes listas"} para la galería`;
   }
 
   renderProductImagesPreview();
@@ -1784,13 +1787,13 @@ function renderProductImagesPreview() {
 
   const total = existingImageUrls.length + pendingImageFiles.length;
   if (productImagesCount) {
-    productImagesCount.textContent = `${total} ${total === 1 ? "imagen" : "imÃ¡genes"}`;
+    productImagesCount.textContent = `${total} ${total === 1 ? "imagen" : "imágenes"}`;
   }
 
   if (total === 0) {
     pendingImagesFirst = false;
     productImagesPreview.innerHTML = `
-      <div class="media-preview-empty"><i class="ph ph-images" aria-hidden="true"></i> AÃºn no hay imÃ¡genes seleccionadas.</div>
+      <div class="media-preview-empty"><i class="ph ph-images" aria-hidden="true"></i> Aún no hay imágenes seleccionadas.</div>
     `;
     return;
   }
@@ -1901,7 +1904,7 @@ async function migrateLegacyProductImages(items) {
       }, { merge: true });
     } catch (error) {
       migratedProductIds.delete(productId);
-      console.warn(`No se pudo migrar la galerÃ­a del producto ${productId}:`, error);
+      console.warn(`No se pudo migrar la galería del producto ${productId}:`, error);
     }
   }
 }
@@ -1911,14 +1914,14 @@ async function migrateLegacyProductImages(items) {
 async function handleProductSubmit(event) {
   event.preventDefault();
 
-  // Al actualizar un producto publicado, pedir confirmaciÃ³n visual elegante
-  // antes de reemplazar la informaciÃ³n actual.
+  // Al actualizar un producto publicado, pedir confirmación visual elegante
+  // antes de reemplazar la información actual.
   if (editingProductId) {
     showConfirm(
       "Actualizar producto",
-      "Los cambios reemplazarÃ¡n la informaciÃ³n actual del producto publicado en la tienda.",
+      "Los cambios reemplazarán la información actual del producto publicado en la tienda.",
       () => submitProductForm(),
-      { tone: "primary", okLabel: "SÃ­, actualizar" }
+      { tone: "primary", okLabel: "Sí, actualizar" }
     );
     return;
   }
@@ -1943,13 +1946,13 @@ async function submitProductForm() {
     const brand = document.getElementById("product-brand").value.trim();
     const category = document.getElementById("product-category").value;
     const condition = document.getElementById("product-condition").value;
-    // La etiqueta se deriva de la condiciÃ³n (el campo manual fue retirado del formulario).
+    // La etiqueta se deriva de la condición (el campo manual fue retirado del formulario).
     const badge = condition === "nuevo" ? "Nuevo" : "Seminuevo";
     const batteryHealth = normalizeBatteryHealth(document.getElementById("product-battery-health").value);
     const description = document.getElementById("product-description").value.trim();
     const directImageUrls = parseImageUrls(document.getElementById("product-image").value).slice(0, MAX_PRODUCT_IMAGES);
 
-    // ValidaciÃ³n visual por campo, con desplazamiento al primer error.
+    // Validación visual por campo, con desplazamiento al primer error.
     let firstInvalidId = null;
     if (!title) {
       setFieldError("product-title", "Escribe el nombre comercial del producto.");
@@ -1965,7 +1968,7 @@ async function submitProductForm() {
       throw new Error("Revisa los campos marcados para continuar.");
     }
 
-    // Subida mÃºltiple. Las URLs ya guardadas se conservan y los archivos nuevos
+    // Subida múltiple. Las URLs ya guardadas se conservan y los archivos nuevos
     // se agregan al array en el mismo orden mostrado por la vista previa.
     let uploadedImageUrls = [];
     if (pendingImageFiles.length > 0) {
@@ -1979,7 +1982,7 @@ async function submitProductForm() {
     if (images.length === 0) {
       setFieldError("fs-gallery", "Agrega al menos una imagen: sube un archivo o pega una URL.");
       document.getElementById("fs-gallery")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      throw new Error("La galerÃ­a necesita al menos una imagen.");
+      throw new Error("La galería necesita al menos una imagen.");
     }
 
     const includes = [...includesList.querySelectorAll(".include-input")]
@@ -2036,14 +2039,14 @@ async function submitProductForm() {
       condition,
       badge,
       images,
-      // Alias legado: mantiene operativos clientes que todavÃ­a leen image.
+      // Alias legado: mantiene operativos clientes que todavía leen image.
       image: images[0],
       batteryHealth,
       description,
       includes,
       specs,
       variants: {
-        colors: colors.length ? colors : [{ name: "EstÃ¡ndar", value: defaultColorValues.hex, ...defaultColorValues }],
+        colors: colors.length ? colors : [{ name: "Estándar", value: defaultColorValues.hex, ...defaultColorValues }],
         storage: storageVars
       },
       updatedAt: new Date().toISOString()
@@ -2056,19 +2059,19 @@ async function submitProductForm() {
       productData.id = String(editingProductId);
       const productRef = doc(db, "productos", String(editingProductId));
       await setDoc(productRef, productData, { merge: true });
-      showAlert("Producto actualizado con Ã©xito en Supabase.", "success");
+      showAlert("Producto actualizado con éxito en Supabase.", "success");
     } else {
       // Crear nuevo documento: la estructura de productos usa IDs secuenciales
-      // (producto-N), NUNCA IDs automÃ¡ticos.
+      // (producto-N), NUNCA IDs automáticos.
       productData.createdAt = new Date().toISOString();
       const nuevoId = await obtenerSiguienteId("productos", "contador_productos", "producto-");
       productData.id = nuevoId;
       const colRef = doc(db, "productos", nuevoId);
       await setDoc(colRef, productData);
-      showAlert("Nuevo producto agregado con Ã©xito a Supabase.", "success");
+      showAlert("Nuevo producto agregado con éxito a Supabase.", "success");
     }
 
-    // Guardado exitoso: no hay cambios pendientes, cerrar sin confirmaciÃ³n.
+    // Guardado exitoso: no hay cambios pendientes, cerrar sin confirmación.
     formSnapshot = null;
     formIsDirty = false;
     forceCloseProductModal();
@@ -2076,7 +2079,7 @@ async function submitProductForm() {
     console.error("Error al guardar producto:", error);
     let msg = error.message;
     if (error.code === "permission-denied" || error.message.includes("permissions")) {
-      msg = "Permisos insuficientes en Supabase: Revisa las polÃ­ticas RLS de la tabla 'productos'.";
+      msg = "Permisos insuficientes en Supabase: Revisa las políticas RLS de la tabla 'productos'.";
     }
     formError.textContent = msg;
     formError.hidden = false;
@@ -2094,7 +2097,7 @@ async function handleDeleteProduct() {
 
   showConfirm(
     "Eliminar producto",
-    "Esta acciÃ³n eliminarÃ¡ permanentemente el producto del catÃ¡logo y de la tienda. No se puede deshacer.",
+    "Esta acción eliminará permanentemente el producto del catálogo y de la tienda. No se puede deshacer.",
     async () => {
       try {
         const productRef = doc(db, "productos", String(editingProductId));
@@ -2105,7 +2108,7 @@ async function handleDeleteProduct() {
         showAlert("Error al eliminar producto: " + error.message, "error");
       }
     },
-    { tone: "danger", okLabel: "SÃ­, eliminar" }
+    { tone: "danger", okLabel: "Sí, eliminar" }
   );
 }
 
@@ -2132,7 +2135,7 @@ function showConfirm(title, message, callback, options = {}) {
   confirmMessage.textContent = message;
   confirmCallback = callback;
 
-  // Tono visual del diÃ¡logo: "danger" (predeterminado) o "primary".
+  // Tono visual del diálogo: "danger" (predeterminado) o "primary".
   const tone = options.tone === "primary" ? "primary" : "danger";
   const icon = confirmDialog.querySelector(".confirm-icon");
   const iconGlyph = confirmDialog.querySelector(".confirm-icon i");
@@ -2203,8 +2206,8 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 }
 
 /* ==========================================================================
-   OBSIDIAN PRISM v6 â€” VISUAL ENHANCEMENTS LAYER
-   Solo estÃ©tica â€” No modifica Supabase, Auth, CRUD, Validaciones.
+   OBSIDIAN PRISM v6 — VISUAL ENHANCEMENTS LAYER
+   Solo estética — No modifica Supabase, Auth, CRUD, Validaciones.
    ========================================================================== */
 (() => {
   // ---------- Metrics Count Animation ----------
@@ -2288,7 +2291,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     return res;
   };
   try {
-    // Replace local reference â€” JS closure cannot be overwritten from outer, so we patch global if exported
+    // Replace local reference — JS closure cannot be overwritten from outer, so we patch global if exported
     // We'll also use MutationObserver fallback
     window.renderProductsTable = wrappedRender;
   } catch(e){}
@@ -2405,14 +2408,14 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     }
   });
 
-  console.log('[Obsidian Prism v6] Visual enhancements loaded â€” logic intact.');
+  console.log('[Obsidian Prism v6] Visual enhancements loaded — logic intact.');
 })();
 
 /* ==========================================================================
-   FLAT OPS v7 â€” VISUAL ENHANCEMENTS REALES (colores planos + movimiento perceptible)
+   FLAT OPS v7 — VISUAL ENHANCEMENTS REALES (colores planos + movimiento perceptible)
    ========================================================================== */
 (() => {
-  // Grid speed boost for flat ops â€” make animation perceptible
+  // Grid speed boost for flat ops — make animation perceptible
   const grids = document.querySelectorAll('.login-grid');
   grids.forEach(g=>{ g.style.animationDuration = '12s'; });
 
@@ -2469,18 +2472,18 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     setInterval(updateSync, 3600000);
   }
 
-  // Input flat focus â€” border 2px animation
+  // Input flat focus — border 2px animation
   document.addEventListener('focusin', e=>{
     if(e.target.matches('input,select,textarea')){
       e.target.style.transition='border-color 160ms ease,box-shadow 160ms ease';
     }
   });
 
-  console.log('[Flat Ops v7] Flat colors + real motion loaded â€” logic intact.');
+  console.log('[Flat Ops v7] Flat colors + real motion loaded — logic intact.');
 })();
 
 /* ==========================================================================
-   v8 FINAL â€” Sidebar imÃ¡genes + promo card Ãºtil
+   v8 FINAL — Sidebar imágenes + promo card útil
    ========================================================================== */
 (() => {
   const tryLoadImage = (base, exts, onSuccess, onFail) => {
@@ -2608,7 +2611,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   console.log('[v8 Final] Sidebar imagen + promo tarjeta integrada lista');
 })();
 
-// Sidebar footer image loader â€” busca imagen_barra con cualquier extensiÃ³n
+// Sidebar footer image loader — busca imagen_barra con cualquier extensión
 (() => {
   const img = document.getElementById('imagen-barra');
   if (!img) return;
@@ -2630,7 +2633,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 })();
 
 // ==========================================================================
-// SETTINGS MODULE â€” NavegaciÃ³n + GestiÃ³n de ImÃ¡genes (Supabase + Cloudinary)
+// SETTINGS MODULE — Navegación + Gestión de Imágenes (Supabase + Cloudinary)
 // ==========================================================================
 (() => {
   const settingsLink = document.getElementById('settings-link');
@@ -2645,7 +2648,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   const IMAGENES_COLLECTION = 'imagenes';
 
   const IMAGE_KEYS = ['imagen_banner_panel', 'imagen_login', 'imagen_sidebar', 'imagen_tarjeta_promocional', 'imagen_barra_principal'];
-  // Alias legacy â†’ nueva key (compatibilidad con datos anteriores)
+  // Alias legacy → nueva key (compatibilidad con datos anteriores)
   const LEGACY_KEY_MAP = { banner: 'imagen_banner_panel', login: 'imagen_login', sidebar: 'imagen_sidebar', tarjeta: 'imagen_tarjeta_promocional', barra: 'imagen_barra_principal' };
 
   const imageMeta = {
@@ -2656,7 +2659,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     imagen_barra_principal:       { label: 'Imagen de barra' }
   };
 
-  // ---- NavegaciÃ³n ----
+  // ---- Navegación ----
   function showCatalog() {
     if (catalogSection) catalogSection.hidden = false;
     if (overviewSection) overviewSection.hidden = false;
@@ -2681,7 +2684,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   settingsLink.addEventListener('click', async (e) => {
     e.preventDefault();
     // Los editores deben ingresar la llave de acceso antes de entrar a Configuración.
-    if (!esAdmin() && !(await pedirLlave('Acceso a Configuración', 'Introduce la llave de acceso generada en Configuración → Llaves para continuar.'))) {
+    if (!esAdmin() && !(await pedirLlave('Acceso a Configuración', 'Introduce la llave de acceso generada en Configuración ? Llaves para continuar.'))) {
       return;
     }
     showSettings();
@@ -2862,7 +2865,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     setStatus(key, '', '');
   }
 
-  // ---- File picker: solo se abre al hacer clic en el botÃ³n ----
+  // ---- File picker: solo se abre al hacer clic en el botón ----
   document.querySelectorAll('.settings-file-btn').forEach(btn => {
     const card = btn.closest('.settings-image-card');
     if (!card) return;
@@ -2879,7 +2882,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       // Validate type
       const validTypes = ['image/jpeg','image/png','image/webp','image/gif'];
       if (!validTypes.includes(file.type)) {
-        showAlert('Formato no vÃ¡lido. Usa JPG, PNG, WEBP o GIF.', 'error');
+        showAlert('Formato no válido. Usa JPG, PNG, WEBP o GIF.', 'error');
         fileInput.value = '';
         return;
       }
@@ -2944,7 +2947,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     btn.addEventListener('click', () => {
       if (!state[key].changed) return;
       showConfirm('Reemplazar imagen',
-        'Â¿EstÃ¡s seguro de que deseas reemplazar esta imagen? La versiÃ³n anterior serÃ¡ sobrescrita.',
+        '¿Estás seguro de que deseas reemplazar esta imagen? La versión anterior será sobrescrita.',
         () => doSave(key));
     });
   });
@@ -2959,11 +2962,11 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   // ---- Cargar datos al iniciar ----
   loadImagesFromSupabase();
 
-  console.log('[Settings v2] MÃ³dulo de configuraciÃ³n con Supabase listo');
+  console.log('[Settings v2] Módulo de configuración con Supabase listo');
 })();
 
 // ==========================================================================
-// SETTINGS CONTENT MODULE â€” Contenido pÃºblico del sitio
+// SETTINGS CONTENT MODULE — Contenido público del sitio
 // Tabla Supabase: configuracion/{empresa, inicio, pie-de-pagina, preguntas-frecuentes, whatsapp} + imagenes/{logo, hero-fondo, nosotros, telefono-*}
 // ==========================================================================
 (() => {
@@ -2979,28 +2982,28 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   const DEFAULTS = {
     empresa: {
       name: 'Mi Phone HN',
-      description: 'Compra celulares nuevos y seminuevos certificados en Honduras. iPhones, Samsung, iPads y accesorios con garantÃ­a, envÃ­os rÃ¡pidos y pagos flexibles desde Choluteca.',
-      about: '<p>En <strong>Mi Phone HN</strong>, nacimos en la ciudad de <strong>Choluteca</strong> con un propÃ³sito claro: hacer que la tecnologÃ­a mÃ³vil de gama alta sea accesible para todos los hondureÃ±os sin complicaciones.</p><p>Nos especializamos en la comercializaciÃ³n de celulares nuevos y seminuevos certificados de las marcas Apple y Samsung. Cada equipo pasa por una rigurosa inspecciÃ³n tÃ©cnica antes de llegar a tus manos.</p><p>No solo vendemos dispositivos; vendemos la tranquilidad de contar con una garantÃ­a real, mÃºltiples facilidades de pago y una entrega rÃ¡pida respaldada por empresas logÃ­sticas de Honduras.</p>',
+      description: 'Compra celulares nuevos y seminuevos certificados en Honduras. iPhones, Samsung, iPads y accesorios con garantía, envíos rápidos y pagos flexibles desde Choluteca.',
+      about: '<p>En <strong>Mi Phone HN</strong>, nacimos en la ciudad de <strong>Choluteca</strong> con un propósito claro: hacer que la tecnología móvil de gama alta sea accesible para todos los hondureños sin complicaciones.</p><p>Nos especializamos en la comercialización de celulares nuevos y seminuevos certificados de las marcas Apple y Samsung. Cada equipo pasa por una rigurosa inspección técnica antes de llegar a tus manos.</p><p>No solo vendemos dispositivos; vendemos la tranquilidad de contar con una garantía real, múltiples facilidades de pago y una entrega rápida respaldada por empresas logísticas de Honduras.</p>',
       ubicacion: 'Choluteca, Honduras',
       telefono: '+504 8823-8432',
       email: ''
     },
     inicio: {
-      announcement: 'EnvÃ­os seguros a nivel nacional vÃ­a RÃ¡pido Cargo desde Choluteca',
+      announcement: 'Envíos seguros a nivel nacional vía Rápido Cargo desde Choluteca',
       hero: {
-        tag: 'TecnologÃ­a premium garantizada',
+        tag: 'Tecnología premium garantizada',
         title: 'El celular que quieres, con las facilidades que necesitas.',
-        subtitle: 'iPhones y Samsung nuevos y seminuevos certificados. Compra hoy de forma segura desde Choluteca con envÃ­os rÃ¡pidos a toda Honduras.'
+        subtitle: 'iPhones y Samsung nuevos y seminuevos certificados. Compra hoy de forma segura desde Choluteca con envíos rápidos a toda Honduras.'
       },
       cards: [
-        { title: 'GarantÃ­a certificada', description: 'Todos nuestros equipos cuentan con 90 dÃ­as de garantÃ­a escrita por fallas de fÃ¡brica.' },
+        { title: 'Garantía certificada', description: 'Todos nuestros equipos cuentan con 90 días de garantía escrita por fallas de fábrica.' },
         { title: 'Pagos flexibles', description: 'Efectivo, transferencia bancaria y extrafinanciamiento con tarjetas participantes.' },
-        { title: 'EnvÃ­os rÃ¡pidos', description: 'Despachos desde Choluteca a todo el paÃ­s vÃ­a RÃ¡pido Cargo en un plazo estimado de 24 a 48 horas.' }
+        { title: 'Envíos rápidos', description: 'Despachos desde Choluteca a todo el país vía Rápido Cargo en un plazo estimado de 24 a 48 horas.' }
       ],
       stats: [
-        { number: '90', label: 'DÃ­as de garantÃ­a real' },
-        { number: '100%', label: 'InspecciÃ³n de calidad' },
-        { number: '48h', label: 'Tiempo mÃ¡ximo de envÃ­o' },
+        { number: '90', label: 'Días de garantía real' },
+        { number: '100%', label: 'Inspección de calidad' },
+        { number: '48h', label: 'Tiempo máximo de envío' },
         { number: '24/7', label: 'Soporte personalizado' }
       ]
     },
@@ -3008,35 +3011,35 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       description: 'El distribuidor de confianza para celulares premium nuevos y seminuevos garantizados en la zona sur y a nivel nacional.',
       location: 'Choluteca, Honduras',
       phone: '+504 8823-8432',
-      shipping: 'EnvÃ­os vÃ­a RÃ¡pido Cargo',
-      copyright: 'Â© 2026 Mi Phone HN. Todos los derechos reservados.',
+      shipping: 'Envíos vía Rápido Cargo',
+      copyright: '© 2026 Mi Phone HN. Todos los derechos reservados.',
       paymentMethods: ['BAC Credomatic', 'Ficohsa', 'Transferencias', 'Efectivo']
     },
     'preguntas-frecuentes': {
       items: [
-        { q: 'Â¿Tienen tienda fÃ­sica y dÃ³nde estÃ¡n ubicados?', a: '<p>Atendemos principalmente por pedido y envÃ­os desde <strong>Choluteca, Honduras</strong>. EscrÃ­benos por WhatsApp para confirmar disponibilidad, punto de entrega o retiro.</p>' },
-        { q: 'Â¿CÃ³mo funcionan los envÃ­os y cuÃ¡nto tardan?', a: '<p>Enviamos con <strong>RÃ¡pido Cargo</strong> a nivel nacional. El tiempo estimado de entrega es de <strong>24 a 48 horas hÃ¡biles</strong> tras confirmar el pago. Te compartiremos el nÃºmero de guÃ­a para rastrear tu paquete.</p>' },
-        { q: 'Â¿CÃ³mo compro con extrafinanciamiento o cuotas?', a: '<p>Para compras con extrafinanciamiento de <strong>BAC Credomatic</strong> o <strong>Ficohsa</strong>:</p><ol><li>Selecciona el producto y agrÃ©galo al carrito.</li><li>EscrÃ­benos por WhatsApp con tu pedido.</li><li>Nuestro asesor confirmarÃ¡ los requisitos y procesarÃ¡ el pago en 3, 6, 9 o 12 cuotas.</li></ol>' },
-        { q: 'Â¿CuÃ¡les son las cuentas de transferencia disponibles?', a: '<p>Aceptamos transferencias a <strong>BAC Honduras</strong>, <strong>Banco AtlÃ¡ntida</strong>, <strong>Banco de Occidente</strong>, <strong>BanpaÃ­s</strong> y <strong>Davivienda</strong>. EnvÃ­a el comprobante por WhatsApp para procesar tu pedido.</p>' },
-        { q: 'Â¿QuÃ© cubre y quÃ© no cubre la garantÃ­a?', a: '<p><strong>Cubre:</strong> fallas mecÃ¡nicas e internas de fÃ¡brica, como pantalla tÃ¡ctil, micrÃ³fono, cÃ¡maras, seÃ±al, carga y botones.</p><p><strong>No cubre:</strong> daÃ±os fÃ­sicos por caÃ­das, contacto con lÃ­quidos o manipulaciÃ³n de software no autorizada.</p>' }
+        { q: '¿Tienen tienda física y dónde están ubicados?', a: '<p>Atendemos principalmente por pedido y envíos desde <strong>Choluteca, Honduras</strong>. Escríbenos por WhatsApp para confirmar disponibilidad, punto de entrega o retiro.</p>' },
+        { q: '¿Cómo funcionan los envíos y cuánto tardan?', a: '<p>Enviamos con <strong>Rápido Cargo</strong> a nivel nacional. El tiempo estimado de entrega es de <strong>24 a 48 horas hábiles</strong> tras confirmar el pago. Te compartiremos el número de guía para rastrear tu paquete.</p>' },
+        { q: '¿Cómo compro con extrafinanciamiento o cuotas?', a: '<p>Para compras con extrafinanciamiento de <strong>BAC Credomatic</strong> o <strong>Ficohsa</strong>:</p><ol><li>Selecciona el producto y agrégalo al carrito.</li><li>Escríbenos por WhatsApp con tu pedido.</li><li>Nuestro asesor confirmará los requisitos y procesará el pago en 3, 6, 9 o 12 cuotas.</li></ol>' },
+        { q: '¿Cuáles son las cuentas de transferencia disponibles?', a: '<p>Aceptamos transferencias a <strong>BAC Honduras</strong>, <strong>Banco Atlántida</strong>, <strong>Banco de Occidente</strong>, <strong>Banpaís</strong> y <strong>Davivienda</strong>. Envía el comprobante por WhatsApp para procesar tu pedido.</p>' },
+        { q: '¿Qué cubre y qué no cubre la garantía?', a: '<p><strong>Cubre:</strong> fallas mecánicas e internas de fábrica, como pantalla táctil, micrófono, cámaras, señal, carga y botones.</p><p><strong>No cubre:</strong> daños físicos por caídas, contacto con líquidos o manipulación de software no autorizada.</p>' }
       ]
     },
     whatsapp: {
       phone: '50488238432',
-      title: 'NUEVO PEDIDO â€” MI PHONE HN',
+      title: 'NUEVO PEDIDO — MI PHONE HN',
       labels: {
         cliente: 'Cliente',
         dni: 'DNI',
-        ciudad: 'Ciudad/EnvÃ­o',
+        ciudad: 'Ciudad/Envío',
         productos: 'Productos',
         cantidad: 'Cantidad',
         subtotal: 'Subtotal',
         total: 'TOTAL',
         despacho: 'Despacho',
-        logistica: 'LogÃ­stica'
+        logistica: 'Logística'
       },
       despachoValue: 'Choluteca, Honduras',
-      logisticaValue: 'RÃ¡pido Cargo',
+      logisticaValue: 'Rápido Cargo',
       messageTemplate: '*[TITULO]*\n\n[LABEL_CLIENTE]: [NOMBRE_CLIENTE]\n[LABEL_DNI]: [DNI_CLIENTE]\n[LABEL_CIUDAD]: [CIUDAD_CLIENTE]\n\n*[LABEL_PRODUCTOS]:*\n[LISTA_PRODUCTOS]\n\n*[LABEL_TOTAL]: [TOTAL_PEDIDO]*\n\n[LABEL_DESPACHO]: [DESPACHO]\n[LABEL_LOGISTICA]: [LOGISTICA]',
       productLineTemplate: '- [NOMBRE_PRODUCTO] ([VARIACION])\n  [LABEL_CANTIDAD]: [CANTIDAD]\n  [LABEL_SUBTOTAL]: [SUBTOTAL]'
     }
@@ -3044,15 +3047,15 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 
   const LISTS = [
     { listKey: 'cards', doc: 'inicio', container: 'home-cards-list', fields: [
-      { key: 'title', label: 'TÃ­tulo', type: 'input' },
-      { key: 'description', label: 'DescripciÃ³n', type: 'input' }
+      { key: 'title', label: 'Título', type: 'input' },
+      { key: 'description', label: 'Descripción', type: 'input' }
     ]},
     { listKey: 'stats', doc: 'inicio', container: 'home-stats-list', fields: [
       { key: 'number', label: 'Valor', type: 'input' },
       { key: 'label', label: 'Texto', type: 'input' }
     ]},
     { listKey: 'paymentMethods', doc: 'pie-de-pagina', container: 'footer-payments-list', fields: [
-      { key: 'value', label: 'MÃ©todo de pago', type: 'input' }
+      { key: 'value', label: 'Método de pago', type: 'input' }
     ]},
     { listKey: 'items', doc: 'preguntas-frecuentes', container: 'faqs-list', fields: [
       { key: 'q', label: 'Pregunta', type: 'input' },
@@ -3283,7 +3286,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     richCommand(editor, btn.dataset.cmd);
   });
 
-  // ---- Listas dinÃ¡micas ----
+  // ---- Listas dinámicas ----
   function listCfg(listKey) {
     return LISTS.find(c => c.listKey === listKey);
   }
@@ -3300,7 +3303,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
           <div class="settings-rich">
             <div class="settings-rich-toolbar">
               <button type="button" class="settings-rich-btn" data-cmd="bold" title="Negrita" aria-label="Negrita"><strong>B</strong></button>
-              <button type="button" class="settings-rich-btn" data-cmd="insertUnorderedList" title="Lista con viÃ±etas" aria-label="Lista con viÃ±etas">â€¢ Lista</button>
+              <button type="button" class="settings-rich-btn" data-cmd="insertUnorderedList" title="Lista con viñetas" aria-label="Lista con viñetas">• Lista</button>
               <button type="button" class="settings-rich-btn" data-cmd="insertOrderedList" title="Lista numerada" aria-label="Lista numerada">1. Lista</button>
             </div>
             <div class="settings-rich-editor" contenteditable="true" data-placeholder="${escapeHTML(f.label)}"></div>
@@ -3401,12 +3404,12 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       docsState[docId].changed = false;
       updateDocButtons(docId);
       cardStatus(card, 'success', 'Cambios guardados');
-      showAlert('ConfiguraciÃ³n guardada correctamente', 'success');
+      showAlert('Configuración guardada correctamente', 'success');
       setTimeout(() => cardStatus(card, '', ''), 3000);
     } catch (err) {
       console.error('[Settings Content] Save error:', err);
       cardStatus(card, 'error', 'Error al guardar');
-      showAlert('Error al guardar la configuraciÃ³n', 'error');
+      showAlert('Error al guardar la configuración', 'error');
     }
   }
 
@@ -3466,10 +3469,10 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     const sample = fillTemplate(v.messageTemplate, {
       TITULO: v.title || 'NUEVO PEDIDO',
       LABEL_CLIENTE: labels.cliente || 'Cliente',
-      NOMBRE_CLIENTE: 'Juan PÃ©rez',
+      NOMBRE_CLIENTE: 'Juan Pérez',
       LABEL_DNI: labels.dni || 'DNI',
       DNI_CLIENTE: '0801-1990-12345',
-      LABEL_CIUDAD: labels.ciudad || 'Ciudad/EnvÃ­o',
+      LABEL_CIUDAD: labels.ciudad || 'Ciudad/Envío',
       CIUDAD_CLIENTE: 'Choluteca',
       LABEL_PRODUCTOS: labels.productos || 'Productos',
       LISTA_PRODUCTOS: line,
@@ -3477,13 +3480,13 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       TOTAL_PEDIDO: 'L. 23,000',
       LABEL_DESPACHO: labels.despacho || 'Despacho',
       DESPACHO: v.despachoValue || '',
-      LABEL_LOGISTICA: labels.logistica || 'LogÃ­stica',
+      LABEL_LOGISTICA: labels.logistica || 'Logística',
       LOGISTICA: v.logisticaValue || ''
     });
     pre.textContent = sample;
   }
 
-  // ---- ImÃ¡genes (logo, hero, about) ----
+  // ---- Imágenes (logo, hero, about) ----
   function imgCard(key) {
     return document.querySelector(`.settings-img-card[data-img-doc="${key}"]`);
   }
@@ -3636,7 +3639,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       if (!file) return;
       const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
       if (!validTypes.includes(file.type)) {
-        showAlert('Formato no vÃ¡lido. Usa JPG, PNG, WEBP o GIF.', 'error');
+        showAlert('Formato no válido. Usa JPG, PNG, WEBP o GIF.', 'error');
         fileInput.value = '';
         return;
       }
@@ -3698,7 +3701,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     saveBtn?.addEventListener('click', () => {
       if (!imgState[key].changed) return;
       showConfirm('Reemplazar imagen',
-        'Â¿EstÃ¡s seguro de que deseas reemplazar esta imagen? La versiÃ³n anterior serÃ¡ sobrescrita.',
+        '¿Estás seguro de que deseas reemplazar esta imagen? La versión anterior será sobrescrita.',
         () => doSaveImg(key),
         { tone: 'primary', okLabel: 'Guardar' });
     });
@@ -3707,12 +3710,12 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 
     removeBtn?.addEventListener('click', () => {
       showConfirm('Eliminar imagen',
-        'La imagen se eliminarÃ¡ del sitio pÃºblico. Esta acciÃ³n no se puede deshacer.',
+        'La imagen se eliminará del sitio público. Esta acción no se puede deshacer.',
         () => doRemoveImg(key));
     });
   });
 
-  // ---- TelÃ©fonos del hero (1-5 imÃ¡genes o URLs; un documento por telÃ©fono) ----
+  // ---- Teléfonos del hero (1-5 imágenes o URLs; un documento por teléfono) ----
   const HERO_PHONES_MAX = 5;
   const HERO_PHONES_NAMES = Array.from({ length: HERO_PHONES_MAX }, (_, i) => 'phone' + (i + 1));
   const HERO_PHONES_DOCS = HERO_PHONES_NAMES.reduce((acc, n, i) => { acc[n] = 'telefono-' + (i + 1); return acc; }, {});
@@ -3851,7 +3854,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
         if (!name || !file) return;
         const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
         if (!validTypes.includes(file.type)) {
-          showAlert('Formato no vÃ¡lido. Usa PNG, WebP, JPG o GIF.', 'error');
+          showAlert('Formato no válido. Usa PNG, WebP, JPG o GIF.', 'error');
           input.value = '';
           return;
         }
@@ -3957,7 +3960,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       renderPhonesList();
       updatePhoneButtons();
     } catch (err) {
-      console.warn('[Settings Content] No se pudieron cargar los telÃ©fonos del hero.');
+      console.warn('[Settings Content] No se pudieron cargar los teléfonos del hero.');
       renderPhonesList();
     }
   }
@@ -3999,7 +4002,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
         if (!out.startsWith('data:image/webp')) out = canvas.toDataURL('image/jpeg', step.quality);
         if (out.length <= MAX_LEN) return out;
       }
-      throw new Error('La imagen no se puede reducir por debajo del lÃ­mite');
+      throw new Error('La imagen no se puede reducir por debajo del límite');
     } catch (err) {
       const raw = await readAsDataURL(file);
       if (raw.length <= MAX_LEN) return raw;
@@ -4029,13 +4032,13 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       }
       phonesAdded.forEach(applyPhonesSaved);
       updatePhoneButtons();
-      cardStatus(card, 'success', 'ImÃ¡genes guardadas');
-      showAlert('ImÃ¡genes del hero actualizadas correctamente', 'success');
+      cardStatus(card, 'success', 'Imágenes guardadas');
+      showAlert('Imágenes del hero actualizadas correctamente', 'success');
       setTimeout(() => cardStatus(card, '', ''), 3000);
     } catch (err) {
       console.error('[Settings Content] Save hero phones error:', err);
       cardStatus(card, 'error', 'Error al guardar');
-      showAlert('Error al guardar las imÃ¡genes del hero', 'error');
+      showAlert('Error al guardar las imágenes del hero', 'error');
     }
   }
 
@@ -4078,11 +4081,11 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   loadHeroPhones();
   setTimeout(renderWaPreview, 0);
 
-  console.log('[Settings Content v1] MÃ³dulo de contenido pÃºblico con Supabase listo');
+  console.log('[Settings Content v1] Módulo de contenido público con Supabase listo');
 })();
 
 // ==========================================================================
-// MÓDULO DE LLAVES DE ACCESO — Gestión de códigos alfanuméricos de 8 caracteres
+// MÓDULO DE LLAVES DE ACCESO - Gestión de códigos alfanuméricos de 8 caracteres
 // Tabla Supabase: configuracion/llaves-acceso
 // ==========================================================================
 (() => {
@@ -4131,7 +4134,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       const snap = await getDoc(doc(db, 'configuracion', 'llaves-acceso'));
       if (snap.exists()) {
         llaves = Array.isArray(snap.data().llaves) ? snap.data().llaves : [];
-        // MigraciÃ³n segura: cÃ³digos guardados en texto plano â†’ hash SHA-256.
+        // Migración segura: códigos guardados en texto plano → hash SHA-256.
         let huboMigracion = false;
         for (const l of llaves) {
           if (l.codigo && !l.hash) {
@@ -4173,7 +4176,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   // Acciones sensibles de llaves: siempre se revalida la llave de acceso.
   async function conAccesoLlaves(accion) {
     const ok = await pedirLlave('Acción sensible', 'Para modificar llaves debes volver a ingresar la llave de acceso.', { incluirInactivas: true });
-    if (!ok) { setStatus('error', 'AcciÃ³n cancelada: llave incorrecta.'); return; }
+    if (!ok) { setStatus('error', 'Acción cancelada: llave incorrecta.'); return; }
     return accion();
   }
 
@@ -4225,7 +4228,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   async function recuperarCodigoDeHash(hashKey) {
     const hashMin = String(hashKey || '').toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(hashMin)) return null;
-    setStatus('loading', 'Buscando el código de la llave…');
+    setStatus('loading', 'Buscando el código de la llave.');
     const bytes = new Uint8Array(32);
     for (let i = 0; i < 64; i += 2) bytes[i >> 1] = parseInt(hashMin.slice(i, i + 2), 16);
     const tail = [bytes[30], bytes[31]];
@@ -4248,15 +4251,15 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       if (candidatos >= 128) break;
       if (start % 100000 === 0) {
         const pct = Math.min(99, Math.round(((start - 100000) / 899999) * 100));
-        setStatus('loading', `Buscando el código de la llave… ${pct}%`);
+        setStatus('loading', `Buscando el código de la llave. ${pct}%`);
       }
     }
     return null;
   }
 
   function codigoEnmascarado(hash) {
-    if (!hash || hash.length < 8) return '••••••';
-    return '••••••' + hash.slice(-4).toUpperCase();
+    if (!hash || hash.length < 8) return '......';
+    return '......' + hash.slice(-4).toUpperCase();
   }
 
   // Vista oculta consistente: enmascara el código REAL dejando visibles los
@@ -4264,7 +4267,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   function textoEnmascarado(codigoReal, hashKey) {
     if (codigoReal) {
       const c = String(codigoReal);
-      return '•'.repeat(Math.max(0, c.length - 4)) + c.slice(-4);
+      return '.'.repeat(Math.max(0, c.length - 4)) + c.slice(-4);
     }
     return codigoEnmascarado(hashKey);
   }
@@ -4408,19 +4411,19 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 
   cargarCodigos();
   cargarLlaves();
-  console.log('[Llaves] MÃ³dulo de llaves de acceso listo');
+  console.log('[Llaves] Módulo de llaves de acceso listo');
 })();
 
 // ==========================================================================
-// MÃ“DULO DE USUARIOS â€” AdministraciÃ³n de informaciÃ³n y permisos
+// MÓDULO DE USUARIOS — Administración de información y permisos
 // Tabla Supabase: usuarios/Usuario-Admin-N (IDs secuenciales)
-// IMPORTANTE: las contraseÃ±as NUNCA se guardan en la BD; la cuenta se
+// IMPORTANTE: las contraseñas NUNCA se guardan en la BD; la cuenta se
 // crea en Supabase Auth y el registro de la tabla referencia su UID.
 // ==========================================================================
 (() => {
   const usuariosSection = document.getElementById('settings-usuarios-tab');
   if (!usuariosSection) return;
-  // Este mÃ³dulo es exclusivo de administradores.
+  // Este módulo es exclusivo de administradores.
   if (document.body.dataset.rol === 'editor') {
     usuariosSection.hidden = true;
     return;
@@ -4446,12 +4449,12 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   }
 
   function fmtFecha(iso) {
-    if (!iso) return 'â€”';
+    if (!iso) return '—';
     try {
       const d = new Date(iso);
-      if (isNaN(d.getTime())) return 'â€”';
+      if (isNaN(d.getTime())) return '—';
       return d.toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch (e) { return 'â€”'; }
+    } catch (e) { return '—'; }
   }
 
   function rolLabel(rol) {
@@ -4481,17 +4484,17 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     tbody.innerHTML = visibles.map((u) => {
       const rl = rolLabel(u.rol);
       const activo = u.activo;
-      const nombre = u.nombre || u.correo || 'â€”';
+      const nombre = u.nombre || u.correo || '—';
       const yo = esYo(u);
       return `
         <tr data-id="${esc(u.id)}">
           <td>
             <div class="usuario-cell">
               <span class="usuario-avatar">${esc((nombre.trim()[0] || '?').toUpperCase())}</span>
-              <div class="usuario-cell-info"><strong>${esc(nombre)}</strong>${yo ? '<em class="usuario-yo">(tÃº)</em>' : ''}</div>
+              <div class="usuario-cell-info"><strong>${esc(nombre)}</strong>${yo ? '<em class="usuario-yo">(tú)</em>' : ''}</div>
             </div>
           </td>
-          <td>${esc(u.correo) || 'â€”'}</td>
+          <td></td>
           <td><span class="rol-pill ${rl.clase}"><i class="ph ${rl.icon}" aria-hidden="true"></i>${esc(rl.texto)}</span></td>
           <td><span class="estado-pill ${activo ? 'is-active' : 'is-inactive'}">${activo ? 'Activo' : 'Bloqueado'}</span></td>
           <td>${fmtFecha(u.fechaCreacion)}</td>
@@ -4580,7 +4583,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     if (esYo(u)) { showAlert('No puedes eliminar tu propia cuenta.', 'error'); return; }
     showConfirm(
       'Eliminar usuario',
-      `Se bloquearÃ¡ el acceso de <strong>${esc(u.nombre || u.correo)}</strong>. Su perfil se marca como eliminado y el documento permanece oculto. La cuenta de Authentication se conserva (solo la consola de Supabase puede borrarla definitivamente).`,
+      `Se bloqueará el acceso de <strong>${esc(u.nombre || u.correo)}</strong>. Su perfil se marca como eliminado y el documento permanece oculto. La cuenta de Authentication se conserva (solo la consola de Supabase puede borrarla definitivamente).`,
       async () => {
         try {
           await setDoc(doc(db, 'usuarios', u.id), {
@@ -4640,10 +4643,10 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     if (!nombre || !correo || !password) { mostrarErrorCrear('Completa todos los campos.'); return; }
 
     try {
-      // El trigger handle_new_user de Supabase crea automÃ¡ticamente el doc en
+      // El trigger handle_new_user de Supabase crea automáticamente el doc en
       // public.usuarios con el id secuencial (Usuario-Admin-N), rol, nombre y
       // permisos correctos, usando la metadata pasada al signUp. No se necesita
-      // setDoc manual (evita doble inserciÃ³n y huecos de contador).
+      // setDoc manual (evita doble inserción y huecos de contador).
       await crearUsuarioTemporal(correo, password, { rol, nombre });
       cerrarCrearDialog();
       showAlert(`Usuario <strong>${esc(nombre)}</strong> creado correctamente`, 'success');
@@ -4651,9 +4654,9 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     } catch (err) {
       let msg = err.message || 'Error desconocido';
       if (err.code === 'auth/email-already-in-use' || (err.message && err.message.includes('already'))) msg = 'Ese correo ya tiene una cuenta. Usa otro o contacta al administrador.';
-      else if (err.code === 'auth/invalid-email' || (err.message && err.message.includes('email'))) msg = 'El correo no es vÃ¡lido.';
-      else if (err.code === 'auth/weak-password' || (err.message && err.message.includes('password'))) msg = 'La contraseÃ±a debe tener al menos 6 caracteres.';
-      else if (err.code === 'auth/operation-not-allowed') msg = 'El registro de correo/contraseÃ±a no estÃ¡ habilitado en Supabase Authentication.';
+      else if (err.code === 'auth/invalid-email' || (err.message && err.message.includes('email'))) msg = 'El correo no es válido.';
+      else if (err.code === 'auth/weak-password' || (err.message && err.message.includes('password'))) msg = 'La contraseña debe tener al menos 6 caracteres.';
+      else if (err.code === 'auth/operation-not-allowed') msg = 'El registro de correo/contraseña no está habilitado en Supabase Authentication.';
       console.error('[Usuarios] Error al crear:', err.code, err.message);
       mostrarErrorCrear(msg);
     }
@@ -4664,6 +4667,6 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   }
 
   cargarUsuarios();
-  console.log('[Usuarios] MÃ³dulo de usuarios listo');
+  console.log('[Usuarios] Módulo de usuarios listo');
 })();
 

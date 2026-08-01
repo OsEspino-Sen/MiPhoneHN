@@ -68,6 +68,34 @@ const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
 const navMenu = document.getElementById("nav-menu");
 
 /* ========================================================================== 
+   TOASTS
+   ========================================================================== */
+
+function notify(message, type = "info") {
+  let container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    container.setAttribute("aria-live", "polite");
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.setAttribute("role", "status");
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add("toast-visible"));
+
+  setTimeout(() => {
+    toast.classList.remove("toast-visible");
+    toast.addEventListener("transitionend", () => toast.remove(), { once: true });
+    setTimeout(() => toast.remove(), 400);
+  }, 3500);
+}
+
+/* ========================================================================== 
    INICIALIZACIÓN
    ========================================================================== */
 
@@ -663,7 +691,7 @@ function quickAddToCart(productId) {
   const color = product.variants?.colors?.[0]?.name || "Color estándar";
   const storageOption = getStorageOptions(product).find((option) => !getStockInfo(product, option.name).isOut);
   if (!storageOption) {
-    alert("Este producto está agotado por el momento.");
+    notify("Este producto está agotado por el momento.", "warning");
     return;
   }
   addToCart(product, color, storageOption.name);
@@ -684,12 +712,12 @@ function addToCart(product, color, storage) {
   const nextQuantity = Number(existingItem?.quantity || 0) + 1;
 
   if (stockInfo.isOut) {
-    alert("Esta variante está agotada.");
+    notify("Esta variante está agotada.", "warning");
     return false;
   }
 
   if (stockInfo.quantity !== null && nextQuantity > stockInfo.quantity) {
-    alert(`Solo hay ${stockInfo.quantity} unidad(es) disponibles para esta variante.`);
+    notify(`Solo hay ${stockInfo.quantity} unidad(es) disponibles para esta variante.`, "warning");
     return false;
   }
 
@@ -725,7 +753,7 @@ function changeCartQty(cartItemId, delta) {
     if (sourceProduct) {
       const stockInfo = getStockInfo(sourceProduct, item.storage);
       if (stockInfo.quantity !== null && Number(item.quantity) >= stockInfo.quantity) {
-        alert(`Solo hay ${stockInfo.quantity} unidad(es) disponibles.`);
+        notify(`Solo hay ${stockInfo.quantity} unidad(es) disponibles.`, "warning");
         return;
       }
     }
@@ -899,7 +927,7 @@ function checkoutCartWhatsApp() {
   });
 
   if (invalidStockItem) {
-    alert(`Actualiza la cantidad de ${invalidStockItem.title}; el stock disponible cambió.`);
+    notify(`Actualiza la cantidad de ${invalidStockItem.title}; el stock disponible cambió.`, "warning");
     return;
   }
 
