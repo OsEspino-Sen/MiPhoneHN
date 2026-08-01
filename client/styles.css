@@ -2858,12 +2858,38 @@ select:focus-visible {
 }
 
 .hero-section.has-hero-img {
-  background: linear-gradient(rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.88)), var(--hero-img) center / cover no-repeat;
+  position: relative;
+  background-color: var(--bg-primary);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.88)), var(--hero-img);
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.hero-section.has-hero-img .hero-content,
+.hero-section.has-hero-img .hero-visual {
+  position: relative;
+  z-index: 1;
 }
 
 [data-theme="dark"] .hero-section.has-hero-img {
-  background: linear-gradient(rgba(10, 15, 25, 0.86), rgba(10, 15, 25, 0.86)), var(--hero-img) center / cover no-repeat;
+  background-color: var(--bg-primary);
+  background-image: linear-gradient(rgba(10, 15, 25, 0.86), rgba(10, 15, 25, 0.86)), var(--hero-img);
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
+
+/* Límites de la imagen de fondo del Hero (se aplican en todos los tamaños).
+   - Superior: pega abajo de la línea divisoria del header, sin espacio blanco
+     (la sección empieza justo después del header y el fondo cubre su padding).
+   - Inferior: el contenedor termina más abajo del botón "Calcular cuotas por
+     WhatsApp" (el padding vertical propio de la sección da el margen extra).
+   - Ancho completo: la imagen va sobre la sección completa, de borde a borde,
+     sin margen lateral, padding horizontal ni max-width que la encierren.
+   - Proporción: "cover" con "center top" conserva intacta la parte superior
+     de la imagen (las chicas con los iPhones).
+   - Capas: textos, botones y teléfonos van por encima (z-index 1). */
 
 .about-image {
   position: relative;
