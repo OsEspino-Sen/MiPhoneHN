@@ -1174,6 +1174,14 @@ function normalizeProductRecord(product) {
   };
 }
 
+function optimizeCloudinaryUrl(url, width = 800) {
+  if (!url || typeof url !== "string" || !url.includes("/image/upload/")) return url;
+  if (url.includes("/f_auto") || url.includes("q_auto")) return url;
+  const marker = "/image/upload/";
+  const idx = url.indexOf(marker);
+  return url.slice(0, idx + marker.length) + `f_auto,q_auto,w_${width}/` + url.slice(idx + marker.length);
+}
+
 function getProductImages(product, colorName = "") {
   const selectedColor = colorName
     ? product?.variants?.colors?.find((color) => String(color.name) === String(colorName))
@@ -1186,7 +1194,8 @@ function getProductImages(product, colorName = "") {
   const productImages = Array.isArray(product?.images) ? product.images : [];
   const legacyImage = product?.image ? [product.image] : [];
   const normalizedImages = uniqueStrings(colorImages.length ? colorImages : (productImages.length ? productImages : legacyImage));
-  return normalizedImages.length ? normalizedImages : [FALLBACK_IMAGE];
+  if (!normalizedImages.length) return [FALLBACK_IMAGE];
+  return normalizedImages.map((img) => optimizeCloudinaryUrl(img, 800));
 }
 
 function normalizeBatteryHealth(value) {
@@ -1597,7 +1606,8 @@ function applyWhatsappSettings(whatsapp) {
 
 function setBrandLogo(dataUrl) {
   if (!dataUrl) return;
-  const imgHtml = `<img src="${dataUrl}" alt="Mi Phone HN" class="brand-logo-img">`;
+  const src = optimizeCloudinaryUrl(dataUrl, 400);
+  const imgHtml = `<img src="${src}" alt="Mi Phone HN" class="brand-logo-img">`;
   const headerLogo = document.querySelector(".logo");
   if (headerLogo) headerLogo.innerHTML = imgHtml;
   const footerLogo = document.querySelector(".footer-logo");
@@ -1608,7 +1618,7 @@ function applyHeroImage(dataUrl) {
   if (!dataUrl) return;
   const hero = document.getElementById("hero");
   if (!hero) return;
-  hero.style.setProperty("--hero-img", `url('${dataUrl}')`);
+  hero.style.setProperty("--hero-img", `url('${optimizeCloudinaryUrl(dataUrl, 1920)}')`);
   hero.classList.add("has-hero-img");
 }
 
@@ -1631,7 +1641,7 @@ function applyHeroPhones(images) {
     if (img) {
       img.onerror = null;
       img.hidden = !url;
-      img.src = url;
+      img.src = url ? optimizeCloudinaryUrl(url, 500) : "";
       mockup.classList.toggle("has-img", !!url);
       if (url) {
         img.onerror = () => {
@@ -1749,7 +1759,7 @@ function applyAboutImage(dataUrl) {
   const img = document.getElementById("about-image");
   if (!wrap || !img) return;
   if (dataUrl) {
-    img.src = dataUrl;
+    img.src = optimizeCloudinaryUrl(dataUrl, 1200);
     wrap.hidden = false;
   } else {
     img.src = "";
