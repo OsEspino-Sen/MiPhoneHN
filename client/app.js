@@ -225,8 +225,10 @@ function setupEventListeners() {
 
   document.getElementById("load-more-btn")?.addEventListener("click", () => {
     if (isShopPage && catalogVisibleCount >= filteredCatalogTotal) {
-      // Catálogo completo desplegado: volver arriba sin colapsar la lista.
-      productsGrid?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Catálogo completo desplegado: volver arriba del catálogo (buscador y
+      // filtros) sin colapsar la lista. scroll-margin-top respeta el header.
+      const catalogSection = document.getElementById("catalog-section");
+      (catalogSection || productsGrid)?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     catalogVisibleCount += CATALOG_PAGE_SIZE;
