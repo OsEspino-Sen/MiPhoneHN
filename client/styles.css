@@ -173,6 +173,12 @@ select:focus-visible {
   transform: none !important;
 }
 
+/* El display de .btn no debe pisar el atributo hidden (p. ej. botones del
+   catálogo que se ocultan según el estado de carga progresiva). */
+.btn[hidden] {
+  display: none !important;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;

@@ -43,6 +43,10 @@ let lastProductModalTrigger = null;
 const CATALOG_PAGE_SIZE = 8;
 const isShopPage = document.body?.dataset.page === "shop";
 let catalogVisibleCount = CATALOG_PAGE_SIZE;
+let filteredCatalogTotal = 0;
+
+const LOAD_MORE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h16m0 0l-6-6m6 6l-6 6"/></svg>';
+const BACK_TO_TOP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-6 6m6-6l6 6"/></svg>';
 
 /* ========================================================================== 
    ELEMENTOS DEL DOM
@@ -220,6 +224,11 @@ function setupEventListeners() {
   });
 
   document.getElementById("load-more-btn")?.addEventListener("click", () => {
+    if (isShopPage && catalogVisibleCount >= filteredCatalogTotal) {
+      // Catálogo completo desplegado: volver arriba sin colapsar la lista.
+      productsGrid?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     catalogVisibleCount += CATALOG_PAGE_SIZE;
     renderProducts();
   });
@@ -320,6 +329,7 @@ function renderProducts() {
   });
 
   productsGrid.innerHTML = "";
+  filteredCatalogTotal = filteredProducts.length;
 
   if (filteredProducts.length === 0) {
     if (noResults) noResults.style.display = "block";
@@ -403,7 +413,6 @@ function updateCatalogFooter(hasMore, total) {
   const shopCount = document.getElementById("shop-count");
 
   if (exploreBtn) exploreBtn.hidden = total === 0;
-  if (loadMoreBtn) loadMoreBtn.hidden = !hasMore;
   if (catalogEnd) {
     const reachedEnd = !hasMore && total > 0;
     catalogEnd.hidden = !reachedEnd;
@@ -415,6 +424,17 @@ function updateCatalogFooter(hasMore, total) {
   }
   if (shopCount) {
     shopCount.textContent = total === 1 ? "1 producto disponible" : `${total} productos disponibles`;
+  }
+  if (loadMoreBtn) {
+    if (hasMore) {
+      loadMoreBtn.hidden = false;
+      loadMoreBtn.innerHTML = `${LOAD_MORE_ICON} Cargar más productos`;
+    } else if (total > CATALOG_PAGE_SIZE) {
+      loadMoreBtn.hidden = false;
+      loadMoreBtn.innerHTML = `${BACK_TO_TOP_ICON} Volver arriba`;
+    } else {
+      loadMoreBtn.hidden = true;
+    }
   }
 }
 
