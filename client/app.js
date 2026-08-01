@@ -214,11 +214,26 @@ function setupEventListeners() {
     mobileMenuToggle.setAttribute("aria-expanded", String(Boolean(isOpen)));
   });
 
-  document.querySelectorAll(".nav-link").forEach((link) => {
-    link.addEventListener("click", () => {
+  // Navegación tipo Single Page: scroll suave sin recargar, sin cambiar la URL
+  // ni agregar entradas al historial (los anclas nativos se mantienen como
+  // mejora progresiva para navegadores sin JS).
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest('a[href^="#"]');
+    if (!link) return;
+    const targetId = decodeURIComponent(link.getAttribute("href").slice(1));
+    event.preventDefault();
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    if (link.classList.contains("nav-link")) {
       navMenu?.classList.remove("active");
       mobileMenuToggle?.setAttribute("aria-expanded", "false");
-    });
+      document.querySelectorAll(".nav-link").forEach((item) => item.classList.remove("active"));
+      link.classList.add("active");
+    }
   });
 
   bindFaqAccordion();
