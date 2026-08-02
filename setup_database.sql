@@ -135,6 +135,27 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Trigger: al eliminar un perfil de public.usuarios se elimina también la
+-- cuenta de auth.users (SECURITY DEFINER, ejecutado como postgres). Así el
+-- correo queda libre y se puede reutilizar al crear un usuario nuevo.
+CREATE OR REPLACE FUNCTION public.eliminar_auth_user_por_perfil()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  DELETE FROM auth.users WHERE id = old.uid;
+  RETURN old;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_usuario_eliminado ON public.usuarios;
+
+CREATE TRIGGER on_usuario_eliminado
+  AFTER DELETE ON public.usuarios
+  FOR EACH ROW EXECUTE FUNCTION public.eliminar_auth_user_por_perfil();
+
 -- 5. Tabla de Productos
 CREATE TABLE IF NOT EXISTS public.productos (
     id VARCHAR PRIMARY KEY,

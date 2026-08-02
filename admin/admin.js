@@ -4511,15 +4511,13 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     if (esYo(u)) { showAlert('No puedes eliminar tu propia cuenta.', 'error'); return; }
     showConfirm(
       'Eliminar usuario',
-      `Se bloqueará el acceso de <strong>${esc(u.nombre || u.correo)}</strong>. Su perfil se marca como eliminado y el documento permanece oculto. La cuenta de Authentication se conserva (solo la consola de Supabase puede borrarla definitivamente).`,
+      `Se eliminará permanentemente el acceso de <strong>${esc(u.nombre || u.correo)}</strong>: se borra su perfil y su cuenta de Authentication, y el correo queda libre para reutilizarlo.`,
       async () => {
+        const ok = await pedirLlave('Acción sensible', 'Para eliminar usuarios debes ingresar la llave de acceso.', { incluirInactivas: true });
+        if (!ok) { showAlert('Acción cancelada: llave incorrecta.', 'error'); return; }
         try {
-          await setDoc(doc(db, 'usuarios', u.id), {
-            activo: false,
-            estado: 'eliminado',
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
-          showAlert('Usuario eliminado y acceso bloqueado', 'success');
+          await deleteDoc(doc(db, 'usuarios', u.id));
+          showAlert('Usuario eliminado y correo liberado', 'success');
           await cargarUsuarios();
         } catch (err) {
           showAlert('Error al eliminar usuario: ' + err.message, 'error');
@@ -4569,6 +4567,9 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     const rol = document.getElementById('usuario-create-rol')?.value === 'admin' ? 'admin' : 'editor';
 
     if (!nombre || !correo || !password) { mostrarErrorCrear('Completa todos los campos.'); return; }
+
+    const ok = await pedirLlave('Acción sensible', 'Para crear usuarios debes ingresar la llave de acceso.', { incluirInactivas: true });
+    if (!ok) { mostrarErrorCrear('Acción cancelada: llave incorrecta.'); return; }
 
     try {
       // El trigger handle_new_user de Supabase crea automáticamente el doc en
