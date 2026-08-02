@@ -65,7 +65,7 @@ async function validarLlave(codigo, opciones = {}) {
     const hash = await sha256Hex(texto);
     // La confirmación de acciones sensibles acepta llaves inactivas para
     // evitar encerrar al administrador tras desactivar la única llave.
-    return llaves.some(l => (l.activa !== false || opciones.incluirInactivas) && (l.hash === hash || l.codigo === texto));
+    return llaves.some(l => (l.activa !== false || opciones.incluirInactivas) && l.hash === hash);
   } catch (err) {
     console.warn('No se pudo validar la llave:', err.message);
     return false;
@@ -4142,30 +4142,12 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       const snap = await getDoc(doc(db, 'configuracion', 'llaves-acceso'));
       if (snap.exists()) {
         llaves = Array.isArray(snap.data().llaves) ? snap.data().llaves : [];
-        // Migración segura: códigos guardados en texto plano → hash SHA-256.
-        let huboMigracion = false;
-        for (const l of llaves) {
-          if (l.codigo && !l.hash) {
-            l.hash = await sha256Hex(l.codigo);
-            delete l.codigo;
-            huboMigracion = true;
-          }
-        }
-        if (huboMigracion) await guardarLlavesSilencioso();
       } else { llaves = []; }
       loaded = true;
       renderLlaves();
     } catch (err) {
       console.warn('[Llaves] No se pudieron cargar:', err);
       llaves = []; renderLlaves();
-    }
-  }
-
-  async function guardarLlavesSilencioso() {
-    try {
-      await setDoc(doc(db, 'configuracion', 'llaves-acceso'), { llaves, updatedAt: new Date().toISOString() });
-    } catch (err) {
-      console.warn('[Llaves] Error al migrar hash:', err);
     }
   }
 
@@ -4228,43 +4210,6 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     return ok;
   }
 
-  // Recuperación: solo aplica a llaves legadas de 6 dígitos numéricos, cuyo
-  // hash SHA-256 se puede reconstruir por búsqueda rápida en el navegador.
-  // Las llaves nuevas (8 caracteres alfanuméricos) no se pueden recuperar.
-  let recuperando = false;
-
-  async function recuperarCodigoDeHash(hashKey) {
-    const hashMin = String(hashKey || '').toLowerCase();
-    if (!/^[0-9a-f]{64}$/.test(hashMin)) return null;
-    setStatus('loading', 'Buscando el código de la llave.');
-    const bytes = new Uint8Array(32);
-    for (let i = 0; i < 64; i += 2) bytes[i >> 1] = parseInt(hashMin.slice(i, i + 2), 16);
-    const tail = [bytes[30], bytes[31]];
-    const enc = new TextEncoder();
-    const BATCH = 400;
-    let candidatos = 0;
-    for (let start = 100000; start <= 999999; start += BATCH) {
-      const nums = [];
-      for (let n = start; n < start + BATCH && n <= 999999; n++) nums.push(String(n));
-      const bufs = await Promise.all(nums.map(t => crypto.subtle.digest('SHA-256', enc.encode(t))));
-      for (let i = 0; i < bufs.length; i++) {
-        const d = new Uint8Array(bufs[i]);
-        if (d[30] === tail[0] && d[31] === tail[1]) {
-          candidatos++;
-          let igual = true;
-          for (let j = 0; j < 32; j++) { if (d[j] !== bytes[j]) { igual = false; break; } }
-          if (igual) return nums[i];
-        }
-      }
-      if (candidatos >= 128) break;
-      if (start % 100000 === 0) {
-        const pct = Math.min(99, Math.round(((start - 100000) / 899999) * 100));
-        setStatus('loading', `Buscando el código de la llave. ${pct}%`);
-      }
-    }
-    return null;
-  }
-
   function codigoEnmascarado(hash) {
     if (!hash || hash.length < 8) return '......';
     return '......' + hash.slice(-4).toUpperCase();
@@ -4289,8 +4234,8 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     }
     list.innerHTML = llaves.map((l, i) => {
       const activa = l.activa !== false;
-      const hashKey = l.hash || l.codigo;
-      const codigoReal = codigosGenerados.get(hashKey) || l.codigo;
+      const hashKey = l.hash;
+      const codigoReal = codigosGenerados.get(hashKey);
       const revelado = codigosRevelados.has(hashKey);
       const texto = revelado && codigoReal ? escapeStr(codigoReal) : escapeStr(textoEnmascarado(codigoReal, hashKey));
       const hayCodigo = Boolean(codigoReal);
@@ -4299,7 +4244,6 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
           <div class="llave-codigo-row"><code class="llave-codigo" data-llave-code="${i}">${texto}</code>
           <button type="button" class="settings-list-btn llave-accion-btn" data-llave-eye="${i}" title="${hayCodigo ? (revelado ? 'Ocultar llave' : 'Mostrar llave completa') : 'Código no disponible: se mostró una sola vez al generarla'}"><i class="ph ${revelado && hayCodigo ? 'ph-eye-slash' : 'ph-eye'}" aria-hidden="true"></i></button>
           <button type="button" class="settings-list-btn llave-accion-btn" data-llave-copy="${i}" title="${hayCodigo ? 'Copiar llave' : 'Código no disponible: se mostró una sola vez al generarla'}"><i class="ph ph-copy" aria-hidden="true"></i></button>
-          ${hayCodigo ? '' : `<button type="button" class="settings-list-btn llave-accion-btn" data-llave-recover="${i}" title="Recuperar código de esta llave"><i class="ph ph-key" aria-hidden="true"></i></button>`}
           <span class="llave-estado ${activa ? 'is-active' : 'is-inactive'}">${activa ? 'Activa' : 'Inactiva'}</span></div>
           <input type="text" class="llave-desc-input" value="${escapeStr(l.descripcion || '')}" placeholder="Descripción (ej. Llave principal)" data-llave-desc="${i}" maxlength="60">
         </div>
@@ -4314,18 +4258,18 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
         const idx = +e.currentTarget.dataset.llaveEye;
         const l = llaves[idx];
         if (!l) return;
-        const hashKey = l.hash || l.codigo;
+        const hashKey = l.hash;
         const codeEl = list.querySelector(`[data-llave-code="${idx}"]`);
         const icon = e.currentTarget.querySelector('.ph');
         if (codigosRevelados.has(hashKey)) {
           codigosRevelados.delete(hashKey);
-          const codigoOculto = codigosGenerados.get(hashKey) || l.codigo || null;
+          const codigoOculto = codigosGenerados.get(hashKey) || null;
           if (codeEl) codeEl.textContent = textoEnmascarado(codigoOculto, hashKey);
           if (icon) icon.className = 'ph ph-eye';
           e.currentTarget.title = 'Mostrar llave completa';
         } else {
-          const codigoReal = codigosGenerados.get(hashKey) || l.codigo;
-          if (!codigoReal) { setStatus('error', 'Código no disponible en esta sesión. Usa el botón de llave para recuperarlo.'); return; }
+          const codigoReal = codigosGenerados.get(hashKey);
+          if (!codigoReal) { setStatus('error', 'Código no disponible: se mostró solo una vez al generarla.'); return; }
           codigosRevelados.add(hashKey);
           if (codeEl) codeEl.textContent = codigoReal;
           if (icon) icon.className = 'ph ph-eye-slash';
@@ -4338,8 +4282,8 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
         const idx = +e.currentTarget.dataset.llaveCopy;
         const l = llaves[idx];
         if (!l) return;
-        const codigoReal = codigosGenerados.get(l.hash || l.codigo) || l.codigo;
-        if (!codigoReal) { setStatus('error', 'Código no disponible en esta sesión. Usa el botón de llave para recuperarlo.'); return; }
+        const codigoReal = codigosGenerados.get(l.hash);
+        if (!codigoReal) { setStatus('error', 'Código no disponible: se mostró solo una vez al generarla.'); return; }
         const ok = await copiarTexto(codigoReal);
         if (!ok) { setStatus('error', 'No se pudo copiar la llave'); return; }
         const icon = e.currentTarget.querySelector('.ph');
@@ -4353,30 +4297,6 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       });
     });
 
-    list.querySelectorAll('[data-llave-recover]').forEach(btn => {
-      btn.addEventListener('click', async e => {
-        const idx = +e.currentTarget.dataset.llaveRecover;
-        const l = llaves[idx];
-        if (!l) return;
-        const hashKey = l.hash || l.codigo;
-        if (recuperando) { setStatus('error', 'Ya hay una recuperación en curso'); return; }
-        if (codigosGenerados.has(hashKey)) return;
-        recuperando = true;
-        try {
-          const codigo = await recuperarCodigoDeHash(hashKey);
-          if (!codigo) { setStatus('error', 'No se pudo recuperar: las llaves nuevas (8 caracteres) no son recuperables. Solo las antiguas de 6 dígitos.'); return; }
-          codigosGenerados.set(hashKey, codigo);
-          persistirCodigos();
-          codigosRevelados.add(hashKey);
-          setStatus('success', `Código recuperado: ${codigo}`);
-          renderLlaves();
-        } catch (err) {
-          setStatus('error', 'No se pudo recuperar el código de esta llave');
-        } finally {
-          recuperando = false;
-        }
-      });
-    });
     list.querySelectorAll('[data-llave-desc]').forEach(input => {
       input.addEventListener('input', e => { const idx = +e.target.dataset.llaveDesc; if (llaves[idx]) llaves[idx].descripcion = e.target.value; });
       input.addEventListener('change', () => conAccesoLlaves(guardarLlaves));
