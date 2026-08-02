@@ -388,87 +388,9 @@
             </div>
 
             <div class="settings-tab-content" id="settings-imagenes-tab">
-              <span class="settings-subheading">Imágenes del sitio</span>
               <div class="settings-grid">
 
-                <article class="settings-form-card settings-logo-card settings-img-card" data-img-doc="logo" data-img-key="logo">
-                  <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
-                    <div><h3>Logo de la empresa</h3><p>PNG o WebP con fondo transparente. Se redimensiona automáticamente.</p></div>
-                  </div>
-                  <div class="settings-image-preview settings-image-preview--logo">
-                    <img src="" alt="Logo">
-                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin logo</span></div>
-                  </div>
-                  <div class="settings-image-actions">
-                    <div class="settings-file-wrap">
-                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar logo</button>
-                      <input type="file" accept=".png,.webp,.jpg,.jpeg,.gif" class="settings-file-input" hidden>
-                      <span class="settings-file-name"></span>
-                    </div>
-                    <div class="settings-site-url-wrap">
-                      <i class="ph ph-link-simple" aria-hidden="true"></i>
-                      <input type="url" class="settings-site-url" data-img-url="logo" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
-                    </div>
-                    <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
-                    <div class="settings-btn-row">
-                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
-                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
-                      <button type="button" class="btn btn-danger-ghost btn-sm settings-remove-btn" disabled><i class="ph ph-trash" aria-hidden="true"></i> Eliminar</button>
-                    </div>
-                  </div>
-                  <div class="settings-upload-status"></div>
-                </article>
-
-                <article class="settings-form-card settings-img-card" data-img-doc="hero-fondo">
-                  <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-image" aria-hidden="true"></i></div>
-                    <div><h3>Imagen de fondo del hero</h3><p>Se muestra detrás de la portada. Se redimensiona automáticamente.</p></div>
-                  </div>
-                  <div class="settings-image-preview settings-image-preview--wide">
-                    <img src="" alt="Hero">
-                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
-                  </div>
-                  <div class="settings-image-actions">
-                    <div class="settings-file-wrap">
-                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar imagen</button>
-                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
-                      <span class="settings-file-name"></span>
-                    </div>
-                    <div class="settings-site-url-wrap">
-                      <i class="ph ph-link-simple" aria-hidden="true"></i>
-                      <input type="url" class="settings-site-url" data-img-url="hero" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
-                    </div>
-                    <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
-                    <div class="settings-btn-row">
-                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
-                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
-                      <button type="button" class="btn btn-danger-ghost btn-sm settings-remove-btn" disabled><i class="ph ph-trash" aria-hidden="true"></i> Eliminar</button>
-                    </div>
-                  </div>
-                  <div class="settings-upload-status"></div>
-                </article>
-
-                <article class="settings-form-card settings-img-card-duo" data-img-doc="heroPhones">
-                  <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-device-mobile" aria-hidden="true"></i></div>
-                    <div><h3>Imágenes del hero (carrusel)</h3><p>De 1 a 5 imágenes o URLs (https://). Se muestran como carrusel automático cada 5 s, en pares: la imagen activa pasa al frente.</p></div>
-                  </div>
-                  <div class="settings-phones-empty" id="phones-empty">
-                    <i class="ph ph-device-mobile" aria-hidden="true"></i>
-                    <span>Sin imágenes. Agrega la primera imagen o URL del hero.</span>
-                  </div>
-                  <div class="settings-phones-list" id="phones-list"></div>
-                  <button type="button" class="btn btn-dashed btn-block settings-phones-add" id="phones-add-btn" hidden><i class="ph ph-plus" aria-hidden="true"></i> Agregar imagen o URL</button>
-                  <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
-                  <div class="settings-btn-row">
-                    <button type="button" class="btn btn-primary btn-sm settings-save-btn settings-duo-save" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
-                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn settings-duo-cancel" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
-                  </div>
-                  <div class="settings-upload-status"></div>
-                </article>
-
-                <article class="settings-form-card settings-img-card" data-img-doc="nosotros">
+<article class="settings-form-card settings-img-card" data-img-doc="nosotros">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-image" aria-hidden="true"></i></div>
                     <div><h3>Imagen de la sección Nosotros</h3><p>Se muestra en la sección Nosotros del inicio, integrada con el texto. PNG o WebP con fondo transparente.</p></div>
@@ -497,116 +419,65 @@
                   <div class="settings-upload-status"></div>
                 </article>
 
-              </div>
+<article class="settings-form-card settings-img-card" data-img-doc="hero-fondo">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-image" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de fondo del hero</h3><p>Se muestra detrás de la portada. Se redimensiona automáticamente.</p></div>
+                  </div>
+                  <div class="settings-image-preview settings-image-preview--wide">
+                    <img src="" alt="Hero">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar imagen</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-site-url-wrap">
+                      <i class="ph ph-link-simple" aria-hidden="true"></i>
+                      <input type="url" class="settings-site-url" data-img-url="hero" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
+                    </div>
+                    <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                      <button type="button" class="btn btn-danger-ghost btn-sm settings-remove-btn" disabled><i class="ph ph-trash" aria-hidden="true"></i> Eliminar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
 
-              <span class="settings-subheading">Imágenes del panel</span>
-              <div class="settings-grid">
-
-                <article class="settings-image-card" data-key="imagen_banner_panel">
+<article class="settings-form-card settings-logo-card settings-img-card" data-img-doc="logo" data-img-key="logo">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
-                    <div><h3>Banner del panel</h3><p>Imagen principal del panel de administración.</p></div>
+                    <div><h3>Logo de la empresa</h3><p>PNG o WebP con fondo transparente. Se redimensiona automáticamente.</p></div>
                   </div>
-                  <div class="settings-image-preview">
-                    <img src="" alt="Banner">
-                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
-                  </div>
-                  <div class="settings-image-actions">
-                    <div class="settings-file-wrap">
-                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
-                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
-                      <span class="settings-file-name"></span>
-                    </div>
-                    <div class="settings-url-field">
-                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/banner.jpg">
-                    </div>
-                    <div class="settings-btn-row">
-                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
-                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
-                    </div>
-                  </div>
-                  <div class="settings-upload-status" id="status-imagen_banner_panel"></div>
-                </article>
-
-                <article class="settings-image-card" data-key="imagen_login">
-                  <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-monitor" aria-hidden="true"></i></div>
-                    <div><h3>Imagen de login</h3><p>Fondo de la pantalla de inicio de sesión.</p></div>
-                  </div>
-                  <div class="settings-image-preview">
-                    <img src="" alt="Login">
-                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  <div class="settings-image-preview settings-image-preview--logo">
+                    <img src="" alt="Logo">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin logo</span></div>
                   </div>
                   <div class="settings-image-actions">
                     <div class="settings-file-wrap">
-                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
-                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar logo</button>
+                      <input type="file" accept=".png,.webp,.jpg,.jpeg,.gif" class="settings-file-input" hidden>
                       <span class="settings-file-name"></span>
                     </div>
-                    <div class="settings-url-field">
-                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagen-login">
+                    <div class="settings-site-url-wrap">
+                      <i class="ph ph-link-simple" aria-hidden="true"></i>
+                      <input type="url" class="settings-site-url" data-img-url="logo" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
                     </div>
+                    <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
                     <div class="settings-btn-row">
                       <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
                       <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                      <button type="button" class="btn btn-danger-ghost btn-sm settings-remove-btn" disabled><i class="ph ph-trash" aria-hidden="true"></i> Eliminar</button>
                     </div>
                   </div>
-                  <div class="settings-upload-status" id="status-imagen_login"></div>
+                  <div class="settings-upload-status"></div>
                 </article>
 
-                <article class="settings-image-card" data-key="imagen_sidebar">
-                  <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-sidebar" aria-hidden="true"></i></div>
-                    <div><h3>Imagen de la sidebar</h3><p>Fondo de la barra lateral.</p></div>
-                  </div>
-                  <div class="settings-image-preview">
-                    <img src="" alt="Sidebar">
-                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
-                  </div>
-                  <div class="settings-image-actions">
-                    <div class="settings-file-wrap">
-                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
-                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
-                      <span class="settings-file-name"></span>
-                    </div>
-                    <div class="settings-url-field">
-                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/sidebar">
-                    </div>
-                    <div class="settings-btn-row">
-                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
-                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
-                    </div>
-                  </div>
-                  <div class="settings-upload-status" id="status-imagen_sidebar"></div>
-                </article>
-
-                <article class="settings-image-card" data-key="imagen_tarjeta_promocional">
-                  <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-cardholder" aria-hidden="true"></i></div>
-                    <div><h3>Imagen para tarjeta</h3><p>Fondo de la tarjeta promocional del sidebar.</p></div>
-                  </div>
-                  <div class="settings-image-preview">
-                    <img src="" alt="Tarjeta">
-                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
-                  </div>
-                  <div class="settings-image-actions">
-                    <div class="settings-file-wrap">
-                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
-                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
-                      <span class="settings-file-name"></span>
-                    </div>
-                    <div class="settings-url-field">
-                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagentarjeta">
-                    </div>
-                    <div class="settings-btn-row">
-                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
-                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
-                    </div>
-                  </div>
-                  <div class="settings-upload-status" id="status-imagen_tarjeta_promocional"></div>
-                </article>
-
-                <article class="settings-image-card" data-key="imagen_barra_principal">
+<article class="settings-image-card" data-key="imagen_barra_principal">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-rows" aria-hidden="true"></i></div>
                     <div><h3>Imagen de barra</h3><p>Imagen del footer del sidebar.</p></div>
@@ -632,10 +503,132 @@
                   <div class="settings-upload-status" id="status-imagen_barra_principal"></div>
                 </article>
 
+<article class="settings-form-card settings-img-card-duo settings-form-card--wide" data-img-doc="heroPhones">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-device-mobile" aria-hidden="true"></i></div>
+                    <div><h3>Imágenes del hero (carrusel)</h3><p>De 1 a 5 imágenes o URLs (https://). Se muestran como carrusel automático cada 5 s, en pares: la imagen activa pasa al frente.</p></div>
+                  </div>
+                  <div class="settings-phones-empty" id="phones-empty">
+                    <i class="ph ph-device-mobile" aria-hidden="true"></i>
+                    <span>Sin imágenes. Agrega la primera imagen o URL del hero.</span>
+                  </div>
+                  <div class="settings-phones-list" id="phones-list"></div>
+                  <button type="button" class="btn btn-dashed btn-block settings-phones-add" id="phones-add-btn" hidden><i class="ph ph-plus" aria-hidden="true"></i> Agregar imagen o URL</button>
+                  <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn settings-duo-save" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn settings-duo-cancel" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+<article class="settings-image-card" data-key="imagen_sidebar">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-sidebar" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de la sidebar</h3><p>Fondo de la barra lateral.</p></div>
+                  </div>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Sidebar">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/sidebar">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status" id="status-imagen_sidebar"></div>
+                </article>
+
+<article class="settings-image-card" data-key="imagen_tarjeta_promocional">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-cardholder" aria-hidden="true"></i></div>
+                    <div><h3>Imagen para tarjeta</h3><p>Fondo de la tarjeta promocional del sidebar.</p></div>
+                  </div>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Tarjeta">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagentarjeta">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status" id="status-imagen_tarjeta_promocional"></div>
+                </article>
+
+<article class="settings-image-card" data-key="imagen_banner_panel">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
+                    <div><h3>Banner del panel</h3><p>Imagen principal del panel de administración.</p></div>
+                  </div>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Banner">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/banner.jpg">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status" id="status-imagen_banner_panel"></div>
+                </article>
+
+<article class="settings-image-card" data-key="imagen_login">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-monitor" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de login</h3><p>Fondo de la pantalla de inicio de sesión.</p></div>
+                  </div>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Login">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagen-login">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status" id="status-imagen_login"></div>
+                </article>
+
               </div>
             </div>
-
-            <div class="settings-tab-content" id="settings-llaves-tab">
+<div class="settings-tab-content" id="settings-llaves-tab">
               <div class="settings-grid settings-grid--single">
                 <article class="settings-form-card">
                   <div class="settings-image-header">
