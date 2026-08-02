@@ -5,3 +5,6 @@ dist/
 
 .firebase/
 .env
+
+.vercel
+.env*
