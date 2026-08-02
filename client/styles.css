@@ -3071,6 +3071,22 @@ select:focus-visible {
   opacity: 1;
 }
 
+/* Aparición coordinada: el marco del teléfono permanece oculto hasta que su
+   imagen está lista; el marco y la foto aparecen juntos con un fundido suave,
+   sin el efecto de teléfono vacío. */
+.hero-visual:not(.phone-ready) .phone-mockup,
+.hero-visual.phone-ready .phone-mockup.has-img:not(.is-loaded) {
+  opacity: 0;
+}
+
+/* Imagen ya disponible en caché del navegador: se muestra al instante, sin
+   transición, para evitar parpadeos; en descargas por red se aplica el
+   fundido normal. */
+.hero-visual .phone-mockup.has-img.is-loaded.is-cached,
+.phone-mockup-img.is-cached {
+  transition: none;
+}
+
 /* Fade-in de la imagen de "Nosotros". */
 #about-image {
   opacity: 0;
@@ -3083,6 +3099,9 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .phone-mockup-img,
   #about-image {
+    transition: none;
+  }
+  .hero-visual .phone-mockup {
     transition: none;
   }
   .hero-visual .phone-screen::after {

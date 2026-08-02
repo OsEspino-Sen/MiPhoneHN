@@ -1647,6 +1647,63 @@ function applyHeroImage(dataUrl) {
 
 let heroPhonesTimer = null;
 
+const markPhoneImgLoaded = (img, mockup, instant) => {
+  img.classList.add("is-loaded");
+  mockup.classList.add("is-loaded");
+  if (instant) {
+    img.classList.add("is-cached");
+    mockup.classList.add("is-cached");
+    requestAnimationFrame(() => {
+      img.classList.remove("is-cached");
+      mockup.classList.remove("is-cached");
+    });
+  }
+};
+
+const attachPhoneImgLoad = (img, mockup) => {
+  img.onload = () => markPhoneImgLoaded(img, mockup, false);
+  img.onerror = () => {
+    img.onload = null;
+    img.onerror = null;
+    img.classList.remove("is-loaded");
+    mockup.classList.remove("is-loaded");
+    img.hidden = true;
+    mockup.classList.remove("has-img");
+  };
+};
+
+const setPhoneImg = (mockup, url) => {
+  if (!mockup) return;
+  const img = mockup.querySelector(".phone-mockup-img");
+  if (!img) {
+    mockup.classList.toggle("has-img", !!url);
+    return;
+  }
+  img.onload = null;
+  img.onerror = null;
+  img.classList.remove("is-loaded", "is-cached");
+  mockup.classList.remove("is-loaded", "is-cached");
+  img.hidden = !url;
+  if (url) {
+    img.src = optimizeCloudinaryUrl(url, 500);
+    mockup.classList.add("has-img");
+    if (img.complete && img.naturalWidth > 0) {
+      markPhoneImgLoaded(img, mockup, true);
+    } else {
+      attachPhoneImgLoad(img, mockup);
+    }
+  } else {
+    img.removeAttribute("src");
+    mockup.classList.remove("has-img");
+  }
+};
+
+const preloadPhoneImg = (url) => {
+  if (!url) return;
+  const im = new Image();
+  im.src = optimizeCloudinaryUrl(url, 500);
+};
+
 function applyHeroPhones(images) {
   const list = (images || []).filter(Boolean);
   const visual = document.querySelector(".hero-visual");
@@ -1658,54 +1715,30 @@ function applyHeroPhones(images) {
     heroPhonesTimer = null;
   }
 
-  const setSlot = (mockup, url) => {
-    if (!mockup) return;
-    const img = mockup.querySelector(".phone-mockup-img");
-    if (img) {
-      img.onerror = null;
-      img.onload = null;
-      img.classList.remove("is-loaded");
-      mockup.classList.remove("is-loaded");
-      img.hidden = !url;
-      img.src = url ? optimizeCloudinaryUrl(url, 500) : "";
-      mockup.classList.toggle("has-img", !!url);
-      if (url) {
-        img.onload = () => {
-          img.classList.add("is-loaded");
-          mockup.classList.add("is-loaded");
-        };
-        img.onerror = () => {
-          img.classList.remove("is-loaded");
-          mockup.classList.remove("is-loaded");
-          img.hidden = true;
-          mockup.classList.remove("has-img");
-        };
-      }
-    } else {
-      mockup.classList.toggle("has-img", !!url);
-    }
-  };
-
   if (!visual || !p1 || list.length === 0) {
-    setSlot(p1, "");
-    setSlot(p2, "");
+    setPhoneImg(p1, "");
+    setPhoneImg(p2, "");
     visual?.classList.remove("has-single", "is-swapping", "has-carousel");
+    visual?.classList.add("phone-ready");
     return;
   }
 
+  list.forEach(preloadPhoneImg);
+
   if (list.length === 1) {
-    setSlot(p1, list[0]);
-    setSlot(p2, "");
+    setPhoneImg(p1, list[0]);
+    setPhoneImg(p2, "");
     visual.classList.add("has-single");
     visual.classList.remove("is-swapping", "has-carousel");
+    visual.classList.add("phone-ready");
     return;
   }
 
   visual.classList.remove("has-single");
-  visual.classList.add("has-carousel");
+  visual.classList.add("has-carousel", "phone-ready");
   let idx = 0;
-  setSlot(p1, list[0]);
-  setSlot(p2, list[1]);
+  setPhoneImg(p1, list[0]);
+  setPhoneImg(p2, list[1]);
 
   const swapSlot = (mockup, url) => {
     const img = mockup?.querySelector(".phone-mockup-img");
@@ -1763,10 +1796,17 @@ function applyHeroPhones(images) {
       mB.style.zIndex = "3";
       await new Promise((r) => setTimeout(r, 500));
 
-      if (imgA) {
-        imgA.classList.remove("is-loaded");
-        imgA.onload = () => imgA.classList.add("is-loaded");
+      if (imgA && mA) {
+        imgA.onload = null;
+        imgA.onerror = null;
+        imgA.classList.remove("is-loaded", "is-cached");
+        mA.classList.remove("is-loaded", "is-cached");
         imgA.src = nextImg;
+        if (imgA.complete && imgA.naturalWidth > 0) {
+          markPhoneImgLoaded(imgA, mA, true);
+        } else {
+          attachPhoneImgLoad(imgA, mA);
+        }
       }
       mA.classList.remove("phone-1");
       mA.classList.add("phone-2");
@@ -1788,10 +1828,17 @@ function applyHeroPhones(images) {
       clearInline(mA);
       clearInline(mB);
     } else {
-      if (imgA) {
-        imgA.classList.remove("is-loaded");
-        imgA.onload = () => imgA.classList.add("is-loaded");
+      if (imgA && mA) {
+        imgA.onload = null;
+        imgA.onerror = null;
+        imgA.classList.remove("is-loaded", "is-cached");
+        mA.classList.remove("is-loaded", "is-cached");
         imgA.src = nextImg;
+        if (imgA.complete && imgA.naturalWidth > 0) {
+          markPhoneImgLoaded(imgA, mA, true);
+        } else {
+          attachPhoneImgLoad(imgA, mA);
+        }
       }
       if (mA) { mA.classList.remove("phone-1"); mA.classList.add("phone-2"); }
       if (mB) { mB.classList.remove("phone-2"); mB.classList.add("phone-1"); }
