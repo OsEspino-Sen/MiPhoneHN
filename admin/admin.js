@@ -605,7 +605,7 @@ function init() {
     if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
       storeLink.href = "http://localhost:5173/";
     } else {
-      storeLink.href = "https://mi-phone-hn.web.app/";
+      storeLink.href = "https://miphonehn.vercel.app/";
     }
   }
 
