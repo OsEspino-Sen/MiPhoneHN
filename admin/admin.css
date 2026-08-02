@@ -4838,6 +4838,17 @@ body #products-table-body .data-grid-row::before {
 .settings-wa-preview-card .settings-image-icon{color:#0f8a3d;background:rgba(30,184,88,.12);border-color:rgba(30,184,88,.28)}
 .settings-wa-preview-card .settings-wa-preview{background:color-mix(in srgb,#1eb858 4%,var(--surface-2));border-color:color-mix(in srgb,#1eb858 22%,var(--line))}
 
+/* --- Tarjeta compacta horizontal (Anuncio superior) --- */
+.settings-form-card--slim{flex-direction:row;flex-wrap:wrap;align-items:center;gap:16px 20px;padding:18px 24px}
+.settings-form-card--slim .settings-image-header{flex:1 1 280px;margin:0}
+.settings-form-card--slim .form-group{flex:2 1 380px;margin:0;min-width:0}
+.settings-form-card--slim .settings-btn-row{margin-left:auto;padding-top:0;border-top:0}
+.settings-form-card--slim .settings-upload-status{flex-basis:100%;margin:0}
+
+/* --- Lista en rejilla compacta (Números destacados) --- */
+.settings-list-card--grid .settings-list-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(max-width:900px){.settings-list-card--grid .settings-list-items{grid-template-columns:1fr}}
+
 /* --- Responsive del módulo --- */
 @media(max-width:1100px){.settings-grid{grid-template-columns:1fr}}
 @media(max-width:900px){.form-grid-3{grid-template-columns:1fr}}

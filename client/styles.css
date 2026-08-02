@@ -223,6 +223,13 @@ select:focus-visible {
   font-weight: 500;
 }
 
+/* Mantener la franja superior oscura también en tema oscuro */
+[data-theme="dark"] .announcement-bar {
+  background: var(--bg-secondary);
+  color: #ffffff;
+  border-bottom: 1px solid var(--border-light);
+}
+
 .site-header {
   position: sticky;
   top: 0;
