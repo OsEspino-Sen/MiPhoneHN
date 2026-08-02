@@ -3474,6 +3474,12 @@ body #products-table-body .data-grid-row::before {
   animation: fadeIn .2s ease both
 }
 
+/* El prompt de llave se abre sobre otros diálogos (crear/eliminar usuario):
+   debe quedar siempre por delante de cualquier .confirm-backdrop (z-index 70). */
+#llave-prompt-dialog {
+  z-index: 90;
+}
+
 .confirm-card {
   position: relative;
   z-index: 1;
