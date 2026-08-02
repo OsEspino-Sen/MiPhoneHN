@@ -4609,6 +4609,7 @@ body #products-table-body .data-grid-row::before {
 
 /* --- Grid: aprovecha todo el ancho del módulo --- */
 .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:stretch}
+.settings-grid--2col{grid-template-columns:repeat(2,minmax(0,1fr))}
 .settings-grid--single{grid-template-columns:minmax(0,1fr)}
 
 /* --- Sistema único de tarjetas (todas las pestañas) --- */
@@ -4825,8 +4826,21 @@ body #products-table-body .data-grid-row::before {
 .settings-users-card .settings-image-header{padding:22px;border-bottom:1px solid var(--line-soft)}
 .settings-users-body{padding:0 22px 22px}
 
+/* --- Campos en 3 columnas (etiquetas de WhatsApp) --- */
+.form-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 16px}
+
+/* --- Tarjeta principal del Inicio: jerarquía sutil --- */
+.settings-form-card--hero{border-color:color-mix(in srgb,var(--accent) 28%,var(--line))}
+.settings-form-card--hero .settings-image-icon{background:linear-gradient(135deg,rgba(36,64,232,.18),rgba(0,178,255,.14));border-color:rgba(36,64,232,.25)}
+
+/* --- Vista previa de WhatsApp: acento de marca --- */
+.settings-wa-preview-card{border-color:color-mix(in srgb,#1eb858 32%,var(--line))}
+.settings-wa-preview-card .settings-image-icon{color:#0f8a3d;background:rgba(30,184,88,.12);border-color:rgba(30,184,88,.28)}
+.settings-wa-preview-card .settings-wa-preview{background:color-mix(in srgb,#1eb858 4%,var(--surface-2));border-color:color-mix(in srgb,#1eb858 22%,var(--line))}
+
 /* --- Responsive del módulo --- */
 @media(max-width:1100px){.settings-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.form-grid-3{grid-template-columns:1fr}}
 @media(max-width:640px){
   .settings-image-header{flex-wrap:wrap}
   .settings-btn-row{flex-wrap:wrap}

@@ -145,7 +145,7 @@
               <button type="button" class="settings-tab" data-tab="usuarios"><i class="ph ph-users" aria-hidden="true"></i><span>Usuarios</span></button>
             </div>
 
-            <div class="settings-tab-content" id="settings-empresa-tab">
+            <div class="settings-tab-content active" id="settings-empresa-tab">
               <div class="settings-grid settings-grid--2col">
                 <article class="settings-form-card">
                   <div class="settings-image-header">
@@ -154,6 +154,11 @@
                   </div>
                   <div class="form-group"><label for="cmp-name">Nombre de la empresa</label><input type="text" id="cmp-name" data-cmp="name" placeholder="Mi Phone HN"><span class="form-hint">Aparece en los títulos del sitio y al compartir enlaces.</span></div>
                   <div class="form-group"><label for="cmp-description">Descripción corta</label><textarea id="cmp-description" data-cmp="description" rows="3" placeholder="Describe tu negocio en una o dos líneas."></textarea><span class="form-hint">Es el texto que Google muestra al buscar tu tienda.</span></div>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="empresa" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="empresa" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
                 </article>
 
                 <article class="settings-form-card">
@@ -164,6 +169,11 @@
                   <div class="form-group"><label for="cmp-ubicacion">Ubicación</label><input type="text" id="cmp-ubicacion" data-cmp="ubicacion" placeholder="Choluteca, Honduras"><span class="form-hint">Ciudad o región principal.</span></div>
                   <div class="form-group"><label for="cmp-telefono">Teléfono / WhatsApp</label><input type="text" id="cmp-telefono" data-cmp="telefono" placeholder="+504 8823-8432"><span class="form-hint">Número de contacto principal.</span></div>
                   <div class="form-group"><label for="cmp-email">Correo electrónico</label><input type="email" id="cmp-email" data-cmp="email" placeholder="info@miphonehn.com"><span class="form-hint">Correo de contacto comercial.</span></div>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="empresa" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="empresa" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
                 </article>
               </div>
 
@@ -197,10 +207,12 @@
                 <article class="settings-form-card settings-form-card--hero">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-sun" aria-hidden="true"></i></div>
-                    <div><h3>Hero principal</h3><p>Títulos de la portada.</p></div>
+                    <div><h3>Hero principal</h3><p>Títulos de la portada del sitio.</p></div>
                   </div>
-                  <div class="form-group"><label for="home-hero-tag">Etiqueta</label><input type="text" id="home-hero-tag" data-home="hero.tag" placeholder="Tecnología premium garantizada"></div>
-                  <div class="form-group"><label for="home-hero-title">Título</label><input type="text" id="home-hero-title" data-home="hero.title" placeholder="El celular que quieres…"></div>
+                  <div class="form-grid-2">
+                    <div class="form-group"><label for="home-hero-tag">Etiqueta</label><input type="text" id="home-hero-tag" data-home="hero.tag" placeholder="Tecnología premium garantizada"></div>
+                    <div class="form-group"><label for="home-hero-title">Título</label><input type="text" id="home-hero-title" data-home="hero.title" placeholder="El celular que quieres…"></div>
+                  </div>
                   <div class="form-group"><label for="home-hero-subtitle">Subtítulo</label><textarea id="home-hero-subtitle" data-home="hero.subtitle" rows="3" placeholder="Subtítulo del hero."></textarea></div>
                   <div class="settings-btn-row">
                     <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="inicio" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
@@ -222,20 +234,6 @@
                   <div class="settings-upload-status"></div>
                 </article>
 
-                <article class="settings-form-card settings-list-card settings-form-card--wide" data-list-doc="home" data-list-key="cards">
-                  <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-cards" aria-hidden="true"></i></div>
-                    <div><h3>Tarjetas de beneficios</h3><p>Las tarjetas que aparecen bajo la portada.</p></div>
-                  </div>
-                  <div class="settings-list-items" id="home-cards-list"></div>
-                  <button type="button" class="btn btn-dashed btn-block settings-list-add" data-add-item="cards"><i class="ph ph-plus" aria-hidden="true"></i> Agregar tarjeta</button>
-                  <div class="settings-btn-row">
-                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="inicio" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
-                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="home" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
-                  </div>
-                  <div class="settings-upload-status"></div>
-                </article>
-
                 <article class="settings-form-card settings-list-card" data-list-doc="home" data-list-key="stats">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-chart-bar" aria-hidden="true"></i></div>
@@ -243,6 +241,20 @@
                   </div>
                   <div class="settings-list-items" id="home-stats-list"></div>
                   <button type="button" class="btn btn-dashed btn-block settings-list-add" data-add-item="stats"><i class="ph ph-plus" aria-hidden="true"></i> Agregar dato</button>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="inicio" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="home" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+                <article class="settings-form-card settings-list-card settings-form-card--wide" data-list-doc="home" data-list-key="cards">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-cards" aria-hidden="true"></i></div>
+                    <div><h3>Tarjetas de beneficios</h3><p>Las tarjetas que aparecen bajo la portada.</p></div>
+                  </div>
+                  <div class="settings-list-items" id="home-cards-list"></div>
+                  <button type="button" class="btn btn-dashed btn-block settings-list-add" data-add-item="cards"><i class="ph ph-plus" aria-hidden="true"></i> Agregar tarjeta</button>
                   <div class="settings-btn-row">
                     <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="inicio" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
                     <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="home" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
@@ -306,18 +318,43 @@
             </div>
 
             <div class="settings-tab-content" id="settings-whatsapp-tab">
-              <div class="settings-grid settings-grid--single">
+              <div class="settings-grid">
                 <article class="settings-form-card">
                   <div class="settings-image-header">
                     <div class="settings-image-icon"><i class="ph ph-chats-circle" aria-hidden="true"></i></div>
-                    <div><h3>Configuración de WhatsApp</h3><p>Todo el mensaje de pedido en un solo lugar: número, título, etiquetas, valores de envío y vista previa.</p></div>
+                    <div><h3>WhatsApp del negocio</h3><p>Número al que llegan los pedidos y título del mensaje.</p></div>
                   </div>
                   <div class="form-group"><label for="wa-phone">Número de destino</label><input type="text" id="wa-phone" data-wa="phone" placeholder="50488238432"><span class="form-hint">El número de WhatsApp donde llegan los pedidos. Sin espacios ni guiones.</span></div>
                   <div class="form-group"><label for="wa-title">Título del mensaje</label><input type="text" id="wa-title" data-wa="title" placeholder="NUEVO PEDIDO — Mi Phone HN"><span class="form-hint">Aparece en negrita al inicio del mensaje de cada pedido.</span></div>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="whatsapp" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="whatsapp" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
 
-                  <h4 class="settings-subheading"><i class="ph ph-tag" aria-hidden="true"></i> Etiquetas del mensaje</h4>
-                  <span class="form-hint">Los nombres que acompañan cada dato del pedido.</span>
+                <article class="settings-form-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-shipping-truck" aria-hidden="true"></i></div>
+                    <div><h3>Despacho por defecto</h3><p>Los datos de envío que cierran cada mensaje.</p></div>
+                  </div>
                   <div class="form-grid-2">
+                    <div class="form-group"><label for="wa-despacho-value">Ciudad de despacho</label><input type="text" id="wa-despacho-value" data-wa="despachoValue" placeholder="Choluteca, Honduras"></div>
+                    <div class="form-group"><label for="wa-logistica-value">Empresa logística</label><input type="text" id="wa-logistica-value" data-wa="logisticaValue" placeholder="Rápido Cargo"></div>
+                  </div>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="whatsapp" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="whatsapp" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+                <article class="settings-form-card settings-form-card--wide">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-tag" aria-hidden="true"></i></div>
+                    <div><h3>Etiquetas del mensaje</h3><p>Los nombres que acompañan cada dato del pedido.</p></div>
+                  </div>
+                  <div class="form-grid-3">
                     <div class="form-group"><label for="wa-lbl-cliente">Cliente</label><input type="text" id="wa-lbl-cliente" data-wa="labels.cliente" placeholder="Cliente"></div>
                     <div class="form-group"><label for="wa-lbl-dni">DNI</label><input type="text" id="wa-lbl-dni" data-wa="labels.dni" placeholder="DNI"></div>
                     <div class="form-group"><label for="wa-lbl-ciudad">Ciudad</label><input type="text" id="wa-lbl-ciudad" data-wa="labels.ciudad" placeholder="Ciudad/Envío"></div>
@@ -328,18 +365,19 @@
                     <div class="form-group"><label for="wa-lbl-despacho">Despacho</label><input type="text" id="wa-lbl-despacho" data-wa="labels.despacho" placeholder="Despacho"></div>
                     <div class="form-group"><label for="wa-lbl-logistica">Logística</label><input type="text" id="wa-lbl-logistica" data-wa="labels.logistica" placeholder="Logística"></div>
                   </div>
-
-                  <h4 class="settings-subheading"><i class="ph ph-shipping-truck" aria-hidden="true"></i> Valores por defecto</h4>
-                  <span class="form-hint">Aparecen al final del mensaje, junto al envío.</span>
-                  <div class="form-grid-2">
-                    <div class="form-group"><label for="wa-despacho-value">Ciudad de despacho</label><input type="text" id="wa-despacho-value" data-wa="despachoValue" placeholder="Choluteca, Honduras"></div>
-                    <div class="form-group"><label for="wa-logistica-value">Empresa logística</label><input type="text" id="wa-logistica-value" data-wa="logisticaValue" placeholder="Rápido Cargo"></div>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="whatsapp" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="whatsapp" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
                   </div>
+                  <div class="settings-upload-status"></div>
+                </article>
 
-                  <h4 class="settings-subheading"><i class="ph ph-eye" aria-hidden="true"></i> Vista previa del mensaje</h4>
-                  <span class="form-hint">Así recibirá el negocio el pedido. Se actualiza mientras escribes.</span>
+                <article class="settings-form-card settings-form-card--wide settings-wa-preview-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-eye" aria-hidden="true"></i></div>
+                    <div><h3>Vista previa</h3><p>Así recibirá el negocio el pedido. Se actualiza mientras escribes.</p></div>
+                  </div>
                   <pre class="settings-wa-preview" id="wa-preview"></pre>
-
                   <div class="settings-btn-row">
                     <button type="button" class="btn btn-primary btn-sm settings-save-btn" data-save-doc="whatsapp" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
                     <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" data-cancel-doc="whatsapp" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>

@@ -3127,6 +3127,10 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       if (content) content.classList.add('active');
     });
   });
+  // Al inicializar: garantiza que el contenido de la pestaña activa esté visible.
+  const initActiveTab = document.querySelector('.settings-tab.active');
+  const initActiveContent = initActiveTab ? document.getElementById(`settings-${initActiveTab.dataset.tab}-tab`) : null;
+  if (initActiveContent) initActiveContent.classList.add('active');
 
   // ---- Botones por documento ----
   function docButtons(docId) {
