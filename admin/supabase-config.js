@@ -278,7 +278,25 @@ export async function setDoc(docRef, data, options = {}) {
     return;
   }
   
-  const payload = mapKeys(data, camelToSnake);
+  let payload = mapKeys(data, camelToSnake);
+  
+  // merge: solo actualiza los campos enviados (semántica de Firestore).
+  // Sin esto, el upsert propone una fila con las columnas faltantes en NULL,
+  // lo que viola NOT NULL (p. ej. label al guardar solo image) y borraría
+  // datos existentes.
+  if (options.merge === true) {
+    try {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const existing = mapKeys(snap.data(), camelToSnake);
+        for (const k in existing) {
+          if (!(k in payload)) payload[k] = existing[k];
+        }
+      }
+    } catch {
+      // Si la fila no existe o no puede leerse, se inserta con lo enviado.
+    }
+  }
   
   if (table === 'usuarios') {
     if (docRef.id.length === 36 && !docRef.id.includes('-')) {

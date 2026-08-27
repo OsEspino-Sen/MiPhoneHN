@@ -4,16 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Soporte y FAQ | Mi Phone HN</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="preload" href="./fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="./fonts/QGYvz_MVcBeNP4NJtEtq.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js" defer></script>
+  <script type="module" src="app.js" defer></script>
 </head>
 <body>
+  <div id="page-loader" class="page-loader" aria-hidden="true">
+    <div class="page-loader-inner">
+      <span class="page-loader-brand">Mi Phone <span>HN</span></span>
+      <span class="page-loader-bar" role="presentation"></span>
+    </div>
+  </div>
   <header class="site-header">
     <div class="header-container">
-      <a href="index.html" class="logo">Mi Phone <span>HN</span></a>
+      <a href="index.html" class="logo"><span class="brand-logo-img" aria-hidden="true"></span><span class="brand-logo-text">Mi Phone <span>HN</span></span></a>
       <nav class="nav-menu">
         <a href="index.html" class="nav-link">Inicio</a>
         <a href="tienda.html" class="nav-link">Tienda</a>
@@ -29,25 +35,65 @@
         <div class="financing-card">
           <div class="financing-info">
             <h2>Calculadora de extrafinanciamiento</h2>
-            <p>Estrena hoy pagando en cómodas cuotas de 3, 6, 9 o 12 meses sin intereses con tarjetas BAC o Ficohsa.</p>
+            <p>Elige tu banco, ingresa el monto y descubre al instante tu cuota mensual con tasas preferenciales, sin hacer cálculos.</p>
+            <ul class="financing-features">
+              <li>Resultados al instante, sin botón</li>
+              <li>Tasas exclusivas BAC y Ficohsa</li>
+              <li>Consulta final por WhatsApp</li>
+            </ul>
           </div>
-          <div class="financing-calculator">
-            <div class="form-group">
-              <label for="calc-amount">Monto del producto (Lempiras):</label>
-              <input type="number" id="calc-amount" value="15000" min="1000" max="100000" step="500">
+
+          <div class="financing-calculator" id="financing-calc">
+            <div class="calc-step">
+              <div class="calc-step-head">
+                <span class="calc-step-num">1</span>
+                <div>
+                  <h3 class="calc-step-title">Elige tu banco</h3>
+                  <p class="calc-step-hint">Solo uno puede estar seleccionado</p>
+                </div>
+              </div>
+              <div class="bank-cards" id="bank-cards" role="radiogroup" aria-label="Banco para extrafinanciamiento"></div>
             </div>
-            <div class="form-group">
-              <label for="calc-months">Plazo de cuotas:</label>
-              <select id="calc-months">
-                <option value="3">3 meses</option>
-                <option value="6" selected>6 meses</option>
-                <option value="9">9 meses</option>
-                <option value="12">12 meses</option>
-              </select>
+
+            <div class="calc-step">
+              <div class="calc-step-head">
+                <span class="calc-step-num">2</span>
+                <div>
+                  <h3 class="calc-step-title">Monto del producto</h3>
+                  <p class="calc-step-hint">Se actualiza mientras escribes</p>
+                </div>
+              </div>
+              <label class="amount-field" for="calc-amount">
+                <span class="amount-currency">L.</span>
+                <input type="number" id="calc-amount" inputmode="numeric" value="15000" min="0" step="100" placeholder="0">
+              </label>
             </div>
-            <div class="calc-result">
-              <span class="calc-label">Cuota mensual estimada:</span>
-              <span class="calc-value" id="calc-value">L. 2,500 / mes</span>
+
+            <div class="calc-step">
+              <div class="calc-step-head">
+                <span class="calc-step-num">3</span>
+                <div>
+                  <h3 class="calc-step-title">Elige tu plazo</h3>
+                  <p class="calc-step-hint">Planes del banco seleccionado</p>
+                </div>
+              </div>
+              <div class="plan-cards" id="plan-cards" role="radiogroup" aria-label="Plazo de pagos"></div>
+            </div>
+
+            <div class="results-panel" id="calc-results" aria-live="polite">
+              <div class="result-main">
+                <span class="result-label">Cuota mensual</span>
+                <span class="result-amount" id="result-monthly">L. 0</span>
+                <span class="result-sub" id="result-summary">Selecciona banco, monto y plazo</span>
+              </div>
+              <div class="result-rows">
+                <div class="result-row"><span>Precio del producto</span><strong id="result-price">L. 0</strong></div>
+                <div class="result-row"><span>Interés aplicado</span><strong id="result-interest">L. 0</strong></div>
+                <div class="result-row"><span>Total a pagar</span><strong id="result-total">L. 0</strong></div>
+                <div class="result-row"><span>Tasa del plan</span><strong id="result-rate">0%</strong></div>
+              </div>
+              <a id="calc-whatsapp-btn" href="https://wa.me/50488238432" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-block">Consultar por WhatsApp</a>
+              <p class="calc-note">*Sujeto a disponibilidad de cupo y aprobación del banco.</p>
             </div>
           </div>
         </div>

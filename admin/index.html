@@ -33,7 +33,7 @@
       <div class="admin-sidebar-overlay"></div>
 
       <div class="sidebar-brand">
-        <span class="sidebar-brand-mark"><i class="ph ph-device-mobile-camera" aria-hidden="true"></i></span>
+        <span class="sidebar-brand-mark"></span>
         <span class="sidebar-brand-copy">
           <strong>Mi Phone HN</strong>
           <small id="sidebar-user-name">Panel centralizado</small>
@@ -648,7 +648,7 @@
               <div class="settings-grid settings-grid--single">
                 <article class="settings-form-card settings-users-card">
                   <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-users" aria-hidden="true"></i></div>
+                    <div class="settings-image-icon"></div>
                     <div>
                       <h3>Usuarios del sistema</h3>
                       <p>Administra información, rol y estado de los usuarios existentes.</p>
@@ -933,7 +933,42 @@
     </div>
   </div>
 
-  <div id="category-modal" class="confirm-backdrop" role="dialog" aria-labelledby="category-modal-title" hidden><div class="confirm-overlay" id="category-overlay"></div><div class="confirm-card category-card"><div class="confirm-card-head"><div class="confirm-icon confirm-icon--blue"><i class="ph ph-tag" aria-hidden="true"></i></div><div><span class="confirm-eyebrow">Organización</span><h3 id="category-modal-title">Categorías</h3><p>Familias de productos.</p></div></div><div id="category-list" class="category-list"></div><div class="category-add-form"><label for="new-category-name">Nueva</label><div class="category-add-row"><input type="text" id="new-category-name" placeholder="Nombre…"><button type="button" id="add-category-btn-modal" class="btn btn-primary"><i class="ph ph-plus" aria-hidden="true"></i> Agregar</button></div></div><div class="confirm-button-group confirm-button-group--full"><button type="button" id="close-category-modal-btn" class="btn btn-secondary btn-block">Cerrar</button></div></div></div>
+  <div id="category-modal" class="confirm-backdrop" role="dialog" aria-labelledby="category-modal-title" hidden>
+    <div class="confirm-overlay" id="category-overlay"></div>
+    <div class="confirm-card category-card">
+      <div class="confirm-card-head">
+        <div class="confirm-icon confirm-icon--blue"><i class="ph ph-tag" aria-hidden="true"></i></div>
+        <div>
+          <span class="confirm-eyebrow">Organización</span>
+          <h3 id="category-modal-title">Categorías</h3>
+          <p>Familias de productos. Puedes asignar una imagen a cada categoría.</p>
+        </div>
+      </div>
+      <div id="category-list" class="category-list"></div>
+      <div class="category-add-form">
+        <label for="new-category-name">Nueva categoría</label>
+        <div class="category-add-row">
+          <input type="text" id="new-category-name" placeholder="Nombre…" maxlength="40">
+          <button type="button" id="add-category-btn-modal" class="btn btn-primary"><i class="ph ph-plus" aria-hidden="true"></i> Agregar</button>
+        </div>
+        <div class="category-add-image" id="category-add-image">
+          <div class="category-image-preview category-image-preview--empty" id="category-add-image-preview" hidden></div>
+          <div class="category-image-row">
+            <label class="btn btn-secondary btn-sm category-image-file-btn">
+              <i class="ph ph-upload-simple" aria-hidden="true"></i> Subir imagen
+              <input type="file" id="category-add-image-file" accept="image/*" hidden>
+            </label>
+            <input type="url" id="category-add-image-url" placeholder="…o pega una URL de imagen" aria-label="URL de imagen">
+            <button type="button" id="category-add-image-clear" class="btn btn-danger btn-sm category-image-clear" title="Quitar imagen" aria-label="Quitar imagen" hidden><i class="ph ph-x" aria-hidden="true"></i></button>
+          </div>
+          <p class="category-image-hint">Opcional · JPG, PNG o WebP hasta 8 MB</p>
+        </div>
+      </div>
+      <div class="confirm-button-group confirm-button-group--full">
+        <button type="button" id="close-category-modal-btn" class="btn btn-secondary btn-block">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
   <div id="llave-prompt-dialog" class="confirm-backdrop" role="dialog" aria-labelledby="llave-prompt-title" hidden><div class="confirm-overlay" id="llave-prompt-overlay"></div><div class="confirm-card confirm-card--centered"><div class="confirm-icon confirm-icon--primary"><i class="ph ph-key" aria-hidden="true"></i></div><span class="confirm-eyebrow">Verificación</span><h3 id="llave-prompt-title">Llave de acceso</h3><p id="llave-prompt-message">Introduce la llave generada en Configuración → Llaves.</p><input type="password" class="llave-prompt-input" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="••••••••" maxlength="12" aria-label="Llave de acceso"><div class="llave-prompt-error" hidden>Llave incorrecta. Intenta de nuevo.</div><div class="confirm-button-group"><button type="button" class="btn btn-secondary llave-prompt-cancel">Cancelar</button><button type="button" class="btn btn-primary llave-prompt-ok">Verificar</button></div></div></div>
 

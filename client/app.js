@@ -24,9 +24,23 @@ const WHATSAPP_DEFAULTS = {
 };
 
 let whatsappSettings = { ...WHATSAPP_DEFAULTS, labels: { ...WHATSAPP_DEFAULTS.labels } };
-const FALLBACK_IMAGE = "https://fdn2.gsmarena.com/vv/pics/apple/apple-iphone-14-1.jpg";
+const FALLBACK_IMAGE =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">` +
+    `<rect width="600" height="600" fill="#f2f4f8"/>` +
+    `<circle cx="300" cy="270" r="120" fill="#e3ecf7"/>` +
+    `<rect x="228" y="140" width="144" height="290" rx="26" fill="#ffffff"/>` +
+    `<rect x="236" y="148" width="128" height="240" rx="16" fill="#eef2f7"/>` +
+    `<circle cx="300" cy="412" r="8" fill="#c9d4e2"/>` +
+    `<rect x="262" y="180" width="76" height="10" rx="5" fill="#d8e2ee"/>` +
+    `<rect x="262" y="202" width="56" height="8" rx="4" fill="#e4ebf3"/>` +
+    `<text x="300" y="520" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="600" fill="#8a94a6" text-anchor="middle">Mi Phone HN</text>` +
+    `</svg>`
+  );
 
 let products = [];
+let categories = [];
 let cart = getStoredCart();
 let activeCategory = "all";
 let activeCondition = "all";
@@ -70,12 +84,19 @@ const productModalOverlay = document.getElementById("product-modal-overlay");
 const productModalClose = document.getElementById("product-modal-close");
 const productModalBody = document.getElementById("product-modal-body");
 const calcAmount = document.getElementById("calc-amount");
-const calcMonths = document.getElementById("calc-months");
-const calcValue = document.getElementById("calc-value");
 const calcWhatsappBtn = document.getElementById("calc-whatsapp-btn");
+const bankCardsEl = document.getElementById("bank-cards");
+const planCardsEl = document.getElementById("plan-cards");
+const resultMonthly = document.getElementById("result-monthly");
+const resultPrice = document.getElementById("result-price");
+const resultInterest = document.getElementById("result-interest");
+const resultTotal = document.getElementById("result-total");
+const resultRate = document.getElementById("result-rate");
+const resultSummary = document.getElementById("result-summary");
 const themeToggle = document.getElementById("theme-toggle");
 const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
 const navMenu = document.getElementById("nav-menu");
+const categoryGrid = document.getElementById("category-grid");
 
 /* ========================================================================== 
    TOASTS
@@ -109,13 +130,37 @@ function notify(message, type = "info") {
    INICIALIZACIÓN
    ========================================================================== */
 
+// Ocultador suave del cargador de pantalla: se desvanece cuando termina la
+// carga inicial de datos (productos, categorías y configuración), cuando el
+// navegador termina de cargar recursos, o como máximo a los 4s. Se mantiene
+// visible un mínimo de 0.9s para que el desvanecimiento sea limpio y el
+// contenido tenga tiempo de aparecer bajo el crossfade.
+const pageLoadStart = performance.now();
+
+function finishPageLoader() {
+  const loader = document.getElementById("page-loader");
+  if (!loader || loader.dataset.done) return;
+  const elapsed = performance.now() - pageLoadStart;
+  if (elapsed < 900) {
+    setTimeout(finishPageLoader, 900 - elapsed);
+    return;
+  }
+  loader.dataset.done = "1";
+  document.body.classList.add("page-ready");
+  loader.classList.add("page-loader--done");
+  setTimeout(() => loader.remove(), 700);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   updateCartUI();
   setupEventListeners();
-  calculateFinancing();
-  loadProducts();
-  loadSiteSettings();
+  initFinancingCalculator();
+  Promise.allSettled([loadProducts(), loadCategories(), loadSiteSettings()])
+    .then(() => document.fonts.ready)
+    .then(finishPageLoader);
+  window.addEventListener("load", finishPageLoader);
+  setTimeout(finishPageLoader, 4000);
 
   // Navegación entre páginas: al llegar desde otra página (p. ej. Tienda/Soporte)
   // con un hash (#about-section, #faq-section, #hero) se hace un scroll suave a
@@ -182,6 +227,7 @@ async function loadProducts() {
         ...docSnap.data()
       }));
       renderProducts();
+      renderFeaturedCarousel();
     }, async (error) => {
       console.warn("⚠️ Streaming en tiempo real bloqueado, intentando lectura única getDocs:", error);
       try {
@@ -191,6 +237,7 @@ async function loadProducts() {
           ...docSnap.data()
         }));
         renderProducts();
+        renderFeaturedCarousel();
       } catch (getErr) {
         console.error("Error al obtener catálogo desde Supabase:", getErr);
         showCatalogError();
@@ -200,6 +247,205 @@ async function loadProducts() {
     console.error("No se pudo conectar a Supabase:", error);
     showCatalogError();
   }
+}
+
+/* ========================================================================== 
+   CARGAR CATEGORÍAS
+   ========================================================================== */
+
+let categoryChipsContainer = null; // contenedor #category-chips (solo tienda)
+let categoryParamHandled = false; // el ?categoria= se aplica una sola vez
+
+async function loadCategories() {
+  categoryChipsContainer = document.getElementById("category-chips");
+  try {
+    const { db, collection, query, orderBy, onSnapshot, getDocs } = await import("./supabase-config.js");
+    const categoriesRef = query(collection(db, "categorias"), orderBy("id"));
+    const apply = (snapshot) => {
+      categories = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderCategoriesSection();
+      renderCategoryChips();
+      applyCategoryParamFilter();
+    };
+    onSnapshot(categoriesRef, apply, async () => {
+      try {
+        const snapshot = await getDocs(categoriesRef);
+        apply(snapshot);
+      } catch (err) {
+        console.warn("No se pudieron cargar las categorías:", err);
+      }
+    });
+  } catch (error) {
+    console.warn("No se pudo conectar para cargar las categorías:", error);
+  }
+}
+
+function renderCategoriesSection() {
+  if (!categoryGrid) return;
+  // Misma lógica que el filtro de "Condición": la sección nunca se vacía ni se
+  // re-renderiza si el conjunto de categorías no cambió (evita el parpadeo).
+  if (!categories.length) return;
+  const ids = categories.map((cat) => cat.id).join("|");
+  if (categoryGrid.dataset.renderedIds === ids) return;
+  const html = categories.map((cat, index) => `
+    <a href="${isShopPage ? `?categoria=${encodeURIComponent(cat.id)}` : `tienda.html?categoria=${encodeURIComponent(cat.id)}`}" class="category-card" data-category-id="${escapeHTML(cat.id)}" data-pastel-index="${index % 6}">
+      <span class="category-card-image">
+        <img src="${escapeHTML(cat.image || FALLBACK_IMAGE)}" alt="${escapeHTML(cat.label)}" loading="lazy">
+      </span>
+      <span class="category-card-name">${escapeHTML(cat.label)}</span>
+    </a>
+  `).join("");
+  categoryGrid.dataset.renderedIds = ids;
+  categoryGrid.innerHTML = html;
+
+  initCategoryCarousel();
+
+  categoryGrid.querySelectorAll(".category-card").forEach((card) => {
+    const img = card.querySelector("img");
+    if (img) {
+      img.addEventListener("error", () => {
+        if (img.dataset.fallbackApplied) return;
+        img.dataset.fallbackApplied = "1";
+        img.src = FALLBACK_IMAGE;
+      });
+    }
+    card.addEventListener("click", (event) => {
+      if (!isShopPage) return; // En Inicio el enlace navega a tienda.html?categoria=…
+      event.preventDefault();
+      applyCategoryFilter(card.dataset.categoryId);
+      history.replaceState(null, "", `?categoria=${encodeURIComponent(card.dataset.categoryId)}`);
+      document.getElementById("catalog-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+}
+
+function initCategoryCarousel() {
+  if (!categoryGrid || categoryGrid.dataset.carouselInit) return;
+  categoryGrid.dataset.carouselInit = "1";
+  const mqMobile = matchMedia("(max-width: 640px)");
+  const mqHover = matchMedia("(hover: hover)");
+  const mqReduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  let raf = 0;
+  let autoScroll = true;
+  let scrollSpeed = 0.55;
+  let resumeTimer = 0;
+
+  const tick = () => {
+    const max = categoryGrid.scrollWidth - categoryGrid.clientWidth;
+    if (max > 0 && autoScroll) {
+      let next = categoryGrid.scrollLeft + scrollSpeed;
+      if (next >= max) {
+        next = max;
+        scrollSpeed = -Math.abs(scrollSpeed);
+      } else if (next <= 0) {
+        next = 0;
+        scrollSpeed = Math.abs(scrollSpeed);
+      }
+      categoryGrid.scrollLeft = next;
+    }
+    raf = requestAnimationFrame(tick);
+  };
+
+  const pause = () => {
+    autoScroll = false;
+    clearTimeout(resumeTimer);
+  };
+
+  const resume = (delay = 1200) => {
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(() => {
+      autoScroll = true;
+    }, delay);
+  };
+
+  // Arrastre con ratón: el contenido sigue al cursor y se pausa el movimiento.
+  categoryGrid.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "mouse") return;
+    pause();
+    const startX = event.clientX;
+    const startScroll = categoryGrid.scrollLeft;
+    let moved = false;
+    const onMove = (moveEvent) => {
+      const delta = moveEvent.clientX - startX;
+      if (Math.abs(delta) > 5) moved = true;
+      categoryGrid.scrollLeft = startScroll - delta;
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      if (moved) categoryGrid.dataset.dragMoved = "1";
+      resume();
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  });
+
+  // Tras un arrastre no se debe activar el enlace de la tarjeta.
+  categoryGrid.addEventListener("click", (event) => {
+    if (categoryGrid.dataset.dragMoved !== "1") return;
+    delete categoryGrid.dataset.dragMoved;
+    event.preventDefault();
+    event.stopPropagation();
+  }, true);
+
+  // En escritorio, al pasar el cursor se pausa; al salir, se reanuda.
+  if (mqHover.matches) {
+    categoryGrid.addEventListener("mouseenter", pause);
+    categoryGrid.addEventListener("mouseleave", () => resume(1000));
+  }
+
+  // En táctil, el deslizamiento nativo se encarga; solo pausamos y reanudamos.
+  categoryGrid.addEventListener("touchstart", pause, { passive: true });
+  categoryGrid.addEventListener("touchend", () => resume(), { passive: true });
+  categoryGrid.addEventListener("touchcancel", () => resume(), { passive: true });
+
+  if (!mqMobile.matches || mqReduceMotion.matches) {
+    autoScroll = false;
+    return;
+  }
+  raf = requestAnimationFrame(tick);
+}
+
+function renderCategoryChips() {
+  if (!categoryChipsContainer || !categories.length) return;
+  // Idéntico a renderCategoriesSection: solo se re-renderiza si el conjunto de
+  // categorías cambió; la selección activa se maneja solo con clases.
+  const ids = categories.map((cat) => cat.id).join("|");
+  if (categoryChipsContainer.dataset.renderedIds === ids) return;
+  const tabs = [
+    `<button type="button" class="filter-tab${activeCategory === "all" ? " active" : ""}" data-category="all">Todos</button>`
+  ].concat(categories.map((cat) =>
+    `<button type="button" class="filter-tab${activeCategory === cat.id ? " active" : ""}" data-category="${escapeHTML(cat.id)}">${escapeHTML(cat.label)}</button>`
+  )).join("");
+  categoryChipsContainer.dataset.renderedIds = ids;
+  categoryChipsContainer.innerHTML = tabs;
+  categoryChipsContainer.querySelectorAll(".filter-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      applyCategoryFilter(tab.dataset.category || "all");
+    });
+  });
+}
+
+function applyCategoryFilter(categoryId) {
+  activeCategory = categoryId || "all";
+  document.querySelectorAll(".filter-tab[data-category]").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.category === activeCategory);
+  });
+  resetCatalogPagination();
+  renderProducts();
+}
+
+// Aplica ?categoria=… al cargar la Tienda (por ejemplo, al pulsar una tarjeta
+// de categoría desde otra página) sin volver a tocarlo en actualizaciones en
+// tiempo real ni pisar la elección manual del usuario.
+function applyCategoryParamFilter() {
+  if (!isShopPage || categoryParamHandled || !categories.length) return;
+  const params = new URLSearchParams(window.location.search);
+  const cat = params.get("categoria");
+  if (cat && cat !== "all" && categories.some((c) => c.id === cat)) {
+    applyCategoryFilter(cat);
+  }
+  categoryParamHandled = true;
 }
 
 function showCatalogLoading() {
@@ -278,7 +524,6 @@ function setupEventListeners() {
   productModalOverlay?.addEventListener("click", closeProductModal);
 
   calcAmount?.addEventListener("input", calculateFinancing);
-  calcMonths?.addEventListener("change", calculateFinancing);
   themeToggle?.addEventListener("click", toggleTheme);
 
   mobileMenuToggle?.addEventListener("click", () => {
@@ -351,7 +596,7 @@ function resetCatalogPagination() {
 function renderProducts() {
   if (!productsGrid) return;
 
-  const filteredProducts = products.filter((product) => {
+  let filteredProducts = products.filter((product) => {
     const title = String(product.title || "").toLowerCase();
     const brand = String(product.brand || "").toLowerCase();
     const category = String(product.category || "").toLowerCase();
@@ -363,6 +608,18 @@ function renderProducts() {
 
     return matchesSearch && matchesCategory && matchesCondition;
   });
+
+  // Un producto sólo está agotado cuando TODAS sus variantes tienen stock 0.
+  const isSoldOut = (product) => getProductAvailability(product).isOut;
+  if (isShopPage) {
+    // Tienda: los disponibles primero; los completamente agotados siempre al final.
+    const available = filteredProducts.filter((item) => !isSoldOut(item));
+    const soldOut = filteredProducts.filter(isSoldOut);
+    filteredProducts = available.concat(soldOut);
+  } else {
+    // Home: ocultar por completo los productos con todas sus variantes agotadas.
+    filteredProducts = filteredProducts.filter((item) => !isSoldOut(item));
+  }
 
   productsGrid.innerHTML = "";
   filteredCatalogTotal = filteredProducts.length;
@@ -389,24 +646,49 @@ function renderProducts() {
     const baseStorageOption = storageOptions[0];
     const hasStoragePrices = storageOptions.length > 1;
     const availability = getProductAvailability(product);
-    const productImage = getProductImages(product)[0] || FALLBACK_IMAGE;
+    const cardImages = getProductImages(product);
+    const hasCarousel = cardImages.length > 1;
+    const productColors = getProductColors(product);
+    const rating = getCardRating(product);
     const oldPriceHTML = baseStorageOption.oldPrice
       ? `<span class="price-old">${formatCurrency(baseStorageOption.oldPrice)}</span>`
       : "";
     const priceLabel = `${hasStoragePrices ? "Desde " : ""}${formatCurrency(baseStorageOption.price)}`;
-    const addButton = `
-      <button type="button" class="btn btn-primary" data-add-product="${escapeHTML(productId)}" ${availability.isOut ? "disabled" : ""}>
-        ${availability.isOut ? "Agotado" : "Agregar al carrito"}
+    const exploreButton = `
+      <button type="button" class="btn btn-explore" data-open-product="${escapeHTML(productId)}">
+        <span>Ver más información</span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+        </svg>
       </button>`;
-    const detailsButton = `
-      <button type="button" class="btn btn-secondary" data-open-product="${escapeHTML(productId)}">
-        Ver detalles
-      </button>`;
+    const galleryHTML = hasCarousel
+      ? `
+        <div class="product-carousel" aria-hidden="true">
+          ${cardImages.map((src, index) => `
+            <img class="carousel-img ${index === 0 ? "active" : ""}" src="${escapeHTML(src)}" alt="" loading="lazy">
+          `).join("")}
+          <span class="carousel-dots">${cardImages.map((_, index) => `<i class="carousel-dot ${index === 0 ? "active" : ""}"></i>`).join("")}</span>
+        </div>`
+      : `<img src="${escapeHTML(cardImages[0])}" alt="${escapeHTML(product.title)}" loading="lazy">`;
+    const colorsRow = productColors.length
+      ? `
+        <div class="product-colors" aria-hidden="true">
+          ${productColors.slice(0, 4).map((color) => `
+            <span class="color-swatch-dot" style="--swatch:${getSafeColor(color.value)};" title="${escapeHTML(color.name)}"></span>
+          `).join("")}
+          ${productColors.length > 4 ? `<span class="color-dot-more">+${productColors.length - 4}</span>` : ""}
+        </div>`
+      : "";
+    const ratingRow = `
+      <div class="product-rating" aria-label="Calificación ${rating.value.toFixed(1)} de 5 estrellas">
+        <span class="stars" aria-hidden="true">${renderStarRating(rating.value)}</span>
+        <span class="rating-count">${rating.reviews} reseñas</span>
+      </div>`;
 
     card.innerHTML = `
       <span class="product-tag-badge ${badgeClass}">${escapeHTML(product.badge || product.condition || "Disponible")}</span>
-      <button type="button" class="product-image-container" data-open-product="${escapeHTML(productId)}" aria-label="Ver detalles de ${escapeHTML(product.title)}">
-        <img src="${escapeHTML(productImage)}" alt="${escapeHTML(product.title)}" loading="lazy">
+      <button type="button" class="product-image-container ${hasCarousel ? "has-carousel" : ""}" data-open-product="${escapeHTML(productId)}" aria-label="Ver detalles de ${escapeHTML(product.title)}">
+        ${galleryHTML}
       </button>
       <div class="product-info">
         <div class="product-card-meta">
@@ -417,29 +699,29 @@ function renderProducts() {
           ${escapeHTML(product.title || "Producto")}
         </button>
         <p class="product-condition">${condition === "nuevo" ? "Equipo nuevo de fábrica" : "Seminuevo Grado A+"}</p>
+        ${ratingRow}
+        ${colorsRow}
         <div class="product-price-row">
           <span class="price-current">${priceLabel}</span>
           ${oldPriceHTML}
         </div>
-        ${isShopPage ? `<div class="product-actions">${detailsButton}${addButton}</div>` : addButton}
+        ${exploreButton}
       </div>
     `;
 
-    card.querySelector("img")?.addEventListener("error", setFallbackImage);
+    card.querySelectorAll("img").forEach((img) => img.addEventListener("error", setFallbackImage));
     card.querySelectorAll("[data-open-product]").forEach((button) => {
       button.addEventListener("click", () => {
         lastProductModalTrigger = button;
         openProductModal(button.dataset.openProduct);
       });
     });
-    card.querySelector("[data-add-product]")?.addEventListener("click", (event) => {
-      quickAddToCart(event.currentTarget.dataset.addProduct);
-    });
 
     productsGrid.appendChild(card);
   });
 
   updateCatalogFooter(visibleProducts.length < filteredProducts.length, filteredProducts.length);
+  startCardCarousels();
 }
 
 function updateCatalogFooter(hasMore, total) {
@@ -475,6 +757,204 @@ function updateCatalogFooter(hasMore, total) {
 }
 
 /* ========================================================================== 
+   CARRUSEL DE TARJETAS Y DESTACADOS
+   ========================================================================== */
+
+const REDUCED_MOTION_QUERY = window.matchMedia?.("(prefers-reduced-motion: reduce)") || { matches: false };
+let cardCarouselInterval = null;
+let cardCarouselObserver = null;
+let featuredCarouselTimer = null;
+let featuredNavBound = false;
+
+function startCardCarousels() {
+  stopCardCarousels();
+
+  const carousels = Array.from(document.querySelectorAll(".product-carousel"));
+  if (!carousels.length || REDUCED_MOTION_QUERY.matches) return;
+
+  cardCarouselObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      entry.target.dataset.inView = entry.isIntersecting ? "1" : "0";
+    });
+  }, { rootMargin: "120px 0px" });
+  carousels.forEach((carousel) => cardCarouselObserver.observe(carousel));
+
+  const advance = () => {
+    if (document.hidden || document.body.classList.contains("product-modal-open")) return;
+    carousels.forEach((carousel) => {
+      if (carousel.dataset.inView !== "1") return;
+      const card = carousel.closest(".product-card");
+      if (!card || card.matches(":hover")) return;
+      const images = carousel.querySelectorAll(".carousel-img");
+      if (images.length < 2) return;
+      const current = Number(carousel.dataset.index || 0);
+      const next = (current + 1) % images.length;
+      carousel.dataset.index = String(next);
+      images.forEach((image, index) => image.classList.toggle("active", index === next));
+      carousel.querySelectorAll(".carousel-dot").forEach((dot, index) => dot.classList.toggle("active", index === next));
+    });
+  };
+
+  advance();
+  cardCarouselInterval = window.setInterval(advance, 3500);
+}
+
+function stopCardCarousels() {
+  if (cardCarouselInterval) {
+    window.clearInterval(cardCarouselInterval);
+    cardCarouselInterval = null;
+  }
+  if (cardCarouselObserver) {
+    cardCarouselObserver.disconnect();
+    cardCarouselObserver = null;
+  }
+}
+
+function renderFeaturedCarousel() {
+  const track = document.getElementById("featured-track");
+  const section = document.getElementById("featured-section");
+  if (!track) return;
+  stopFeaturedAutoScroll();
+
+  if (!products.length) {
+    if (section) section.hidden = true;
+    return;
+  }
+  if (section) section.hidden = false;
+
+  // Home: el carrusel de destacados sólo muestra productos con al menos una
+  // variante disponible (los completamente agotados se ocultan).
+  const featuredProducts = products.filter((product) => !getProductAvailability(product).isOut);
+  if (!featuredProducts.length) {
+    if (section) section.hidden = true;
+    track.innerHTML = "";
+    stopFeaturedAutoScroll();
+    return;
+  }
+  if (section) section.hidden = false;
+
+  track.innerHTML = featuredProducts.map((product) => {
+    const productId = String(product.id);
+    const storageOptions = getStorageOptions(product);
+    const baseOption = storageOptions[0];
+    const hasStoragePrices = storageOptions.length > 1;
+    const priceLabel = `${hasStoragePrices ? "Desde " : ""}${formatCurrency(baseOption.price)}`;
+    const image = getProductImages(product)[0] || FALLBACK_IMAGE;
+    return `
+      <button type="button" class="featured-card" data-open-product="${escapeHTML(productId)}" aria-label="Ver detalles de ${escapeHTML(product.title || "Producto")}">
+        <span class="featured-image-wrap">
+          <img src="${escapeHTML(image)}" alt="" loading="lazy">
+        </span>
+        <span class="featured-card-info">
+          <span class="featured-card-name">${escapeHTML(product.title || "Producto")}</span>
+          <span class="featured-card-price">${priceLabel}</span>
+        </span>
+      </button>
+    `;
+  }).join("");
+
+  track.querySelectorAll("img").forEach((img) => img.addEventListener("error", setFallbackImage));
+  track.querySelectorAll("[data-open-product]").forEach((button) => {
+    button.addEventListener("click", () => {
+      lastProductModalTrigger = button;
+      openProductModal(button.dataset.openProduct);
+    });
+  });
+
+  bindFeaturedNav();
+  startFeaturedAutoScroll();
+}
+
+function bindFeaturedNav() {
+  if (featuredNavBound) return;
+  featuredNavBound = true;
+  document.getElementById("featured-prev")?.addEventListener("click", () => scrollFeatured(-1));
+  document.getElementById("featured-next")?.addEventListener("click", () => scrollFeatured(1));
+}
+
+function getFeaturedStep(track) {
+  const card = track.querySelector(".featured-card");
+  if (!card) return 0;
+  const gap = parseFloat(window.getComputedStyle(track).columnGap) || 16;
+  return card.getBoundingClientRect().width + gap;
+}
+
+function scrollFeatured(direction) {
+  const track = document.getElementById("featured-track");
+  if (!track || track.scrollWidth <= track.clientWidth) return;
+  const step = getFeaturedStep(track) * 3;
+  const maxScroll = track.scrollWidth - track.clientWidth;
+  if (direction > 0 && track.scrollLeft >= maxScroll - 2) {
+    track.scrollTo({ left: 0, behavior: "smooth" });
+    return;
+  }
+  if (direction < 0 && track.scrollLeft <= 2) {
+    track.scrollTo({ left: maxScroll, behavior: "smooth" });
+    return;
+  }
+  track.scrollBy({ left: direction * step, behavior: "smooth" });
+}
+
+function startFeaturedAutoScroll() {
+  stopFeaturedAutoScroll();
+  const track = document.getElementById("featured-track");
+  if (!track || REDUCED_MOTION_QUERY.matches) return;
+
+  featuredCarouselTimer = window.setInterval(() => {
+    if (document.hidden || document.body.classList.contains("product-modal-open")) return;
+    if (track.matches(":hover") || track.matches(":focus-within")) return;
+    scrollFeatured(1);
+  }, 4000);
+}
+
+function stopFeaturedAutoScroll() {
+  if (featuredCarouselTimer) {
+    window.clearInterval(featuredCarouselTimer);
+    featuredCarouselTimer = null;
+  }
+}
+
+/* ========================================================================== 
+   GALERÍA MODAL — REPRODUCCIÓN AUTOMÁTICA DEL VISOR
+   ========================================================================== */
+let modalGalleryTimer = null;
+let modalGalleryHover = false;
+
+// Avance automático del visor de imágenes en el detalle de producto.
+// Solo se activa cuando hay más de una imagen, respeta prefers-reduced-motion
+// y se detiene mientras el cursor pasa sobre el visor. Tras una interacción
+// manual se reinicia, de modo que la reproducción jamás se interrumpe.
+function startModalGalleryAuto() {
+  stopModalGalleryAuto();
+  if (modalGalleryHover) return;
+  if (!currentSelectedProduct || !productModal?.classList.contains("active")) return;
+  const images = getProductImages(currentSelectedProduct, modalSelectedColor);
+  if (images.length < 2) return;
+  if (REDUCED_MOTION_QUERY.matches) return;
+
+  modalGalleryTimer = window.setInterval(() => {
+    if (document.hidden || !productModal?.classList.contains("active")) {
+      stopModalGalleryAuto();
+      return;
+    }
+    if (modalGalleryHover) return;
+    setModalGalleryImage(modalActiveImageIndex + 1);
+  }, 4000);
+}
+
+function stopModalGalleryAuto() {
+  if (modalGalleryTimer) {
+    window.clearInterval(modalGalleryTimer);
+    modalGalleryTimer = null;
+  }
+}
+
+function resetModalGalleryAuto() {
+  stopModalGalleryAuto();
+  startModalGalleryAuto();
+}
+
+/* ========================================================================== 
    MODAL DE PRODUCTO
    ========================================================================== */
 
@@ -497,6 +977,7 @@ function openProductModal(productId) {
   productModal?.setAttribute("aria-hidden", "false");
   document.body.classList.add("product-modal-open");
   document.body.style.overflow = "hidden";
+  startModalGalleryAuto();
 
   const modalContent = productModal?.querySelector(".product-modal-content");
   modalContent?.scrollTo({ top: 0, behavior: "auto" });
@@ -505,6 +986,7 @@ function openProductModal(productId) {
 
 function closeProductModal() {
   if (!productModal?.classList.contains("active")) return;
+  stopModalGalleryAuto();
 
   productModal.classList.remove("active");
   productModal.setAttribute("aria-hidden", "true");
@@ -709,17 +1191,33 @@ function renderModalContent() {
 
   productModalBody.querySelector("[data-gallery-prev]")?.addEventListener("click", () => {
     setModalGalleryImage(modalActiveImageIndex - 1);
+    resetModalGalleryAuto();
   });
   productModalBody.querySelector("[data-gallery-next]")?.addEventListener("click", () => {
     setModalGalleryImage(modalActiveImageIndex + 1);
+    resetModalGalleryAuto();
   });
   productModalBody.querySelectorAll("[data-gallery-index]").forEach((button) => {
-    button.addEventListener("click", () => setModalGalleryImage(Number(button.dataset.galleryIndex)));
+    button.addEventListener("click", () => {
+      setModalGalleryImage(Number(button.dataset.galleryIndex));
+      resetModalGalleryAuto();
+    });
   });
   const galleryStage = productModalBody.querySelector(".modal-gallery-stage");
+  galleryStage?.addEventListener("mouseenter", () => { modalGalleryHover = true; });
+  galleryStage?.addEventListener("mouseleave", () => {
+    modalGalleryHover = false;
+    resetModalGalleryAuto();
+  });
   galleryStage?.addEventListener("keydown", (event) => {
-    if (event.key === "ArrowLeft") setModalGalleryImage(modalActiveImageIndex - 1);
-    if (event.key === "ArrowRight") setModalGalleryImage(modalActiveImageIndex + 1);
+    if (event.key === "ArrowLeft") {
+      setModalGalleryImage(modalActiveImageIndex - 1);
+      resetModalGalleryAuto();
+    }
+    if (event.key === "ArrowRight") {
+      setModalGalleryImage(modalActiveImageIndex + 1);
+      resetModalGalleryAuto();
+    }
   });
 
   let galleryTouchStartX = null;
@@ -732,6 +1230,7 @@ function renderModalContent() {
     galleryTouchStartX = null;
     if (Math.abs(deltaX) < 45) return;
     setModalGalleryImage(modalActiveImageIndex + (deltaX < 0 ? 1 : -1));
+    resetModalGalleryAuto();
   }, { passive: true });
 
   productModalBody.querySelectorAll(".color-dot-btn").forEach((button) => {
@@ -759,6 +1258,8 @@ function renderModalContent() {
   });
 
   document.getElementById("modal-add-cart-btn")?.addEventListener("click", addModalProductToCart);
+
+  startModalGalleryAuto();
 }
 
 function setModalGalleryImage(nextIndex) {
@@ -1126,30 +1627,186 @@ function fillTemplate(template, values) {
    CALCULADORA DE EXTRAFINANCIAMIENTO
    ========================================================================== */
 
+// Fuente de datos única: agregar un banco o ajustar porcentajes aquí.
+const bancos = {
+  bac: {
+    nombre: "BAC Credomatic",
+    sigla: "BAC",
+    color: "#e5001c",
+    planes: [
+      { meses: 6, interes: 9 },
+      { meses: 12, interes: 13.8 }
+    ]
+  },
+  ficohsa: {
+    nombre: "Ficohsa",
+    sigla: "FIC",
+    color: "#003a70",
+    planes: [
+      { meses: 3, interes: 5 },
+      { meses: 6, interes: 8 },
+      { meses: 9, interes: 9 },
+      { meses: 12, interes: 10.5 },
+      { meses: 18, interes: 15.8 }
+    ]
+  }
+};
+
+const financingState = {
+  banco: "bac",
+  planIndex: 0,
+  last: { price: 0, interest: 0, total: 0, monthly: 0, rate: 0 }
+};
+
+function renderBankCards() {
+  if (!bankCardsEl) return;
+  bankCardsEl.innerHTML = Object.entries(bancos).map(([key, banco], index) => `
+    <button type="button" class="bank-card${financingState.banco === key ? " is-selected" : ""}"
+      data-bank="${key}" role="radio" aria-checked="${financingState.banco === key}"
+      style="--bank-color: ${banco.color}; animation-delay: ${index * 60}ms" aria-label="${banco.nombre}">
+      <span class="bank-emblem">${banco.sigla}</span>
+      <div class="bank-card-body">
+        <span class="bank-card-name">${banco.nombre}</span>
+        <span class="bank-card-plans">${banco.planes.length} ${banco.planes.length === 1 ? "plan" : "planes"} disponibles</span>
+      </div>
+      <span class="bank-card-check" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>
+    </button>
+  `).join("");
+}
+
+function renderPlanCards() {
+  if (!planCardsEl) return;
+  const banco = bancos[financingState.banco];
+  if (!banco) return;
+  const planSeguro = Math.min(financingState.planIndex, banco.planes.length - 1);
+  planCardsEl.innerHTML = banco.planes.map((plan, index) => `
+    <button type="button" class="plan-card${index === planSeguro ? " is-selected" : ""}"
+      data-plan="${index}" role="radio" aria-checked="${index === planSeguro}"
+      style="animation-delay: ${index * 50}ms">
+      <span class="plan-card-months">${plan.meses} meses</span>
+      <span class="plan-card-rate">${plan.interes}%</span>
+      <span class="plan-card-desc">${plan.meses} cuotas mensuales</span>
+    </button>
+  `).join("");
+}
+
+function animateCount(el, from, to, formatter, duration = 500) {
+  if (!el) return;
+  if (el.__countRaf) cancelAnimationFrame(el.__countRaf);
+  const start = performance.now();
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = formatter(from + (to - from) * eased);
+    if (t < 1) el.__countRaf = requestAnimationFrame(tick);
+    else delete el.__countRaf;
+  };
+  el.__countRaf = requestAnimationFrame(tick);
+}
+
+function addRipple(card, event) {
+  const rect = card.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const span = document.createElement("span");
+  span.className = "ripple";
+  span.style.width = `${size}px`;
+  span.style.height = `${size}px`;
+  span.style.left = `${event.clientX - rect.left - size / 2}px`;
+  span.style.top = `${event.clientY - rect.top - size / 2}px`;
+  card.appendChild(span);
+  span.addEventListener("animationend", () => span.remove());
+}
+
+function formatRatePercent(value) {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
 function calculateFinancing() {
-  if (!calcAmount || !calcMonths || !calcValue || !calcWhatsappBtn) return;
+  if (!calcAmount || !calcWhatsappBtn) return;
 
   const amount = Math.max(0, Number.parseFloat(calcAmount.value) || 0);
-  const months = Number.parseInt(calcMonths.value, 10) || 6;
+  const banco = bancos[financingState.banco];
+  const plan = banco && banco.planes[Math.min(financingState.planIndex, banco.planes.length - 1)];
 
-  if (amount <= 0) {
-    calcValue.textContent = "L. 0 / mes";
+  if (!banco || !plan || amount <= 0) {
+    animateCount(resultMonthly, financingState.last.monthly, 0, (v) => `${formatCurrency(v)} / mes`);
+    animateCount(resultPrice, financingState.last.price, 0, formatCurrency);
+    animateCount(resultInterest, financingState.last.interest, 0, formatCurrency);
+    animateCount(resultTotal, financingState.last.total, 0, formatCurrency);
+    animateCount(resultRate, financingState.last.rate, 0, (v) => `${formatRatePercent(v)}%`);
+    financingState.last = { price: 0, interest: 0, total: 0, monthly: 0, rate: 0 };
+    if (resultSummary) resultSummary.textContent = "Ingresa un monto válido para ver tus cuotas";
     calcWhatsappBtn.href = `https://wa.me/${whatsappSettings.phone}`;
     return;
   }
 
-  const monthlyPayment = Math.round(amount / months);
-  calcValue.textContent = `${formatCurrency(monthlyPayment)} / mes`;
+  const interest = Math.round((amount * plan.interes) / 100);
+  const total = amount + interest;
+  const monthly = Math.round(total / plan.meses);
+
+  animateCount(resultMonthly, financingState.last.monthly, monthly, (v) => `${formatCurrency(v)} / mes`);
+  animateCount(resultPrice, financingState.last.price, amount, formatCurrency);
+  animateCount(resultInterest, financingState.last.interest, interest, formatCurrency);
+  animateCount(resultTotal, financingState.last.total, total, formatCurrency);
+  animateCount(resultRate, financingState.last.rate, plan.interes, (v) => `${formatRatePercent(v)}%`);
+  financingState.last = { price: amount, interest, total, monthly, rate: plan.interes };
+
+  if (resultSummary) {
+    resultSummary.textContent = `${banco.nombre} · ${plan.meses} cuotas de ${formatCurrency(monthly)}`;
+  }
 
   const message = [
     "Hola Mi Phone HN, me gustaría consultar por Extrafinanciamiento:",
-    `Monto: ${formatCurrency(amount)}`,
-    `Plazo: ${months} meses sin intereses.`,
+    `Banco: ${banco.nombre}`,
+    `Producto: ${formatCurrency(amount)}`,
+    `Plazo: ${plan.meses} meses (tasa ${plan.interes}%)`,
+    `Interés: ${formatCurrency(interest)}`,
+    `Total a pagar: ${formatCurrency(total)}`,
+    `Cuota mensual: ${formatCurrency(monthly)}`,
     "",
-    "¿Cuáles son los requisitos con BAC o Ficohsa?"
+    "¿Cuáles son los requisitos?"
   ].join("\n");
 
   calcWhatsappBtn.href = `https://wa.me/${whatsappSettings.phone}?text=${encodeURIComponent(message)}`;
+}
+
+function initFinancingCalculator() {
+  if (!bankCardsEl && !planCardsEl) return;
+
+  renderBankCards();
+  renderPlanCards();
+
+  bankCardsEl?.addEventListener("pointerdown", (event) => {
+    const card = event.target.closest(".bank-card");
+    if (card) addRipple(card, event);
+  });
+  planCardsEl?.addEventListener("pointerdown", (event) => {
+    const card = event.target.closest(".plan-card");
+    if (card) addRipple(card, event);
+  });
+
+  bankCardsEl?.addEventListener("click", (event) => {
+    const card = event.target.closest(".bank-card");
+    if (!card || card.dataset.bank === financingState.banco) return;
+    financingState.banco = card.dataset.bank;
+    financingState.planIndex = 0;
+    renderBankCards();
+    renderPlanCards();
+    calculateFinancing();
+  });
+
+  planCardsEl?.addEventListener("click", (event) => {
+    const card = event.target.closest(".plan-card");
+    if (!card || Number(card.dataset.plan) === financingState.planIndex) return;
+    financingState.planIndex = Number(card.dataset.plan);
+    renderPlanCards();
+    calculateFinancing();
+  });
+
+  calculateFinancing();
 }
 
 /* ========================================================================== 
@@ -1219,6 +1876,47 @@ function getProductImages(product, colorName = "") {
   const normalizedImages = uniqueStrings(colorImages.length ? colorImages : (productImages.length ? productImages : legacyImage));
   if (!normalizedImages.length) return [FALLBACK_IMAGE];
   return normalizedImages.map((img) => optimizeCloudinaryUrl(img, 800));
+}
+
+function getProductColors(product) {
+  const colors = Array.isArray(product?.variants?.colors) ? product.variants.colors : [];
+  return colors.filter((color) => color && color.name);
+}
+
+function hashString(value) {
+  const text = String(value);
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = (hash * 31 + text.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+// Valoración visual estable por producto: la misma tarjeta siempre muestra la
+// misma calificación (4.0–5.0) sin depender de datos externos.
+function getCardRating(product) {
+  const seed = hashString(product?.id || product?.title || "producto") || 12345;
+  let state = seed >>> 0;
+  const random = () => {
+    state += 0x6d2b79f5;
+    let value = Math.imul(state ^ (state >>> 15), 1 | state);
+    value ^= value + Math.imul(value ^ (value >>> 7), 61 | value);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+  const value = Math.min(5, Math.max(4, Math.round((4 + random()) * 2) / 2));
+  const reviews = 8 + Math.floor(random() * 142);
+  return { value, reviews };
+}
+
+function renderStarRating(value) {
+  const full = Math.floor(value);
+  const hasHalf = value - full >= 0.5;
+  let html = "";
+  for (let i = 0; i < 5; i++) {
+    const className = i < full ? "star-full" : i === full && hasHalf ? "star-half" : "star-empty";
+    html += `<span class="star ${className}">★</span>`;
+  }
+  return html;
 }
 
 function normalizeBatteryHealth(value) {
@@ -1630,11 +2328,14 @@ function applyWhatsappSettings(whatsapp) {
 function setBrandLogo(dataUrl) {
   if (!dataUrl) return;
   const src = optimizeCloudinaryUrl(dataUrl, 400);
-  const imgHtml = `<img src="${src}" alt="Mi Phone HN" class="brand-logo-img">`;
-  const headerLogo = document.querySelector(".logo");
-  if (headerLogo) headerLogo.innerHTML = imgHtml;
-  const footerLogo = document.querySelector(".footer-logo");
-  if (footerLogo) footerLogo.innerHTML = imgHtml;
+  // Identidad visual: el logotipo acompaña al nombre de la empresa.
+  // [ LOGO ] Mi Phone HN — el logo nunca sustituye el texto.
+  const brandHtml =
+    `<img src="${escapeHTML(src)}" alt="Mi Phone HN" class="brand-logo-img">` +
+    `<span class="brand-logo-text">Mi Phone <span>HN</span></span>`;
+  document.querySelectorAll(".logo, .footer-logo").forEach((el) => {
+    el.innerHTML = brandHtml;
+  });
 }
 
 function applyHeroImage(dataUrl) {

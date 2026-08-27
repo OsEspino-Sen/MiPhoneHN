@@ -6,8 +6,12 @@
 -- 1. Tabla de Categorías
 CREATE TABLE IF NOT EXISTS public.categorias (
     id VARCHAR PRIMARY KEY,
-    label VARCHAR NOT NULL
+    label VARCHAR NOT NULL,
+    image VARCHAR
 );
+
+-- Bases de datos existentes: agregar la columna de imagen de categoría.
+-- ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS image VARCHAR;
 
 -- Sembrar categorías por defecto
 INSERT INTO public.categorias (id, label) VALUES

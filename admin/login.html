@@ -35,7 +35,7 @@
       <div class="login-shell">
         <div class="login-card">
           <div class="login-brand">
-            <span class="login-brand-mark"><i class="ph ph-device-mobile" aria-hidden="true"></i></span>
+            <span class="login-brand-mark"></span>
             <span class="login-brand-text">Mi Phone <b>HN</b></span>
           </div>
 
@@ -79,7 +79,7 @@
     </div>
   </section>
 
-  <script>
+  <script type="module">
     (() => {
       const wrapper = document.getElementById('login-image-wrapper');
       const img = document.getElementById('login-custom-image');
@@ -149,7 +149,23 @@
     })();
   </script>
   <script type="module">
-    import { auth, signInWithEmailAndPassword, syncUserToSupabase } from './supabase-config.js';
+    import { auth, signInWithEmailAndPassword, syncUserToSupabase, db, doc, getDoc } from './supabase-config.js';
+
+    // Logotipo oficial junto al nombre de la empresa en la pantalla de acceso.
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'imagenes', 'logo'));
+        const data = snap.exists() ? snap.data() : null;
+        const url = data?.url || data?.data;
+        if (!url) return;
+        const src = url.startsWith('data:') ? url : url + '?t=' + Date.now();
+        const mark = document.querySelector('.login-brand-mark');
+        if (mark) {
+          mark.innerHTML = `<img src="${src}" alt="Mi Phone HN" class="brand-logo-img">`;
+          mark.classList.add('has-logo');
+        }
+      } catch (_) {}
+    })();
 
     document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
