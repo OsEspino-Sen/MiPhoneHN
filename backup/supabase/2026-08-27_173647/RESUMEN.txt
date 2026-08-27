@@ -1,0 +1,16 @@
+BACKUP MIPHONE HN — SUPABASE + CLOUDINARY (READ-ONLY)
+Generado: 2026-08-27T23:36:47.169Z
+Supabase: https://dtaroricdbzavktglteu.supabase.co
+
+COMPARATIVA DE CANTIDADES (servidor vs backup):
+  productos: 33 existentes → 33 exportados  [COINCIDE]
+  categorias: 4 existentes → 4 exportados  [COINCIDE]
+
+VERIFICACIÓN PROFUNDA (re-lectura + comparación canónica): 5/5 idénticos [OK]
+CLOUDINARY: 0 imágenes únicas · 0 responden HTTP OK · 0 problemas
+
+ARCHIVOS: productos.json, categorias.json, cloudinary_inventory.json, verificacion.json
+
+Este backup contiene todos los campos e IDs necesarios para reconstruir las
+relaciones productos ↔ variantes ↔ imágenes ↔ precios ↔ stock ↔ specs.
+Restauración: scripts/restore_backup_supabase.mjs (requiere service role key).

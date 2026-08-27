@@ -1,0 +1,1604 @@
+[
+  {
+    "id": "producto-10",
+    "title": "Apple Adaptador USB-C 20W",
+    "brand": "Apple",
+    "price": 900,
+    "old_price": 900,
+    "category": "accessories",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "Adaptador de carga rápida USB-C compatible con iPhone y iPad.",
+    "includes": [],
+    "specs": [
+      "Carga rápida de 20W",
+      "Puerto USB-C",
+      "Compatible con iPhone",
+      "Compatible con iPad",
+      "Diseño compacto"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#FFFFFF",
+          "hsl": "0, 0%, 100%",
+          "rgb": "255, 255, 255",
+          "name": "Blanco",
+          "oklch": "1.000, 0.000, 89.9",
+          "value": "#FFFFFF"
+        }
+      ],
+      "storage": [
+        {
+          "name": "Estándar",
+          "price": 900,
+          "stock": 10,
+          "old_price": 900
+        }
+      ]
+    },
+    "images": [
+      "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MHJA3?wid=572&hei=572&fmt=jpeg&qlt=95&.v=1603730167000"
+    ],
+    "image": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MHJA3?wid=572&hei=572&fmt=jpeg&qlt=95&.v=1603730167000",
+    "created_at": "2026-08-01T13:41:22.272+00:00",
+    "updated_at": "2026-08-20T21:47:11.874+00:00"
+  },
+  {
+    "id": "producto-11",
+    "title": "iPhone 17 Pro",
+    "brand": "Apple",
+    "price": 28800,
+    "old_price": 29960,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El iPhone 17 Pro es uno de los teléfonos de gama alta de Apple, caracterizado por el regreso al chasis de aluminio forjado en caliente con estructura unibody (reemplazando el titanio de generaciones previas) y por integrar un avanzado sistema de enfriamiento por cámara de vapor",
+    "includes": [
+      "Cable de carga tipo C",
+      "Garantia"
+    ],
+    "specs": [
+      "Batería en 100%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#FF6A00",
+          "hsl": "25, 100%, 50%",
+          "rgb": "255, 106, 0",
+          "name": "Naranja",
+          "oklch": "0.701, 0.201, 44.8",
+          "value": "#FF6A00"
+        },
+        {
+          "hex": "#EBEBEB",
+          "hsl": "0, 0%, 92%",
+          "rgb": "235, 235, 235",
+          "name": "Silver",
+          "oklch": "0.940, 0.000, 89.9",
+          "value": "#EBEBEB"
+        }
+      ],
+      "storage": [
+        {
+          "name": "256GB",
+          "price": 28800,
+          "stock": 3,
+          "old_price": 29960
+        }
+      ]
+    },
+    "images": [
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_17PROMAX_256GB_SILVER_694f75dc8c32d.webp",
+      "https://ladylee.net/cdn/shop/files/comprar-iphone-17-pro-max-honduras-naranja-frontal.webp?v=1771533946&width=416"
+    ],
+    "image": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_17PROMAX_256GB_SILVER_694f75dc8c32d.webp",
+    "created_at": "2026-08-01T13:41:23.004+00:00",
+    "updated_at": "2026-08-27T17:06:04.933+00:00"
+  },
+  {
+    "id": "producto-13",
+    "title": "iPhone 16 Plus",
+    "brand": "Apple",
+    "price": 26500,
+    "old_price": 27560,
+    "category": "iphones",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "El iPhone 16 Plus destaca como la opción ideal de Apple para quienes buscan una pantalla grande de 6.7 pulgadas y la máxima duración de batería sin el costo ni la complejidad de las versiones Pro. Este modelo equilibra potencia y diseño con la integración nativa de inteligencia artificial.",
+    "includes": [
+      "Cable de carga",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 100%",
+      "Nuevo",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#E63B7A",
+          "hsl": "338, 77%, 57%",
+          "rgb": "230, 59, 122",
+          "name": "Rosado",
+          "oklch": "0.625, 0.210, 3.6",
+          "value": "#E63B7A"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 26500,
+          "stock": 1,
+          "old_price": 27560
+        }
+      ]
+    },
+    "images": [
+      "https://ishop.gt/cdn/shop/files/iPhone_16_Plus_No_AI_Pink_PDP_Image_Position_1__GENS_b21e669a-bf9e-41a3-8834-5b20db2bf9fb.jpg?v=1726067563",
+      "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-16-plus-pink-witb-202409_FMT_WHH?wid=560&hei=744&fmt=jpeg&qlt=90&.v=LzF1SmZDTmUzL1QxQ2JXNHpEZjMrYUMzU3p1RHloN3dISUQ0OW16L1c3c0d1R1RTRmZxcldhaTc4Q2w3K0FJTng1cU1LaVA3emtIaXgrdGhmdjJJQjdibzVJOUNDdkxwZ3NZOTJEaWVpTk1TU0FnbHF5NUJsUGdyckNkdzFZaXc"
+    ],
+    "image": "https://ishop.gt/cdn/shop/files/iPhone_16_Plus_No_AI_Pink_PDP_Image_Position_1__GENS_b21e669a-bf9e-41a3-8834-5b20db2bf9fb.jpg?v=1726067563",
+    "created_at": "2026-08-11T23:05:11.333+00:00",
+    "updated_at": "2026-08-27T17:10:23.679+00:00"
+  },
+  {
+    "id": "producto-14",
+    "title": "iPhone 17 Pro Max",
+    "brand": "Apple",
+    "price": 37999,
+    "old_price": 39520,
+    "category": "iphones",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "Destaca principalmente por incorporar una estructura unibody de aluminio forjado en caliente, un sistema de enfriamiento por cámara de vapor y una pantalla de 6.9 pulgadas protegida por la tecnología Ceramic Shield 2",
+    "includes": [
+      "Cable de carga tipo C",
+      "Garantía"
+    ],
+    "specs": [
+      "Nuevo y sellado"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#EBEBEB",
+          "hsl": "0, 0%, 92%",
+          "rgb": "235, 235, 235",
+          "name": "Silver",
+          "oklch": "0.940, 0.000, 89.9",
+          "value": "#EBEBEB"
+        },
+        {
+          "hex": "#0042AA",
+          "hsl": "217, 100%, 33%",
+          "rgb": "0, 66, 170",
+          "name": "Azul",
+          "oklch": "0.417, 0.177, 260.7",
+          "value": "#0042AA"
+        }
+      ],
+      "storage": [
+        {
+          "name": "256GB",
+          "price": 37999,
+          "stock": 3,
+          "old_price": 39520
+        }
+      ]
+    },
+    "images": [
+      "https://content.macstore.mx/img/sku/IPHONE783_FZ.jpg",
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_17PROMAX_256GB_SILVER_694f75dc8c32d.webp"
+    ],
+    "image": "https://content.macstore.mx/img/sku/IPHONE783_FZ.jpg",
+    "created_at": "2026-08-11T23:24:38.226+00:00",
+    "updated_at": "2026-08-20T21:37:22.272+00:00"
+  },
+  {
+    "id": "producto-15",
+    "title": "iPhone 14 Pro Max",
+    "brand": "Apple",
+    "price": 16300,
+    "old_price": 16960,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El Apple iPhone 14 Pro Max es un teléfono inteligente de gama alta con pantalla OLED de 6,7 pulgadas a 120 Hz, chip A16 Bionic, cámara principal de 48 MP e Isla Dinámica.",
+    "includes": [
+      "Cable Lightning",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 100%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#232323",
+          "hsl": "0, 0%, 14%",
+          "rgb": "35, 35, 35",
+          "name": "Negro",
+          "oklch": "0.256, 0.000, 89.9",
+          "value": "#232323"
+        }
+      ],
+      "storage": [
+        {
+          "name": "256GB",
+          "price": 16300,
+          "stock": 1,
+          "old_price": 16960
+        }
+      ]
+    },
+    "images": [
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSmQA8N1t3o7vGzioCM2-jWCsPtrtDDDBTU6FGjpZyeAg&s=10"
+    ],
+    "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSmQA8N1t3o7vGzioCM2-jWCsPtrtDDDBTU6FGjpZyeAg&s=10",
+    "created_at": "2026-08-11T23:29:40.498+00:00",
+    "updated_at": "2026-08-27T17:08:22.869+00:00"
+  },
+  {
+    "id": "producto-16",
+    "title": "iPhone 15",
+    "brand": "Apple",
+    "price": 12700,
+    "old_price": 13250,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 89,
+    "description": "El iPhone 15 es un teléfono de gama alta desarrollado por Apple, caracterizado principalmente por la integración del puerto USB-C, la inclusión de la Dynamic Island (Isla Dinámica) en los modelos base y un sensor de cámara principal mejorado de 48 megapíxeles.",
+    "includes": [
+      "Cable Lightning",
+      "Garantía"
+    ],
+    "specs": [
+      "Bateria en 89%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#F9D3E0",
+          "hsl": "339, 76%, 90%",
+          "rgb": "249, 211, 224",
+          "name": "Rosado",
+          "oklch": "0.903, 0.046, 355.5",
+          "value": "#F9D3E0"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 12700,
+          "stock": 1,
+          "old_price": 13250
+        }
+      ]
+    },
+    "images": [
+      "https://www.phonelectrics.com/cdn/shop/files/iPhone15-2.jpg?v=1738330167&width=820"
+    ],
+    "image": "https://www.phonelectrics.com/cdn/shop/files/iPhone15-2.jpg?v=1738330167&width=820",
+    "created_at": "2026-08-11T23:34:45.885+00:00",
+    "updated_at": "2026-08-27T17:10:00.223+00:00"
+  },
+  {
+    "id": "producto-17",
+    "title": "iPhone 15 Plus",
+    "brand": "Apple",
+    "price": 14600,
+    "old_price": 15200,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El iPhone 15 Plus es un teléfono inteligente diseñado por Apple que destaca por su pantalla OLED de 6.7 pulgadas, su batería de larga duración con hasta 26 horas de reproducción de video, y la inclusión de la isla dinámica (Dynamic Island) junto con el puerto USB-C.",
+    "includes": [
+      "Cable tipo C",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 100%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#CAF0FE",
+          "hsl": "196, 96%, 89%",
+          "rgb": "202, 240, 254",
+          "name": "Celeste",
+          "oklch": "0.932, 0.044, 222.1",
+          "value": "#CAF0FE"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 14600,
+          "stock": 1,
+          "old_price": 15200
+        }
+      ]
+    },
+    "images": [
+      "https://www.kasigra.it/1375-medium_default/apple-iphone-15-128gb-azzurro-garanzia-europa-24-mesi.jpg"
+    ],
+    "image": "https://www.kasigra.it/1375-medium_default/apple-iphone-15-128gb-azzurro-garanzia-europa-24-mesi.jpg",
+    "created_at": "2026-08-11T23:52:17.494+00:00",
+    "updated_at": "2026-08-27T17:09:33.94+00:00"
+  },
+  {
+    "id": "producto-18",
+    "title": "iPhone 15 Plus",
+    "brand": "Apple",
+    "price": 14600,
+    "old_price": 15200,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 89,
+    "description": "El iPhone 15 Plus es un teléfono inteligente diseñado por Apple que destaca por su pantalla OLED de 6.7 pulgadas, su batería de larga duración con hasta 26 horas de reproducción de video, y la inclusión de la isla dinámica (Dynamic Island) junto con el puerto USB-C.",
+    "includes": [
+      "Cable USB-C",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 89%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#F9D3E0",
+          "hsl": "339, 76%, 90%",
+          "rgb": "249, 211, 224",
+          "name": "Rosado",
+          "oklch": "0.903, 0.046, 355.5",
+          "value": "#F9D3E0"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 14600,
+          "stock": 1,
+          "old_price": 15200
+        }
+      ]
+    },
+    "images": [
+      "https://mac-center.com/cdn/shop/files/IMG-10935121_1c9a6788-db9f-4c2e-bc2a-ec310a624aa4.jpg?v=1723750964"
+    ],
+    "image": "https://mac-center.com/cdn/shop/files/IMG-10935121_1c9a6788-db9f-4c2e-bc2a-ec310a624aa4.jpg?v=1723750964",
+    "created_at": "2026-08-11T23:56:20.723+00:00",
+    "updated_at": "2026-08-27T17:08:50.334+00:00"
+  },
+  {
+    "id": "producto-19",
+    "title": "iPhone 15 Plus",
+    "brand": "Apple",
+    "price": 15200,
+    "old_price": 15800,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 90,
+    "description": "El iPhone 15 Plus es un teléfono inteligente diseñado por Apple que destaca por su pantalla OLED de 6.7 pulgadas, su batería de larga duración con hasta 26 horas de reproducción de video, y la inclusión de la isla dinámica (Dynamic Island) junto con el puerto USB-C.",
+    "includes": [
+      "Cable USB-C"
+    ],
+    "specs": [
+      "Batería en 90%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#F9D3E0",
+          "hsl": "339, 76%, 90%",
+          "rgb": "249, 211, 224",
+          "name": "Rosado",
+          "oklch": "0.903, 0.046, 355.5",
+          "value": "#F9D3E0"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 15200,
+          "stock": 1,
+          "old_price": 15800
+        }
+      ]
+    },
+    "images": [
+      "https://mac-center.com/cdn/shop/files/IMG-10935121_1c9a6788-db9f-4c2e-bc2a-ec310a624aa4.jpg?v=1723750964"
+    ],
+    "image": "https://mac-center.com/cdn/shop/files/IMG-10935121_1c9a6788-db9f-4c2e-bc2a-ec310a624aa4.jpg?v=1723750964",
+    "created_at": "2026-08-12T00:04:04.917+00:00",
+    "updated_at": "2026-08-27T17:09:48.958+00:00"
+  },
+  {
+    "id": "producto-2",
+    "title": "iPhone 11",
+    "brand": "Apple",
+    "price": 6800,
+    "old_price": 7100,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "Equipo seminuevo grado A+ con pantalla ProMotion y gran rendimiento.",
+    "includes": [
+      "Cable Lightning",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 100%"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#FF2600",
+          "hsl": "9, 100%, 50%",
+          "rgb": "255, 38, 0",
+          "name": "Rojo",
+          "oklch": "0.639, 0.248, 31.2",
+          "value": "#FF2600"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 6800,
+          "stock": 1,
+          "old_price": 7100
+        }
+      ]
+    },
+    "images": [
+      "https://certifiedrefurbished.com/cdn/shop/products/75344_b2cdfae3-2e9f-4836-aecc-c7590d2a1ba7.jpg?v=1744734174"
+    ],
+    "image": "https://certifiedrefurbished.com/cdn/shop/products/75344_b2cdfae3-2e9f-4836-aecc-c7590d2a1ba7.jpg?v=1744734174",
+    "created_at": "2026-07-29T17:04:16.374+00:00",
+    "updated_at": "2026-08-10T23:25:48.496+00:00"
+  },
+  {
+    "id": "producto-20",
+    "title": "iPhone 16 Pro",
+    "brand": "Apple",
+    "price": 21200,
+    "old_price": 22050,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El iPhone 16 Pro destaca por su pantalla de 6.3 pulgadas, el potente chip A18 Pro enfocado en inteligencia artificial y la incorporación del nuevo botón físico Camera Control.",
+    "includes": [
+      "Cable USB-C",
+      "Garantia"
+    ],
+    "specs": [
+      "Batería en 100%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#FFECD5",
+          "hsl": "33, 100%, 92%",
+          "rgb": "255, 236, 213",
+          "name": "Dorado",
+          "oklch": "0.952, 0.037, 72.6",
+          "value": "#FFECD5"
+        },
+        {
+          "hex": "#FFFFFF",
+          "hsl": "0, 0%, 100%",
+          "rgb": "255, 255, 255",
+          "name": "Blanco",
+          "oklch": "1.000, 0.000, 89.9",
+          "value": "#FFFFFF"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 21200,
+          "stock": 1,
+          "old_price": 22050
+        },
+        {
+          "name": "256GB",
+          "price": 22500,
+          "stock": 1,
+          "old_price": 23400
+        }
+      ]
+    },
+    "images": [
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_16PRO_256GB_NATURAL_6870d6b2f3039.webp",
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_16PROMAX_256GB_WHITE_6870d6c69ab6e.webp"
+    ],
+    "image": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_16PRO_256GB_NATURAL_6870d6b2f3039.webp",
+    "created_at": "2026-08-12T00:12:08.805+00:00",
+    "updated_at": "2026-08-27T17:11:29.857+00:00"
+  },
+  {
+    "id": "producto-21",
+    "title": "iPhone 12",
+    "brand": "Apple",
+    "price": 8200,
+    "old_price": 8530,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El iPhone 12 es un teléfono inteligente desarrollado por Apple que destaca por incorporar conectividad 5G, una pantalla OLED Super Retina XDR y el chip A14 Bionic. Introdujo un diseño renovado con bordes planos de aluminio que recuerda a modelos clásicos y cuenta con la protección Ceramic Shield en su pantalla para mayor resistencia contra caídas.",
+    "includes": [
+      "Cable Lightning",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 100%"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#B18CFE",
+          "hsl": "259, 98%, 77%",
+          "rgb": "177, 140, 254",
+          "name": "Morado",
+          "oklch": "0.722, 0.164, 297.1",
+          "value": "#B18CFE"
+        },
+        {
+          "hex": "#0061FF",
+          "hsl": "217, 100%, 50%",
+          "rgb": "0, 97, 255",
+          "name": "Azul",
+          "oklch": "0.554, 0.246, 261.4",
+          "value": "#0061FF"
+        },
+        {
+          "hex": "#E0EDD4",
+          "hsl": "91, 41%, 88%",
+          "rgb": "224, 237, 212",
+          "name": "Verde",
+          "oklch": "0.930, 0.036, 129.7",
+          "value": "#E0EDD4"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 8200,
+          "stock": 3,
+          "old_price": 8530
+        }
+      ]
+    },
+    "images": [
+      "https://www.apple.com/newsroom/images/product/iphone/geo/apple_iphone-12_2-up_geo_10132020_inline.jpg.large.jpg",
+      "https://m.media-amazon.com/images/I/51rqWfzdqyL._AC_UF894,1000_QL80_.jpg",
+      "https://i5.walmartimages.ca/asr/c2e54432-d97a-485a-bfc8-0d06adb22317.9abcdd3bf10ae4663d39bde2d25d59c5.jpeg"
+    ],
+    "image": "https://www.apple.com/newsroom/images/product/iphone/geo/apple_iphone-12_2-up_geo_10132020_inline.jpg.large.jpg",
+    "created_at": "2026-08-15T21:05:43.844+00:00",
+    "updated_at": "2026-08-27T15:22:28.844+00:00"
+  },
+  {
+    "id": "producto-22",
+    "title": "iPHone 17 (Nuevo)",
+    "brand": "Apple",
+    "price": 26500,
+    "old_price": 27560,
+    "category": "iphones",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "La familia iPhone 17 de Apple se compone de cuatro modelos principales orientados a diferentes tipos de usuario. Los dispositivos introducen pantallas más fluidas y un rediseño en sus lentes frontales y materiales",
+    "includes": [
+      "Cable USB-C",
+      "Garantía"
+    ],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#D9CAFE",
+          "hsl": "257, 96%, 89%",
+          "rgb": "217, 202, 254",
+          "name": "Lavander",
+          "oklch": "0.868, 0.073, 298.1",
+          "value": "#D9CAFE"
+        },
+        {
+          "hex": "#FFFFFF",
+          "hsl": "0, 0%, 100%",
+          "rgb": "255, 255, 255",
+          "name": "Blanco",
+          "oklch": "1.000, 0.000, 89.9",
+          "value": "#FFFFFF"
+        }
+      ],
+      "storage": [
+        {
+          "name": "256GB",
+          "price": 26500,
+          "stock": 2,
+          "old_price": 27560
+        }
+      ]
+    },
+    "images": [
+      "https://www.apple.com/newsroom/images/2025/09/apple-debuts-iphone-17/article/Apple-iPhone-17-hero-250909_inline.jpg.large.jpg",
+      "https://media.binglee.com.au/cdn-cgi/image/fit=scale-down,f=auto,w=1079/a/5/4/6/a546af4fe0687021e3bbe5204fba36d3f91ea26b_Apple_MG6K4XA_Iphone_Hero_1.jpg"
+    ],
+    "image": "https://www.apple.com/newsroom/images/2025/09/apple-debuts-iphone-17/article/Apple-iPhone-17-hero-250909_inline.jpg.large.jpg",
+    "created_at": "2026-08-15T21:32:19.549+00:00",
+    "updated_at": "2026-08-20T21:04:03.301+00:00"
+  },
+  {
+    "id": "producto-23",
+    "title": "Samsung S23 Ultra",
+    "brand": "Samsung",
+    "price": 13800,
+    "old_price": 14350,
+    "category": "samsung",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": null,
+    "description": "El Samsung Galaxy S23 Ultra sigue siendo uno de los teléfonos de gama alta más potentes y equilibrados del mercado. Equipado con el procesador Snapdragon 8 Gen 2 for Galaxy, una espectacular pantalla de 6.8 pulgadas Quad HD+ y un avanzado sistema de cámara de 200 MP, este dispositivo ofrece un re",
+    "includes": [
+      "Cable USB-C",
+      "Garantía"
+    ],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#CAF0FE",
+          "hsl": "196, 96%, 89%",
+          "rgb": "202, 240, 254",
+          "name": "Celeste",
+          "oklch": "0.932, 0.044, 222.1",
+          "value": "#CAF0FE"
+        }
+      ],
+      "storage": [
+        {
+          "name": "256GB",
+          "price": 13800,
+          "stock": null,
+          "old_price": 14350
+        }
+      ]
+    },
+    "images": [
+      "https://cdn1.smartprix.com/rx-i3mlY205k-w420-h420/samsung-galaxy-s23-u.webp"
+    ],
+    "image": "https://cdn1.smartprix.com/rx-i3mlY205k-w420-h420/samsung-galaxy-s23-u.webp",
+    "created_at": "2026-08-15T21:45:21.43+00:00",
+    "updated_at": "2026-08-15T21:45:21.43+00:00"
+  },
+  {
+    "id": "producto-24",
+    "title": "Samsung A36",
+    "brand": "Samsung",
+    "price": 7000,
+    "old_price": 7280,
+    "category": "samsung",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "El Samsung Galaxy A36 5G es un teléfono de gama media lanzado en marzo de 2025 que destaca por equilibrar un rendimiento fluido, funciones básicas de Inteligencia Artificial (\"Awesome Intelligence\") y una de las mejores políticas de soporte en su categoría",
+    "includes": [
+      "Cable de carga",
+      "Garanría"
+    ],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#D9CAFE",
+          "hsl": "257, 96%, 89%",
+          "rgb": "217, 202, 254",
+          "name": "Lavander",
+          "oklch": "0.868, 0.073, 298.1",
+          "value": "#D9CAFE"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 7000,
+          "stock": 1,
+          "old_price": 7280
+        }
+      ]
+    },
+    "images": [
+      "https://m.media-amazon.com/images/I/51kxnf0PyrL._AC_UF894,1000_QL80_.jpg"
+    ],
+    "image": "https://m.media-amazon.com/images/I/51kxnf0PyrL._AC_UF894,1000_QL80_.jpg",
+    "created_at": "2026-08-16T00:05:45.583+00:00",
+    "updated_at": "2026-08-16T00:05:45.583+00:00"
+  },
+  {
+    "id": "producto-25",
+    "title": "Samsung A07",
+    "brand": "Samsung",
+    "price": 3500,
+    "old_price": 3640,
+    "category": "samsung",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "El Samsung Galaxy A07 es el teléfono de gama de entrada más económico de la marca.",
+    "includes": [
+      "Cable de carga",
+      "Garantía"
+    ],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#232323",
+          "hsl": "0, 0%, 14%",
+          "rgb": "35, 35, 35",
+          "name": "Negro",
+          "oklch": "0.256, 0.000, 89.9",
+          "value": "#232323"
+        },
+        {
+          "hex": "#D9CAFE",
+          "hsl": "257, 96%, 89%",
+          "rgb": "217, 202, 254",
+          "name": "Morado",
+          "oklch": "0.868, 0.073, 298.1",
+          "value": "#D9CAFE"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 3500,
+          "stock": 4,
+          "old_price": 3640
+        }
+      ]
+    },
+    "images": [
+      "https://yas.co.tz/wp-content/uploads/2026/05/a07.png",
+      "https://dcdn-us.mitiendanube.com/stores/003/280/428/products/d_nq_np_2x_902363-mla92380662685_092025-f-35e46e1249c7aeb29317580374950869-1024-1024.webp"
+    ],
+    "image": "https://yas.co.tz/wp-content/uploads/2026/05/a07.png",
+    "created_at": "2026-08-16T00:10:55.049+00:00",
+    "updated_at": "2026-08-16T00:10:55.049+00:00"
+  },
+  {
+    "id": "producto-26",
+    "title": "CablE Lightning",
+    "brand": "Apple",
+    "price": 0,
+    "old_price": 900,
+    "category": "accessories",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "Original",
+    "includes": [],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#FFFFFF",
+          "hsl": "0, 0%, 100%",
+          "rgb": "255, 255, 255",
+          "name": "Blanco",
+          "oklch": "1.000, 0.000, 89.9",
+          "value": "#FFFFFF"
+        }
+      ],
+      "storage": [
+        {
+          "name": "Estandar",
+          "price": 0,
+          "stock": null,
+          "old_price": 900
+        }
+      ]
+    },
+    "images": [
+      "https://xiaomistore.com.hn/wp-content/uploads/MI-Type-C-to-Lightning-Cable-100cm-5204.webp",
+      "https://m.media-amazon.com/images/I/61FTrhdnqEL.jpg"
+    ],
+    "image": "https://xiaomistore.com.hn/wp-content/uploads/MI-Type-C-to-Lightning-Cable-100cm-5204.webp",
+    "created_at": "2026-08-16T00:18:43.411+00:00",
+    "updated_at": "2026-08-16T00:18:43.411+00:00"
+  },
+  {
+    "id": "producto-27",
+    "title": "Samsung Galaxy S21 Ultra",
+    "brand": "Samsung",
+    "price": 8300,
+    "old_price": 8640,
+    "category": "samsung",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": null,
+    "description": "Destaca por ofrecer características insignia (como su pantalla Quad HD+ a 120Hz y un zoom óptico de 10x) a un precio de mercado secundario muy competitivo, posicionándose como una gran alternativa de presupuesto frente a las gamas medias actuales.",
+    "includes": [
+      "Cable USB-C",
+      "Garantía"
+    ],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#232323",
+          "hsl": "0, 0%, 14%",
+          "rgb": "35, 35, 35",
+          "name": "Negro",
+          "oklch": "0.256, 0.000, 89.9",
+          "value": "#232323"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 8300,
+          "stock": 1,
+          "old_price": 8640
+        }
+      ]
+    },
+    "images": [
+      "https://tecexpresshn.com/wp-content/uploads/2024/02/s21-ultra-1-e1712683784955.webp"
+    ],
+    "image": "https://tecexpresshn.com/wp-content/uploads/2024/02/s21-ultra-1-e1712683784955.webp",
+    "created_at": "2026-08-20T21:46:17.265+00:00",
+    "updated_at": "2026-08-20T21:46:17.265+00:00"
+  },
+  {
+    "id": "producto-28",
+    "title": "Apple Pencil Type C",
+    "brand": "Apple",
+    "price": 3500,
+    "old_price": 3640,
+    "category": "accessories",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "El Apple Pencil (USB-C) es el modelo más accesible de la línea de lápices ópticos de Apple, diseñado principalmente para estudiantes, tareas escolares y productividad general. Destaca por incluir un puerto físico USB-C oculto bajo una tapa deslizante para su emparejamiento y carga mediante cable.",
+    "includes": [],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#CCCCCC",
+          "hsl": "0, 0%, 80%",
+          "rgb": "204, 204, 204",
+          "name": "Estándar",
+          "oklch": "0.845, 0.000, 89.9",
+          "value": "#CCCCCC"
+        }
+      ],
+      "storage": [
+        {
+          "name": "ESTANDAR",
+          "price": 3500,
+          "stock": 1,
+          "old_price": 3640
+        }
+      ]
+    },
+    "images": [
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/cache/catalog/public/products/product_MUWA3AM_A_6870d7138ec87-500x500.webp",
+      "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MUWA3?wid=1000&hei=1000&fmt=jpeg&qlt=95&.v=1695933856697"
+    ],
+    "image": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/cache/catalog/public/products/product_MUWA3AM_A_6870d7138ec87-500x500.webp",
+    "created_at": "2026-08-20T21:50:12.042+00:00",
+    "updated_at": "2026-08-20T21:51:02.264+00:00"
+  },
+  {
+    "id": "producto-29",
+    "title": "EarPods Type C",
+    "brand": "Apple",
+    "price": 980,
+    "old_price": 980,
+    "category": "accessories",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "Los Apple EarPods (USB-C) son audífonos cableados oficiales de Apple diseñados para ofrecer un sonido de alta calidad directamente a través de un puerto tipo C, ideales para modelos recientes de iPhone, iPad y computadoras Mac.",
+    "includes": [],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#CCCCCC",
+          "hsl": "0, 0%, 80%",
+          "rgb": "204, 204, 204",
+          "name": "Estándar",
+          "oklch": "0.845, 0.000, 89.9",
+          "value": "#CCCCCC"
+        }
+      ],
+      "storage": [
+        {
+          "name": "ESTANDAR",
+          "price": 980,
+          "stock": null,
+          "old_price": 980
+        }
+      ]
+    },
+    "images": [
+      "https://geeky.sfo2.cdn.digitaloceanspaces.com/geekydrop_production/d_nq_np_697061-mla75572388718_042024-o.webp-839zYy57s.webp",
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_MTJY3AM_A_6870e89de2f24.webp"
+    ],
+    "image": "https://geeky.sfo2.cdn.digitaloceanspaces.com/geekydrop_production/d_nq_np_697061-mla75572388718_042024-o.webp-839zYy57s.webp",
+    "created_at": "2026-08-20T21:58:47.591+00:00",
+    "updated_at": "2026-08-20T21:58:47.591+00:00"
+  },
+  {
+    "id": "producto-3",
+    "title": "iPhone 13",
+    "brand": "Apple",
+    "price": 10200,
+    "old_price": 10610,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El iPhone 13 cuenta con una pantalla Super Retina XDR de 6.1 pulgadas, chip A15 Bionic, sistema de cámara dual trasera de 12 MP con modo Cine y conectividad 5G",
+    "includes": [
+      "Cable Lightning",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 100%",
+      "Bateria en 89%/ 128GB"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#232323",
+          "hsl": "0, 0%, 14%",
+          "rgb": "35, 35, 35",
+          "name": "Negro",
+          "oklch": "0.256, 0.000, 89.9",
+          "value": "#232323"
+        },
+        {
+          "hex": "#38571A",
+          "hsl": "90, 54%, 22%",
+          "rgb": "56, 87, 26",
+          "name": "Verde",
+          "oklch": "0.418, 0.095, 132.3",
+          "value": "#38571A"
+        }
+      ],
+      "storage": [
+        {
+          "name": "256GB",
+          "price": 10200,
+          "stock": 1,
+          "old_price": 10610
+        },
+        {
+          "name": "128GB",
+          "price": 9200,
+          "stock": 1,
+          "old_price": 9568
+        }
+      ]
+    },
+    "images": [
+      "https://i5.walmartimages.com/seo/Restored-Apple-iPhone-13-Mini-128GB-Midnight-LTE-Cellular-TMobile-MLHM3LL-A-TM-Refurbished_bc2c5249-44d3-4fa4-9a60-dd41534391c7.57f1463b179ca49928cdeb2d5ff8d3fb.jpeg",
+      "https://m.media-amazon.com/images/I/51KxuUmFqeL.jpg"
+    ],
+    "image": "https://i5.walmartimages.com/seo/Restored-Apple-iPhone-13-Mini-128GB-Midnight-LTE-Cellular-TMobile-MLHM3LL-A-TM-Refurbished_bc2c5249-44d3-4fa4-9a60-dd41534391c7.57f1463b179ca49928cdeb2d5ff8d3fb.jpeg",
+    "created_at": "2026-07-29T17:04:17.019+00:00",
+    "updated_at": "2026-08-27T21:58:54.868+00:00"
+  },
+  {
+    "id": "producto-30",
+    "title": "EarPods Type Lightning",
+    "brand": "Apple",
+    "price": 980,
+    "old_price": 980,
+    "category": "accessories",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "Los Apple EarPods con conector Lightning son los audífonos alámbricos oficiales de Apple diseñados específicamente para dispositivos que no cuentan con entrada de audio tradicional de 3.5 mm, conectándose directamente al puerto de carga",
+    "includes": [],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#CCCCCC",
+          "hsl": "0, 0%, 80%",
+          "rgb": "204, 204, 204",
+          "name": "Estándar",
+          "oklch": "0.845, 0.000, 89.9",
+          "value": "#CCCCCC"
+        }
+      ],
+      "storage": [
+        {
+          "name": "ESTANDAR",
+          "price": 980,
+          "stock": null,
+          "old_price": 980
+        }
+      ]
+    },
+    "images": [
+      "https://siman.vtexassets.com/arquivos/ids/6290875-800-auto?v=638653882194970000&width=800&height=auto&aspect=true",
+      "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MMTN2?wid=2000&hei=2000&fmt=jpeg&qlt=95&.v=Z01ZWSs0MExIUHN1S2VNREx3amRoV2orYzFkTG5HaE9wejd5WUxYZjRML3VlaGtpaWc2M1pZRjFsclpzd3lPRFRHL0QxcnpjcmRVR29kRCt2bHZPb3c"
+    ],
+    "image": "https://siman.vtexassets.com/arquivos/ids/6290875-800-auto?v=638653882194970000&width=800&height=auto&aspect=true",
+    "created_at": "2026-08-20T22:02:24.483+00:00",
+    "updated_at": "2026-08-20T22:02:24.483+00:00"
+  },
+  {
+    "id": "producto-31",
+    "title": "Apple Watch SE 3th GEN/ 44mm",
+    "brand": "Apple",
+    "price": 9500,
+    "old_price": 9880,
+    "category": "accessories",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "El Apple Watch SE 3 en color Starlight (Blanco Estelar) es el reloj inteligente de entrada de Apple. Este dispositivo destaca por mantener un precio accesible de $249 USD e introducir mejoras drásticas respecto a su antecesor, como la pantalla siempre activa y el potente chip S10",
+    "includes": [
+      "Garantía"
+    ],
+    "specs": [
+      "Nuevo"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#D6D6D6",
+          "hsl": "0, 0%, 84%",
+          "rgb": "214, 214, 214",
+          "name": "Starlight",
+          "oklch": "0.876, 0.000, 89.9",
+          "value": "#D6D6D6"
+        }
+      ],
+      "storage": [
+        {
+          "name": "ESTANDAR",
+          "price": 9500,
+          "stock": 1,
+          "old_price": 9880
+        }
+      ]
+    },
+    "images": [
+      "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MYJ33ref_VW_34FR+watch-case-40-aluminum-starlight-nc-se3_VW_34FR+watch-face-40-aluminum-starlight-se3_VW_34FR?wid=752&hei=720&bgc=fafafa&trim=1&fmt=p-jpg&qlt=80&.v=L1VPMlk5ZkpkOVFZR3Fud25vckh4RStGZUJWLzNFUFVydllxZFp0d1M4NktoaXQwYi9wRGFOV2FsZVA1S1dYc01zdmlsQnpTM2JsTW1CL2FMcHR1ZUl3ZVlaMG9GekEwc3V1SXQ4RHBUY09LaGl0MGIvcERhTldhbGVQNUtXWHN3cVN2b2d1T00zNGpwWGphRE1oeEFRNWEyZ3hIVVVNdnh1ODVRM0J1Z0FacmMyRTN3NCt6QkoxaUdRb0FBay9VYktGTHdENW9lYUFnak5pcy9ReEdDVEszY29raWMyOFlMelpOTTBsSW8rKzV0OC9XcGFTWGhLMU9QRmNqbkdDaA",
+      "https://www.apple.com/v/apple-watch-se-3/b/images/overview/on-the-go/go_ping__gb8mux6dn8y2_large.jpg"
+    ],
+    "image": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MYJ33ref_VW_34FR+watch-case-40-aluminum-starlight-nc-se3_VW_34FR+watch-face-40-aluminum-starlight-se3_VW_34FR?wid=752&hei=720&bgc=fafafa&trim=1&fmt=p-jpg&qlt=80&.v=L1VPMlk5ZkpkOVFZR3Fud25vckh4RStGZUJWLzNFUFVydllxZFp0d1M4NktoaXQwYi9wRGFOV2FsZVA1S1dYc01zdmlsQnpTM2JsTW1CL2FMcHR1ZUl3ZVlaMG9GekEwc3V1SXQ4RHBUY09LaGl0MGIvcERhTldhbGVQNUtXWHN3cVN2b2d1T00zNGpwWGphRE1oeEFRNWEyZ3hIVVVNdnh1ODVRM0J1Z0FacmMyRTN3NCt6QkoxaUdRb0FBay9VYktGTHdENW9lYUFnak5pcy9ReEdDVEszY29raWMyOFlMelpOTTBsSW8rKzV0OC9XcGFTWGhLMU9QRmNqbkdDaA",
+    "created_at": "2026-08-20T22:11:09.467+00:00",
+    "updated_at": "2026-08-20T22:11:09.467+00:00"
+  },
+  {
+    "id": "producto-32",
+    "title": "Apple Watch Series 11/ 42mm",
+    "brand": "Apple",
+    "price": 13400,
+    "old_price": 13940,
+    "category": "accessories",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "El Apple Watch Series 11 en color Oro Rosa (Rose Gold) destaca como una de las opciones más sofisticadas de la línea de aluminio de Apple, presentando un acabado mate cepillado muy elegante. Apple empareja por defecto este estuche con la correa deportiva en tono Light Blush (Rubor Claro), eliminando por completo el antiguo color blanco estelar (Starlight) de esta generación.",
+    "includes": [
+      "Garantía"
+    ],
+    "specs": [
+      "Nuevo"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#F9D3E0",
+          "hsl": "339, 76%, 90%",
+          "rgb": "249, 211, 224",
+          "name": "Rose Gold",
+          "oklch": "0.903, 0.046, 355.5",
+          "value": "#F9D3E0"
+        }
+      ],
+      "storage": [
+        {
+          "name": "ESTANDAR",
+          "price": 13400,
+          "stock": 1,
+          "old_price": 13940
+        }
+      ]
+    },
+    "images": [
+      "https://i5.walmartimages.com/seo/Apple-Watch-Series-11-GPS-Cellular-42mm-Rose-Gold-Aluminum-Case-with-Light-Blush-Sport-Band-S-M_0f49bd52-4921-4a79-8f2f-de608912a693.c4a5fb77937c6d9679bbda387cbfa13f.jpeg",
+      "https://www.apple.com/v/apple-watch-series-11/c/images/overview/highlights/highlights_glass_endframe__f39nueq3bfiy_large.jpg"
+    ],
+    "image": "https://i5.walmartimages.com/seo/Apple-Watch-Series-11-GPS-Cellular-42mm-Rose-Gold-Aluminum-Case-with-Light-Blush-Sport-Band-S-M_0f49bd52-4921-4a79-8f2f-de608912a693.c4a5fb77937c6d9679bbda387cbfa13f.jpeg",
+    "created_at": "2026-08-20T22:14:54.382+00:00",
+    "updated_at": "2026-08-20T22:14:54.382+00:00"
+  },
+  {
+    "id": "producto-33",
+    "title": "iPhone 13 Pro Max",
+    "brand": "Apple",
+    "price": 15400,
+    "old_price": 16020,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El iPhone 13 Pro Max destaca por ser uno de los dispositivos premium más equilibrados de Apple, famoso por consolidar una de las mejores autonomías de batería en la historia de la marca y por introducir la pantalla ProMotion.",
+    "includes": [
+      "Cable de carga",
+      "Garantía"
+    ],
+    "specs": [
+      "100% de batería"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#EBEBEB",
+          "hsl": "0, 0%, 92%",
+          "rgb": "235, 235, 235",
+          "name": "Blanco",
+          "oklch": "0.940, 0.000, 89.9",
+          "value": "#EBEBEB"
+        },
+        {
+          "hex": "#CAF0FE",
+          "hsl": "196, 96%, 89%",
+          "rgb": "202, 240, 254",
+          "name": "Celeste",
+          "oklch": "0.932, 0.044, 222.1",
+          "value": "#CAF0FE"
+        }
+      ],
+      "storage": [
+        {
+          "name": "512GB",
+          "price": 15400,
+          "stock": 4,
+          "old_price": 16020
+        },
+        {
+          "name": "1TB",
+          "price": 15500,
+          "stock": 1,
+          "old_price": 16120
+        }
+      ]
+    },
+    "images": [
+      "https://www.apple.com/newsroom/images/product/iphone/geo/Apple_iPhone-13-Pro_iPhone-13-Pro-Max_GEO_09142021_inline.jpg.large.jpg",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRRH-7_lJkYuwW7H2RIF-4LUdQa4JrPBd7dSG-drdtffEvAFpAVzkciRs6f&s=10"
+    ],
+    "image": "https://www.apple.com/newsroom/images/product/iphone/geo/Apple_iPhone-13-Pro_iPhone-13-Pro-Max_GEO_09142021_inline.jpg.large.jpg",
+    "created_at": "2026-08-27T15:46:57.859+00:00",
+    "updated_at": "2026-08-27T15:49:17.196+00:00"
+  },
+  {
+    "id": "producto-34",
+    "title": "iPhone 14 Pro",
+    "brand": "Apple",
+    "price": 13800,
+    "old_price": 14352,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "Destaca por introducir la Dynamic Island (Isla Dinámica), una pantalla siempre activa y un potente sensor de cámara principal de 48 megapíxeles.",
+    "includes": [
+      "Cable de carga",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 100%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#450E59",
+          "hsl": "284, 73%, 20%",
+          "rgb": "69, 14, 89",
+          "name": "Morado",
+          "oklch": "0.301, 0.129, 314.9",
+          "value": "#450E59"
+        },
+        {
+          "hex": "#EBEBEB",
+          "hsl": "0, 0%, 92%",
+          "rgb": "235, 235, 235",
+          "name": "Blanco",
+          "oklch": "0.940, 0.000, 89.9",
+          "value": "#EBEBEB"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 13800,
+          "stock": 2,
+          "old_price": 14352
+        },
+        {
+          "name": "256GB",
+          "price": 14800,
+          "stock": 2,
+          "old_price": 15392
+        }
+      ]
+    },
+    "images": [
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_14PRO_256GB_PURPLE_ESIM_68710bb1cfcd7.webp",
+      "https://www.apple.com/newsroom/images/product/iphone/geo/Apple-iPhone-14-Pro-iPhone-14-Pro-Max-silver-220907-geo_inline.jpg.large.jpg"
+    ],
+    "image": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_14PRO_256GB_PURPLE_ESIM_68710bb1cfcd7.webp",
+    "created_at": "2026-08-27T15:55:24.92+00:00",
+    "updated_at": "2026-08-27T17:10:50.058+00:00"
+  },
+  {
+    "id": "producto-35",
+    "title": "iPhone 16",
+    "brand": "Apple",
+    "price": 17600,
+    "old_price": 19344,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "Esta generación destaca principalmente por la inclusión del potente chip A18, la integración nativa de Apple Intelligence, y la incorporación del nuevo botón físico Control de Cámara.",
+    "includes": [
+      "Cable de carga",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 100%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#ED719E",
+          "hsl": "338, 78%, 69%",
+          "rgb": "237, 113, 158",
+          "name": "Rosado",
+          "oklch": "0.707, 0.159, 359.1",
+          "value": "#ED719E"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 17600,
+          "stock": 3,
+          "old_price": 19344
+        }
+      ]
+    },
+    "images": [
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_16_128GB_PINK_6870d53b40864.webp",
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/cache/catalog/public/products/product_IPHONE_16_128GB_PINK_6870d53ccc931-500x500.webp"
+    ],
+    "image": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_16_128GB_PINK_6870d53b40864.webp",
+    "created_at": "2026-08-27T16:41:43.457+00:00",
+    "updated_at": "2026-08-27T17:11:17.405+00:00"
+  },
+  {
+    "id": "producto-36",
+    "title": "iPhone 16 Plus",
+    "brand": "Apple",
+    "price": 18300,
+    "old_price": 19032,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El iPhone 16 Plus destaca principalmente por su pantalla OLED de 6.7 pulgadas y una batería de larga duración de 4,674 mAh que ofrece hasta 27 horas de reproducción de video.",
+    "includes": [
+      "Cable de carga",
+      "Garantía"
+    ],
+    "specs": [
+      "Bateria en 100%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#ED719E",
+          "hsl": "338, 78%, 69%",
+          "rgb": "237, 113, 158",
+          "name": "Rosado",
+          "oklch": "0.707, 0.159, 359.1",
+          "value": "#ED719E"
+        },
+        {
+          "hex": "#232323",
+          "hsl": "0, 0%, 14%",
+          "rgb": "35, 35, 35",
+          "name": "Negro",
+          "oklch": "0.256, 0.000, 89.9",
+          "value": "#232323"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 18300,
+          "stock": 2,
+          "old_price": 19032
+        }
+      ]
+    },
+    "images": [
+      "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-16-plus-pink-witb-202409_FMT_WHH?wid=560&hei=744&fmt=jpeg&qlt=90&.v=LzF1SmZDTmUzL1QxQ2JXNHpEZjMrYUMzU3p1RHloN3dISUQ0OW16L1c3c0d1R1RTRmZxcldhaTc4Q2w3K0FJTng1cU1LaVA3emtIaXgrdGhmdjJJQjdibzVJOUNDdkxwZ3NZOTJEaWVpTk1TU0FnbHF5NUJsUGdyckNkdzFZaXc",
+      "https://cdn.prod.website-files.com/632e1b3fb161a903129c733e/673b82c59d937453e94bde59_673b488240c909cc3e4bc175_iphone-16-plus-negro.webp"
+    ],
+    "image": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-16-plus-pink-witb-202409_FMT_WHH?wid=560&hei=744&fmt=jpeg&qlt=90&.v=LzF1SmZDTmUzL1QxQ2JXNHpEZjMrYUMzU3p1RHloN3dISUQ0OW16L1c3c0d1R1RTRmZxcldhaTc4Q2w3K0FJTng1cU1LaVA3emtIaXgrdGhmdjJJQjdibzVJOUNDdkxwZ3NZOTJEaWVpTk1TU0FnbHF5NUJsUGdyckNkdzFZaXc",
+    "created_at": "2026-08-27T16:45:42.333+00:00",
+    "updated_at": "2026-08-27T17:11:05.251+00:00"
+  },
+  {
+    "id": "producto-37",
+    "title": "iPhone 16 Pro Max",
+    "brand": "Apple",
+    "price": 23800,
+    "old_price": 24760,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El Apple iPhone 16 Pro Max es el teléfono de pantalla grande definitivo de la marca, destacando por su enorme panel de 6.9 pulgadas, el potente procesador A18 Pro enfocado en inteligencia artificial y la introducción del botón físico Camera Control.",
+    "includes": [
+      "Cable de carga",
+      "Garantía"
+    ],
+    "specs": [
+      "Bateria en 100%",
+      "eSIM"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#232323",
+          "hsl": "0, 0%, 14%",
+          "rgb": "35, 35, 35",
+          "name": "Negro",
+          "oklch": "0.256, 0.000, 89.9",
+          "value": "#232323"
+        }
+      ],
+      "storage": [
+        {
+          "name": "256GB",
+          "price": 23800,
+          "stock": 1,
+          "old_price": 24760
+        }
+      ]
+    },
+    "images": [
+      "https://m.media-amazon.com/images/I/41ekoGCE34L._AC_UF350,350_QL80_.jpg",
+      "https://imgcdn.dapplications.tech/10013386_546c35b8-8222-47ec-bfa8-d913f6c8cd93.jpg"
+    ],
+    "image": "https://m.media-amazon.com/images/I/41ekoGCE34L._AC_UF350,350_QL80_.jpg",
+    "created_at": "2026-08-27T17:05:37.573+00:00",
+    "updated_at": "2026-08-27T17:05:37.573+00:00"
+  },
+  {
+    "id": "producto-4",
+    "title": "iPhone 13 Pro",
+    "brand": "Apple",
+    "price": 11800,
+    "old_price": 12280,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 100,
+    "description": "El iPhone 13 Pro cuenta con una pantalla OLED de 6.1 pulgadas con tecnología ProMotion de 120Hz, el chip A15 Bionic, un sistema de triple cámara trasera de 12 MP con zoom óptico de 3x y modo cinematográfico.",
+    "includes": [
+      "Cable Lightning",
+      "Garantía"
+    ],
+    "specs": [
+      "Bateria en 100%"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#EBEBEB",
+          "hsl": "0, 0%, 92%",
+          "rgb": "235, 235, 235",
+          "name": "Blamco",
+          "oklch": "0.940, 0.000, 89.9",
+          "value": "#EBEBEB"
+        },
+        {
+          "hex": "#94E3FE",
+          "hsl": "195, 98%, 79%",
+          "rgb": "148, 227, 254",
+          "name": "Celeste",
+          "oklch": "0.874, 0.086, 221.6",
+          "value": "#94E3FE"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 11800,
+          "stock": 4,
+          "old_price": 12280
+        }
+      ]
+    },
+    "images": [
+      "https://tecexpresshn.com/wp-content/uploads/2023/12/refurb-iphone-13-pro-max-blue-2023.jpeg",
+      "https://www.peru-smart.com/wp-content/uploads/2023/08/CELR057SILVER-256GB_1.jpg"
+    ],
+    "image": "https://tecexpresshn.com/wp-content/uploads/2023/12/refurb-iphone-13-pro-max-blue-2023.jpeg",
+    "created_at": "2026-07-29T17:04:17.422+00:00",
+    "updated_at": "2026-08-27T15:28:56.249+00:00"
+  },
+  {
+    "id": "producto-6",
+    "title": "Samsung Galaxy S26 Ultra",
+    "brand": "Samsung",
+    "price": 30500,
+    "old_price": 31720,
+    "category": "samsung",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "Potente gama alta con S Pen, excelente zoom y pantalla AMOLED.",
+    "includes": [],
+    "specs": [
+      "S Pen",
+      "Carga rápida"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#232323",
+          "hsl": "0, 0%, 14%",
+          "rgb": "35, 35, 35",
+          "name": "Negro",
+          "oklch": "0.256, 0.000, 89.9",
+          "value": "#232323"
+        }
+      ],
+      "storage": [
+        {
+          "name": "256GB",
+          "price": 30500,
+          "stock": 1,
+          "old_price": 31720
+        }
+      ]
+    },
+    "images": [
+      "https://tiendaenlinea.claro.com.hn/cdn/I02.7033.363/I02.7033.363_1_312x400.jpg?2026-03-26T204143"
+    ],
+    "image": "https://tiendaenlinea.claro.com.hn/cdn/I02.7033.363/I02.7033.363_1_312x400.jpg?2026-03-26T204143",
+    "created_at": "2026-07-29T17:04:18.4+00:00",
+    "updated_at": "2026-08-27T17:17:16.591+00:00"
+  },
+  {
+    "id": "producto-7",
+    "title": "iPhone 13",
+    "brand": "Apple",
+    "price": 9300,
+    "old_price": 9568,
+    "category": "iphones",
+    "condition": "seminuevo",
+    "badge": "Seminuevo",
+    "battery_health": 83,
+    "description": "El iPhone 13 cuenta con una pantalla Super Retina XDR de 6.1 pulgadas, chip A15 Bionic, sistema de cámara dual trasera de 12 MP con modo Cine y conectividad 5G",
+    "includes": [
+      "Cable Lightning",
+      "Garantía"
+    ],
+    "specs": [
+      "Batería en 83%"
+    ],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#38571A",
+          "hsl": "90, 54%, 22%",
+          "rgb": "56, 87, 26",
+          "name": "Verde",
+          "oklch": "0.418, 0.095, 132.3",
+          "value": "#38571A"
+        }
+      ],
+      "storage": [
+        {
+          "name": "128GB",
+          "price": 9300,
+          "stock": 1,
+          "old_price": 9568
+        }
+      ]
+    },
+    "images": [
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRKwbfWYv9vAtQw9zbuGJaOqvBU1m8LsX4NgZYOQeJaYg&s=10"
+    ],
+    "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRKwbfWYv9vAtQw9zbuGJaOqvBU1m8LsX4NgZYOQeJaYg&s=10",
+    "created_at": "2026-07-29T17:04:18.939+00:00",
+    "updated_at": "2026-08-20T20:58:43.429+00:00"
+  },
+  {
+    "id": "producto-8",
+    "title": "Apple Cable USB-C",
+    "brand": "Apple",
+    "price": 900,
+    "old_price": 900,
+    "category": "accessories",
+    "condition": "nuevo",
+    "badge": "Nuevo",
+    "battery_health": null,
+    "description": "Original",
+    "includes": [],
+    "specs": [],
+    "variants": {
+      "colors": [
+        {
+          "hex": "#FFFFFF",
+          "hsl": "0, 0%, 100%",
+          "rgb": "255, 255, 255",
+          "name": "Blanco",
+          "oklch": "1.000, 0.000, 89.9",
+          "value": "#FFFFFF"
+        }
+      ],
+      "storage": [
+        {
+          "name": "Estándar",
+          "price": 900,
+          "stock": 10,
+          "old_price": 900
+        }
+      ]
+    },
+    "images": [
+      "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_MUQ93AM_A_6870d882acd8b.webp",
+      "https://storage.googleapis.com/catalog-pictures-carrefour-es/catalog/pictures/hd_510x_/8445045022204_1.jpg"
+    ],
+    "image": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_MUQ93AM_A_6870d882acd8b.webp",
+    "created_at": "2026-07-29T17:04:19.479+00:00",
+    "updated_at": "2026-08-20T21:46:48.594+00:00"
+  }
+]

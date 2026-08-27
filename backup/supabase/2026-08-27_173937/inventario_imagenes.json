@@ -1,0 +1,600 @@
+{
+  "generatedAt": "2026-08-27T23:39:37.763Z",
+  "totalReferences": 86,
+  "uniqueImages": 56,
+  "cloudinaryImages": 11,
+  "externalImages": 45,
+  "reachableOk": 56,
+  "reachabilityProblems": [],
+  "images": [
+    {
+      "cloudinary": null,
+      "host": "jetstereo-retail.s3.us-east-2.amazonaws.com",
+      "url": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_17PROMAX_256GB_SILVER_694f75dc8c32d.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-11.images[0]",
+        "productos/producto-11.image",
+        "productos/producto-14.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "ladylee.net",
+      "url": "https://ladylee.net/cdn/shop/files/comprar-iphone-17-pro-max-honduras-naranja-frontal.webp?v=1771533946&width=416",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-11.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "ishop.gt",
+      "url": "https://ishop.gt/cdn/shop/files/iPhone_16_Plus_No_AI_Pink_PDP_Image_Position_1__GENS_b21e669a-bf9e-41a3-8834-5b20db2bf9fb.jpg?v=1726067563",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-13.images[0]",
+        "productos/producto-13.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "content.macstore.mx",
+      "url": "https://content.macstore.mx/img/sku/IPHONE783_FZ.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-14.images[0]",
+        "productos/producto-14.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "www.phonelectrics.com",
+      "url": "https://www.phonelectrics.com/cdn/shop/files/iPhone15-2.jpg?v=1738330167&width=820",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-16.images[0]",
+        "productos/producto-16.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "www.kasigra.it",
+      "url": "https://www.kasigra.it/1375-medium_default/apple-iphone-15-128gb-azzurro-garanzia-europa-24-mesi.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-17.images[0]",
+        "productos/producto-17.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "mac-center.com",
+      "url": "https://mac-center.com/cdn/shop/files/IMG-10935121_1c9a6788-db9f-4c2e-bc2a-ec310a624aa4.jpg?v=1723750964",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-18.images[0]",
+        "productos/producto-18.image",
+        "productos/producto-19.images[0]",
+        "productos/producto-19.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "certifiedrefurbished.com",
+      "url": "https://certifiedrefurbished.com/cdn/shop/products/75344_b2cdfae3-2e9f-4836-aecc-c7590d2a1ba7.jpg?v=1744734174",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-2.images[0]",
+        "productos/producto-2.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "jetstereo-retail.s3.us-east-2.amazonaws.com",
+      "url": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_16PRO_256GB_NATURAL_6870d6b2f3039.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-20.images[0]",
+        "productos/producto-20.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "jetstereo-retail.s3.us-east-2.amazonaws.com",
+      "url": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_16PROMAX_256GB_WHITE_6870d6c69ab6e.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-20.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "www.apple.com",
+      "url": "https://www.apple.com/newsroom/images/product/iphone/geo/apple_iphone-12_2-up_geo_10132020_inline.jpg.large.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-21.images[0]",
+        "productos/producto-21.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "m.media-amazon.com",
+      "url": "https://m.media-amazon.com/images/I/51rqWfzdqyL._AC_UF894,1000_QL80_.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-21.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "i5.walmartimages.ca",
+      "url": "https://i5.walmartimages.ca/asr/c2e54432-d97a-485a-bfc8-0d06adb22317.9abcdd3bf10ae4663d39bde2d25d59c5.jpeg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-21.images[2]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "www.apple.com",
+      "url": "https://www.apple.com/newsroom/images/2025/09/apple-debuts-iphone-17/article/Apple-iPhone-17-hero-250909_inline.jpg.large.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-22.images[0]",
+        "productos/producto-22.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "media.binglee.com.au",
+      "url": "https://media.binglee.com.au/cdn-cgi/image/fit=scale-down,f=auto,w=1079/a/5/4/6/a546af4fe0687021e3bbe5204fba36d3f91ea26b_Apple_MG6K4XA_Iphone_Hero_1.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-22.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "cdn1.smartprix.com",
+      "url": "https://cdn1.smartprix.com/rx-i3mlY205k-w420-h420/samsung-galaxy-s23-u.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-23.images[0]",
+        "productos/producto-23.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "m.media-amazon.com",
+      "url": "https://m.media-amazon.com/images/I/51kxnf0PyrL._AC_UF894,1000_QL80_.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-24.images[0]",
+        "productos/producto-24.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "yas.co.tz",
+      "url": "https://yas.co.tz/wp-content/uploads/2026/05/a07.png",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-25.images[0]",
+        "productos/producto-25.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "dcdn-us.mitiendanube.com",
+      "url": "https://dcdn-us.mitiendanube.com/stores/003/280/428/products/d_nq_np_2x_902363-mla92380662685_092025-f-35e46e1249c7aeb29317580374950869-1024-1024.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-25.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "xiaomistore.com.hn",
+      "url": "https://xiaomistore.com.hn/wp-content/uploads/MI-Type-C-to-Lightning-Cable-100cm-5204.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-26.images[0]",
+        "productos/producto-26.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "m.media-amazon.com",
+      "url": "https://m.media-amazon.com/images/I/61FTrhdnqEL.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-26.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "tecexpresshn.com",
+      "url": "https://tecexpresshn.com/wp-content/uploads/2024/02/s21-ultra-1-e1712683784955.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-27.images[0]",
+        "productos/producto-27.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "jetstereo-retail.s3.us-east-2.amazonaws.com",
+      "url": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/cache/catalog/public/products/product_MUWA3AM_A_6870d7138ec87-500x500.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-28.images[0]",
+        "productos/producto-28.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "geeky.sfo2.cdn.digitaloceanspaces.com",
+      "url": "https://geeky.sfo2.cdn.digitaloceanspaces.com/geekydrop_production/d_nq_np_697061-mla75572388718_042024-o.webp-839zYy57s.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-29.images[0]",
+        "productos/producto-29.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "jetstereo-retail.s3.us-east-2.amazonaws.com",
+      "url": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_MTJY3AM_A_6870e89de2f24.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-29.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "i5.walmartimages.com",
+      "url": "https://i5.walmartimages.com/seo/Restored-Apple-iPhone-13-Mini-128GB-Midnight-LTE-Cellular-TMobile-MLHM3LL-A-TM-Refurbished_bc2c5249-44d3-4fa4-9a60-dd41534391c7.57f1463b179ca49928cdeb2d5ff8d3fb.jpeg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-3.images[0]",
+        "productos/producto-3.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "m.media-amazon.com",
+      "url": "https://m.media-amazon.com/images/I/51KxuUmFqeL.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-3.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "www.apple.com",
+      "url": "https://www.apple.com/v/apple-watch-se-3/b/images/overview/on-the-go/go_ping__gb8mux6dn8y2_large.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-31.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "i5.walmartimages.com",
+      "url": "https://i5.walmartimages.com/seo/Apple-Watch-Series-11-GPS-Cellular-42mm-Rose-Gold-Aluminum-Case-with-Light-Blush-Sport-Band-S-M_0f49bd52-4921-4a79-8f2f-de608912a693.c4a5fb77937c6d9679bbda387cbfa13f.jpeg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-32.images[0]",
+        "productos/producto-32.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "www.apple.com",
+      "url": "https://www.apple.com/v/apple-watch-series-11/c/images/overview/highlights/highlights_glass_endframe__f39nueq3bfiy_large.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-32.images[1]",
+        "imagenes/hero-fondo.url"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "www.apple.com",
+      "url": "https://www.apple.com/newsroom/images/product/iphone/geo/Apple_iPhone-13-Pro_iPhone-13-Pro-Max_GEO_09142021_inline.jpg.large.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-33.images[0]",
+        "productos/producto-33.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "jetstereo-retail.s3.us-east-2.amazonaws.com",
+      "url": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_14PRO_256GB_PURPLE_ESIM_68710bb1cfcd7.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-34.images[0]",
+        "productos/producto-34.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "www.apple.com",
+      "url": "https://www.apple.com/newsroom/images/product/iphone/geo/Apple-iPhone-14-Pro-iPhone-14-Pro-Max-silver-220907-geo_inline.jpg.large.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-34.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "jetstereo-retail.s3.us-east-2.amazonaws.com",
+      "url": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_IPHONE_16_128GB_PINK_6870d53b40864.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-35.images[0]",
+        "productos/producto-35.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "jetstereo-retail.s3.us-east-2.amazonaws.com",
+      "url": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/cache/catalog/public/products/product_IPHONE_16_128GB_PINK_6870d53ccc931-500x500.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-35.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "cdn.prod.website-files.com",
+      "url": "https://cdn.prod.website-files.com/632e1b3fb161a903129c733e/673b82c59d937453e94bde59_673b488240c909cc3e4bc175_iphone-16-plus-negro.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-36.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "m.media-amazon.com",
+      "url": "https://m.media-amazon.com/images/I/41ekoGCE34L._AC_UF350,350_QL80_.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-37.images[0]",
+        "productos/producto-37.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "imgcdn.dapplications.tech",
+      "url": "https://imgcdn.dapplications.tech/10013386_546c35b8-8222-47ec-bfa8-d913f6c8cd93.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-37.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "tecexpresshn.com",
+      "url": "https://tecexpresshn.com/wp-content/uploads/2023/12/refurb-iphone-13-pro-max-blue-2023.jpeg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-4.images[0]",
+        "productos/producto-4.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "www.peru-smart.com",
+      "url": "https://www.peru-smart.com/wp-content/uploads/2023/08/CELR057SILVER-256GB_1.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-4.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "tiendaenlinea.claro.com.hn",
+      "url": "https://tiendaenlinea.claro.com.hn/cdn/I02.7033.363/I02.7033.363_1_312x400.jpg?2026-03-26T204143",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-6.images[0]",
+        "productos/producto-6.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "jetstereo-retail.s3.us-east-2.amazonaws.com",
+      "url": "https://jetstereo-retail.s3.us-east-2.amazonaws.com/images/catalog/public/products/product_MUQ93AM_A_6870d882acd8b.webp",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-8.images[0]",
+        "productos/producto-8.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "storage.googleapis.com",
+      "url": "https://storage.googleapis.com/catalog-pictures-carrefour-es/catalog/pictures/hd_510x_/8445045022204_1.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "productos/producto-8.images[1]"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "static.vecteezy.com",
+      "url": "https://static.vecteezy.com/system/resources/thumbnails/050/017/743/small_2x/a-pair-of-silver-headphones-with-a-silver-band-png.png",
+      "status": "ok",
+      "referencedBy": [
+        "categorias/accessories.image"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1785714491",
+        "public_id": "xry0tkraig6uyf6qdnjq",
+        "format": "png",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1785714491/xry0tkraig6uyf6qdnjq.png"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1785714491/xry0tkraig6uyf6qdnjq.png",
+      "status": "ok",
+      "referencedBy": [
+        "categorias/ipads.image"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1785714408",
+        "public_id": "ztsg9ip8jtbrblqepvch",
+        "format": "png",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1785714408/ztsg9ip8jtbrblqepvch.png"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1785714408/ztsg9ip8jtbrblqepvch.png",
+      "status": "ok",
+      "referencedBy": [
+        "categorias/iphones.image"
+      ]
+    },
+    {
+      "cloudinary": null,
+      "host": "static.vecteezy.com",
+      "url": "https://static.vecteezy.com/system/resources/previews/022/722/945/non_2x/samsung-galaxy-s23-ultra-transparent-image-free-png.png",
+      "status": "ok",
+      "referencedBy": [
+        "categorias/samsung.image"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1787269057",
+        "public_id": "wxfhwjs0fgxheijzavjq",
+        "format": "png",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787269057/wxfhwjs0fgxheijzavjq.png"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787269057/wxfhwjs0fgxheijzavjq.png",
+      "status": "ok",
+      "referencedBy": [
+        "imagenes/imagen_banner_panel.url"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1786839868",
+        "public_id": "imqq5fdbjxmrkqhxg2es",
+        "format": "jpg",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1786839868/imqq5fdbjxmrkqhxg2es.jpg"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1786839868/imqq5fdbjxmrkqhxg2es.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "imagenes/imagen_barra_principal.url"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1786840141",
+        "public_id": "kew4uiof5pwpeklgtpfw",
+        "format": "jpg",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1786840141/kew4uiof5pwpeklgtpfw.jpg"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1786840141/kew4uiof5pwpeklgtpfw.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "imagenes/imagen_login.url"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1785615982",
+        "public_id": "ddh7kklupdknct4gjfa1",
+        "format": "jpg",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1785615982/ddh7kklupdknct4gjfa1.jpg"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1785615982/ddh7kklupdknct4gjfa1.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "imagenes/imagen_sidebar.url"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1785615983",
+        "public_id": "h3nxwoylhbtfgbr3zwpz",
+        "format": "jpg",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1785615983/h3nxwoylhbtfgbr3zwpz.jpg"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1785615983/h3nxwoylhbtfgbr3zwpz.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "imagenes/imagen_tarjeta_promocional.url"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1787266869",
+        "public_id": "qsd9kxmekmsqhh2xdute",
+        "format": "jpg",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787266869/qsd9kxmekmsqhh2xdute.jpg"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787266869/qsd9kxmekmsqhh2xdute.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "imagenes/telefono-1.url"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1787266870",
+        "public_id": "arkno3ovtqygfc94hbos",
+        "format": "jpg",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787266870/arkno3ovtqygfc94hbos.jpg"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787266870/arkno3ovtqygfc94hbos.jpg",
+      "status": "ok",
+      "referencedBy": [
+        "imagenes/telefono-2.url"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1787266874",
+        "public_id": "bwl5xyulwrrpx0kwdgof",
+        "format": "png",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787266874/bwl5xyulwrrpx0kwdgof.png"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787266874/bwl5xyulwrrpx0kwdgof.png",
+      "status": "ok",
+      "referencedBy": [
+        "imagenes/telefono-3.url"
+      ]
+    },
+    {
+      "cloudinary": {
+        "version": "v1787266875",
+        "public_id": "gwc6qtxru4t7vxcvdx5u",
+        "format": "webp",
+        "secure_url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787266875/gwc6qtxru4t7vxcvdx5u.webp"
+      },
+      "host": "res.cloudinary.com",
+      "url": "https://res.cloudinary.com/vujysvvg/image/upload/v1787266875/gwc6qtxru4t7vxcvdx5u.webp",
+      "status": "ok",
+      "referencedBy": [
+        "imagenes/telefono-4.url"
+      ]
+    }
+  ]
+}

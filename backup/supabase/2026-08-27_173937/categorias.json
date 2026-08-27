@@ -1,0 +1,22 @@
+[
+  {
+    "id": "accessories",
+    "label": "Accesorios",
+    "image": "https://static.vecteezy.com/system/resources/thumbnails/050/017/743/small_2x/a-pair-of-silver-headphones-with-a-silver-band-png.png"
+  },
+  {
+    "id": "ipads",
+    "label": "iPads",
+    "image": "https://res.cloudinary.com/vujysvvg/image/upload/v1785714491/xry0tkraig6uyf6qdnjq.png"
+  },
+  {
+    "id": "iphones",
+    "label": "iPhones",
+    "image": "https://res.cloudinary.com/vujysvvg/image/upload/v1785714408/ztsg9ip8jtbrblqepvch.png"
+  },
+  {
+    "id": "samsung",
+    "label": "Samsung",
+    "image": "https://static.vecteezy.com/system/resources/previews/022/722/945/non_2x/samsung-galaxy-s23-ultra-transparent-image-free-png.png"
+  }
+]

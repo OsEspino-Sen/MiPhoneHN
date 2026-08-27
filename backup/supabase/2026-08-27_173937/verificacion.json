@@ -1,0 +1,67 @@
+{
+  "generatedAt": "2026-08-27T23:39:37.763Z",
+  "supabaseUrl": "https://dtaroricdbzavktglteu.supabase.co",
+  "mode": "read-only (anon key, políticas de lectura pública)",
+  "tables": {
+    "productos": {
+      "expectedCount": 33,
+      "exportedCount": 33,
+      "match": true
+    },
+    "categorias": {
+      "expectedCount": 4,
+      "exportedCount": 4,
+      "match": true
+    },
+    "configuracion": {
+      "expectedCount": 6,
+      "exportedCount": 6,
+      "match": true
+    },
+    "imagenes": {
+      "expectedCount": 12,
+      "exportedCount": 12,
+      "match": true
+    }
+  },
+  "deepVerification": {
+    "sampleSize": 5,
+    "results": [
+      {
+        "id": "producto-10",
+        "title": "Apple Adaptador USB-C 20W",
+        "match": true
+      },
+      {
+        "id": "producto-18",
+        "title": "iPhone 15 Plus",
+        "match": true
+      },
+      {
+        "id": "producto-24",
+        "title": "Samsung A36",
+        "match": true
+      },
+      {
+        "id": "producto-30",
+        "title": "EarPods Type Lightning",
+        "match": true
+      },
+      {
+        "id": "producto-37",
+        "title": "iPhone 16 Pro Max",
+        "match": true
+      }
+    ],
+    "allMatch": true
+  },
+  "cloudinary": {
+    "totalReferences": 86,
+    "uniqueImages": 56,
+    "cloudinaryImages": 11,
+    "externalImages": 45,
+    "reachableOk": 56,
+    "problems": 0
+  },
+  "externalCopy": "D:\\Oscar Espino\\MiPhoneBackups\\2026-08-27_173937"
+}
