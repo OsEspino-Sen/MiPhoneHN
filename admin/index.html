@@ -851,19 +851,25 @@
             </div>
           </section>
 
-          <!-- 06 · Colores -->
+          <!-- 06 · Variantes de color (ficha independiente) -->
           <section class="form-section" id="fs-colors">
             <header class="fs-head">
               <span class="fs-icon fs-icon--pink"><i class="ph-duotone ph-palette" aria-hidden="true"></i></span>
               <div class="fs-copy">
-                <h3 class="section-heading">Colores disponibles</h3>
-                <p>Variantes de color que el cliente podrá elegir en la tienda.</p>
+                <h3 class="section-heading">Variantes de color</h3>
+                <p>Cada variante puede tener su propia ficha: marca, categoría, capacidades, precios, stock, especificaciones, descripción e imágenes. Los campos vacíos heredan los datos del producto base.</p>
               </div>
               <span class="fs-chip">Opcional</span>
             </header>
             <div class="fs-body">
-              <div id="colors-list" class="dynamic-stack"></div>
-              <button type="button" id="add-color-btn" class="btn btn-dashed btn-block"><i class="ph ph-plus" aria-hidden="true"></i> Agregar color</button>
+              <div class="variant-tabs" id="variant-tabs" role="tablist" aria-label="Variantes de color"></div>
+              <div class="variant-editor" id="variant-editor"></div>
+              <div class="variant-actions">
+                <button type="button" id="add-variant-btn" class="btn btn-dashed"><i class="ph ph-plus" aria-hidden="true"></i> Agregar variante</button>
+                <button type="button" id="duplicate-variant-btn" class="btn btn-secondary"><i class="ph ph-copy" aria-hidden="true"></i> Duplicar variante actual</button>
+                <button type="button" id="remove-variant-btn" class="btn btn-danger-ghost"><i class="ph ph-trash" aria-hidden="true"></i> Quitar variante actual</button>
+                <button type="button" id="clear-variant-btn" class="btn btn-secondary"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Heredar datos del producto base</button>
+              </div>
             </div>
           </section>
 
