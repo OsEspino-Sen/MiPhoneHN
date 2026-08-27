@@ -45,7 +45,8 @@ let cart = getStoredCart();
 let activeCategory = "all";
 let activeCondition = "all";
 let searchQuery = "";
-let currentSelectedProduct = null;
+let currentBaseProduct = null;   // Producto agrupado original (sin overrides)
+let currentSelectedProduct = null; // Producto efectivo según la variante (color) activa
 let modalSelectedColor = "";
 let modalSelectedStorage = "";
 let modalActiveImageIndex = 0;
@@ -672,9 +673,9 @@ function renderProducts() {
       : `<img src="${escapeHTML(cardImages[0])}" alt="${escapeHTML(product.title)}" loading="lazy">`;
     const colorsRow = productColors.length
       ? `
-        <div class="product-colors" aria-hidden="true">
+        <div class="product-colors">
           ${productColors.slice(0, 4).map((color) => `
-            <span class="color-swatch-dot" style="--swatch:${getSafeColor(color.value)};" title="${escapeHTML(color.name)}"></span>
+            <button type="button" class="color-swatch-dot color-swatch-btn" data-card-color="${escapeHTML(color.name)}" style="--swatch:${getSafeColor(color.value)};" title="Ver ${escapeHTML(color.name)}" aria-label="Ver variante ${escapeHTML(color.name)} de ${escapeHTML(product.title || "Producto")}"></button>
           `).join("")}
           ${productColors.length > 4 ? `<span class="color-dot-more">+${productColors.length - 4}</span>` : ""}
         </div>`
@@ -714,6 +715,41 @@ function renderProducts() {
       button.addEventListener("click", () => {
         lastProductModalTrigger = button;
         openProductModal(button.dataset.openProduct);
+      });
+    });
+
+    // Puntos de color interactivos: el hover previsualiza la imagen (y el precio)
+    // de esa variante; el clic abre el detalle ya posicionado en ese color.
+    const cardImage = card.querySelector(".product-image-container img");
+    const priceCurrent = card.querySelector(".price-current");
+    card.querySelectorAll("[data-card-color]").forEach((dot) => {
+      const colorName = dot.dataset.cardColor;
+      const variantImages = getProductImages(product, colorName);
+      const variantStorage = getVariantStorageOptions(product, colorName);
+      const variantPrice = Math.min(...variantStorage.map((option) => Number(option.price) || 0));
+      const basePrice = Math.min(...getStorageOptions(product).map((option) => Number(option.price) || 0));
+      const hasVariantPrice = variantPrice && variantPrice !== basePrice;
+      let originalImageSrc = null;
+      let originalPriceText = null;
+
+      dot.addEventListener("mouseenter", () => {
+        if (cardImage && variantImages[0]) {
+          if (originalImageSrc === null) originalImageSrc = cardImage.getAttribute("src");
+          cardImage.setAttribute("src", variantImages[0]);
+        }
+        if (priceCurrent && hasVariantPrice) {
+          if (originalPriceText === null) originalPriceText = priceCurrent.textContent;
+          const cheapestVariantStorage = variantStorage.reduce((min, option) => (Number(option.price) || 0) < (Number(min.price) || 0) ? option : min, variantStorage[0]);
+          priceCurrent.textContent = `${hasStoragePrices ? "Desde " : ""}${formatCurrency(cheapestVariantStorage.price)}`;
+        }
+      });
+      dot.addEventListener("mouseleave", () => {
+        if (cardImage && originalImageSrc !== null) cardImage.setAttribute("src", originalImageSrc);
+        if (priceCurrent && originalPriceText !== null) priceCurrent.textContent = originalPriceText;
+      });
+      dot.addEventListener("click", () => {
+        lastProductModalTrigger = card.querySelector("[data-open-product]");
+        openProductModal(productId, colorName);
       });
     });
 
@@ -958,16 +994,26 @@ function resetModalGalleryAuto() {
    MODAL DE PRODUCTO
    ========================================================================== */
 
-function openProductModal(productId) {
+function openProductModal(productId, colorName = "") {
   if (!productModal || !productModalBody) return;
   const product = products.find((item) => String(item.id) === String(productId));
   if (!product) return;
 
-  currentSelectedProduct = product;
-  modalSelectedColor = product.variants?.colors?.[0]?.name || "Color estándar";
+  currentBaseProduct = product;
+  const availableColors = getProductColors(product);
 
-  const storageOptions = getStorageOptions(product);
-  const firstAvailableOption = storageOptions.find((option) => !getStockInfo(product, option.name).isOut);
+  // Permite abrir el modal ya posicionado en una variante concreta (ej. desde
+  // un punto de color de la tarjeta). Si el color no existe, se usa el primero.
+  const requestedColor = colorName
+    ? availableColors.find((color) => String(color.name) === String(colorName))
+    : null;
+  modalSelectedColor = requestedColor?.name || availableColors[0]?.name || "Color estándar";
+
+  // El producto efectivo puede tener capacidades/precios/stock propios.
+  currentSelectedProduct = resolveVariantProduct(product, modalSelectedColor);
+
+  const storageOptions = getStorageOptions(currentSelectedProduct);
+  const firstAvailableOption = storageOptions.find((option) => !getStockInfo(currentSelectedProduct, option.name).isOut);
   modalSelectedStorage = (firstAvailableOption || storageOptions[0]).name;
   modalActiveImageIndex = 0;
   modalActiveTab = "description";
@@ -1236,7 +1282,18 @@ function renderModalContent() {
   productModalBody.querySelectorAll(".color-dot-btn").forEach((button) => {
     button.addEventListener("click", () => {
       modalSelectedColor = button.dataset.color || "Color estándar";
+      // Toda la ficha pasa a la variante seleccionada: marca, categoría,
+      // capacidades, precios, stock, especificaciones, descripción e imágenes.
+      currentSelectedProduct = resolveVariantProduct(currentBaseProduct, modalSelectedColor);
       modalActiveImageIndex = 0;
+
+      // Si la variante define capacidades distintas, revalidar la selección.
+      const storageOptions = getStorageOptions(currentSelectedProduct);
+      const stillValid = storageOptions.some((option) => option.name === modalSelectedStorage);
+      if (!stillValid) {
+        const firstAvailable = storageOptions.find((option) => !getStockInfo(currentSelectedProduct, option.name).isOut) || storageOptions[0];
+        modalSelectedStorage = firstAvailable.name;
+      }
       renderModalContent();
     });
   });
@@ -1326,12 +1383,14 @@ function quickAddToCart(productId) {
   if (!product) return;
 
   const color = product.variants?.colors?.[0]?.name || "Color estándar";
-  const storageOption = getStorageOptions(product).find((option) => !getStockInfo(product, option.name).isOut);
+  // La ficha efectiva de la variante puede tener capacidades/stock distintos.
+  const effectiveProduct = resolveVariantProduct(product, color);
+  const storageOption = getStorageOptions(effectiveProduct).find((option) => !getStockInfo(effectiveProduct, option.name).isOut);
   if (!storageOption) {
     notify("Este producto está agotado por el momento.", "warning");
     return;
   }
-  addToCart(product, color, storageOption.name);
+  addToCart(effectiveProduct, color, storageOption.name);
 }
 
 function addModalProductToCart() {
@@ -1866,16 +1925,71 @@ function getProductImages(product, colorName = "") {
   const selectedColor = colorName
     ? product?.variants?.colors?.find((color) => String(color.name) === String(colorName))
     : null;
+  // Prioridad de imágenes para una variante de color:
+  //   1. color.images / color.image (formato legado ya soportado)
+  //   2. color.overrides.images / color.overrides.image (ficha completa de la variante)
+  //   3. imágenes generales del producto (resuelto o base)
+  const variantImages = Array.isArray(selectedColor?.overrides?.images) && selectedColor.overrides.images.length
+    ? selectedColor.overrides.images
+    : selectedColor?.overrides?.image
+      ? [selectedColor.overrides.image]
+      : null;
   const colorImages = Array.isArray(selectedColor?.images)
     ? selectedColor.images
     : selectedColor?.image
       ? [selectedColor.image]
-      : [];
+      : variantImages || [];
   const productImages = Array.isArray(product?.images) ? product.images : [];
   const legacyImage = product?.image ? [product.image] : [];
   const normalizedImages = uniqueStrings(colorImages.length ? colorImages : (productImages.length ? productImages : legacyImage));
   if (!normalizedImages.length) return [FALLBACK_IMAGE];
   return normalizedImages.map((img) => optimizeCloudinaryUrl(img, 800));
+}
+
+/*
+  Resuelve el "producto efectivo" para una variante de color.
+
+  variants.colors[i] puede incluir un bloque `overrides` con una ficha completa
+  independiente (brand, category, description, specs, includes, images, battery,
+  condition, badge, storage...). Campos sin override se heredan del producto base,
+  por lo que los productos antiguos (sin overrides) se comportan exactamente igual.
+*/
+function resolveVariantProduct(product, colorName = "") {
+  if (!product || !colorName) return product;
+  const colors = product?.variants?.colors;
+  if (!Array.isArray(colors)) return product;
+  const color = colors.find((item) => String(item?.name) === String(colorName));
+  const overrides = color?.overrides;
+  if (!overrides || typeof overrides !== "object") return product;
+
+  const variantImages = Array.isArray(overrides.images) && overrides.images.length
+    ? overrides.images
+    : (overrides.image ? [overrides.image] : null);
+
+  const resolved = { ...product };
+  Object.entries(overrides).forEach(([key, value]) => {
+    if (key === "images") {
+      if (variantImages) resolved.images = variantImages;
+      return;
+    }
+    // Un override vacío (null/undefined) nunca degrada el dato base.
+    if (value === null || value === undefined) return;
+    resolved[key] = value;
+  });
+
+  // Los colores del grupo SIEMPRE provienen del producto base; las capacidades,
+  // en cambio, pueden ser propias de la variante.
+  resolved.variants = {
+    ...product.variants,
+    ...(Array.isArray(overrides.storage) && overrides.storage.length ? { storage: overrides.storage } : {})
+  };
+  resolved.image = variantImages?.[0] || product.image || "";
+  return resolved;
+}
+
+// Opciones de capacidad/precio/stock de una variante concreta (o del base).
+function getVariantStorageOptions(product, colorName = "") {
+  return getStorageOptions(resolveVariantProduct(product, colorName));
 }
 
 function getProductColors(product) {
