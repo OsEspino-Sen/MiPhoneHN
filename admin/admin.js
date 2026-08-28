@@ -2027,6 +2027,28 @@ function renderVariantColorMode(draft) {
     variantColorNameInput.value = draft.colorName || "";
     updateVariantHexInput(draft.hex || "#cccccc", false);
   }
+
+  // Zona de riesgo (eliminar producto): SOLO en el producto principal. Desde
+  // una variante no tiene sentido (eliminar borra todo el grupo).
+  if (drawerDangerZone) drawerDangerZone.hidden = isVariant || !editingProductId;
+
+  // Identificador persistente del modo de edición en el encabezado del drawer.
+  if (drawerModeChip) {
+    if (isVariant) {
+      drawerModeChip.textContent = `Variante: ${draft?.colorName || "sin color"}`;
+      drawerModeChip.classList.add("is-variant");
+    } else {
+      drawerModeChip.textContent = editingProductId ? "Edición" : "Nuevo";
+      drawerModeChip.classList.remove("is-variant");
+    }
+  }
+  if (drawerModeCopy) {
+    drawerModeCopy.textContent = isVariant
+      ? `Estás editando la variante${draft?.colorName ? ` "${draft.colorName}"` : ""} — se guarda dentro del producto principal`
+      : (editingProductId
+        ? "Los cambios reemplazarán la información publicada"
+        : "Completa las secciones y guarda para publicar");
+  }
 }
 
 function updateVariantHexInput(hex, updateDraft = true) {
