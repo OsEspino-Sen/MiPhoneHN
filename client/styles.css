@@ -885,22 +885,6 @@ select:focus-visible {
   box-shadow: 0 0 0 1px var(--border-color);
   transition: var(--transition);
 }
-/* Punto de color interactivo en tarjetas: previsualiza y abre la variante */
-.color-swatch-btn {
-  padding: 0;
-  cursor: pointer;
-  font: inherit;
-}
-
-.color-swatch-btn:hover {
-  transform: scale(1.18);
-  box-shadow: 0 0 0 2px #0071e3;
-}
-
-.color-swatch-btn:focus-visible {
-  outline: 2px solid #0071e3;
-  outline-offset: 2px;
-}
 
 .color-dot-more {
   color: var(--text-secondary);

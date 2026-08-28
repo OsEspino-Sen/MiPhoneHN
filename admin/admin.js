@@ -528,13 +528,6 @@ let existingImageUrls = [];
 let pendingImageFiles = [];
 let pendingImagesFirst = false;
 let previewObjectUrls = [];
-
-/* Estado del editor de variantes de color (ficha independiente).
-   Cada draft vive en memoria mientras se edita el producto; solo se persiste
-   al guardar, dentro de variants.colors[i].overrides. */
-let variantDrafts = [];
-let activeVariantIndex = 0;
-let variantPreviewObjectUrls = [];
 /* Detección de cambios sin guardar del Drawer de producto. */
 let formSnapshot = null;
 let formIsDirty = false;
@@ -563,17 +556,12 @@ const cancelFormBtn = document.getElementById("cancel-form-btn");
 const formError = document.getElementById("form-error");
 const includesList = document.getElementById("includes-list");
 const specsList = document.getElementById("specs-list");
+const colorsList = document.getElementById("colors-list");
 const storageList = document.getElementById("storage-list");
 const addIncludeBtn = document.getElementById("add-include-btn");
 const addSpecBtn = document.getElementById("add-spec-btn");
+const addColorBtn = document.getElementById("add-color-btn");
 const addStorageBtn = document.getElementById("add-storage-btn");
-/* Variantes de color con ficha independiente */
-const variantTabsEl = document.getElementById("variant-tabs");
-const variantEditorEl = document.getElementById("variant-editor");
-const addVariantBtn = document.getElementById("add-variant-btn");
-const duplicateVariantBtn = document.getElementById("duplicate-variant-btn");
-const removeVariantBtn = document.getElementById("remove-variant-btn");
-const clearVariantBtn = document.getElementById("clear-variant-btn");
 const confirmDialog = document.getElementById("confirm-dialog");
 const confirmOverlay = document.getElementById("confirm-overlay");
 const confirmTitle = document.getElementById("confirm-title");
@@ -703,12 +691,8 @@ function init() {
   deleteProductBtn?.addEventListener("click", handleDeleteProduct);
   addIncludeBtn?.addEventListener("click", () => addIncludeRow());
   addSpecBtn?.addEventListener("click", () => addSpecRow());
+  addColorBtn?.addEventListener("click", () => addColorRow());
   addStorageBtn?.addEventListener("click", () => addStorageRow());
-  /* Variantes de color */
-  addVariantBtn?.addEventListener("click", addVariant);
-  duplicateVariantBtn?.addEventListener("click", duplicateActiveVariant);
-  removeVariantBtn?.addEventListener("click", removeActiveVariant);
-  clearVariantBtn?.addEventListener("click", clearActiveVariantOverrides);
   confirmCancelBtn?.addEventListener("click", closeConfirm);
   confirmOverlay?.addEventListener("click", closeConfirm);
   confirmOkBtn?.addEventListener("click", () => {
@@ -1583,21 +1567,12 @@ function computeFormSnapshot() {
 
   parts.push([...(includesList?.querySelectorAll(".include-input") || [])].map((i) => i.value).join("¦"));
   parts.push([...(specsList?.querySelectorAll(".spec-input") || [])].map((i) => i.value).join("¦"));
-  /* Variantes de color: sincronizar el editor activo antes de comparar */
-  syncActiveVariantFromEditor();
-  parts.push(variantDrafts.map((draft) => [
-    draft.name,
-    draft.hex,
-    draft.brand,
-    draft.category,
-    draft.condition,
-    String(draft.batteryHealth ?? ""),
-    draft.description,
-    draft.specs.join("·"),
-    draft.includes.join("·"),
-    draft.images.join("·"),
-    draft.storage.map((s) => `${s.name}·${s.price}·${s.oldPrice}·${s.stock}`).join(","),
-    String(draft.pendingFiles.length)
+  parts.push([...(colorsList?.querySelectorAll(".color-row") || [])].map((row) => [
+    row.querySelector(".color-name")?.value,
+    row.querySelector(".color-hex")?.value,
+    row.querySelector(".color-rgb")?.value,
+    row.querySelector(".color-hsl")?.value,
+    row.querySelector(".color-oklch")?.value
   ].join("·")).join("¦"));
   parts.push([...(storageList?.querySelectorAll(".dynamic-row") || [])].map((row) => [
     row.querySelector(".storage-name")?.value,
@@ -1708,8 +1683,11 @@ function fillProductForm(product) {
   specsList.innerHTML = "";
   (product.specs?.length ? product.specs : [""]).forEach((spec) => addSpecRow(spec));
 
-  /* Variantes de color (ficha independiente por variante) */
-  loadVariantsFromProduct(product);
+  colorsList.innerHTML = "";
+  const colors = product.variants?.colors?.length
+    ? product.variants.colors
+    : [{ name: "", value: "#cccccc" }];
+  colors.forEach((color) => addColorRow(color));
 
   storageList.innerHTML = "";
   const storageVars = product.variants?.storage?.length
@@ -1844,507 +1822,78 @@ function getColorRepresentations(hexValue) {
   };
 }
 
-/* ==========================================================================
-   VARIANTES DE COLOR — ficha independiente por variante
-   Cada draft: { name, hex, brand, category, condition, batteryHealth,
-   description, specs[], includes[], images[], pendingFiles[], storage[] }
-   Los campos vacíos se omiten al guardar → la variante hereda del producto base.
-   ========================================================================== */
-
-function makeEmptyVariantDraft() {
-  return {
-    name: "",
-    hex: "#cccccc",
-    brand: "",
-    category: "",
-    condition: "",
-    batteryHealth: "",
-    description: "",
-    specs: [],
-    includes: [],
-    images: [],
-    pendingFiles: [],
-    storage: []
+function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
+  const source = colorOrName && typeof colorOrName === "object"
+    ? colorOrName
+    : { name: colorOrName, value: legacyValue };
+  const calculated = getColorRepresentations(source.hex || source.value || legacyValue);
+  const color = {
+    name: String(source.name || ""),
+    hex: calculated.hex,
+    rgb: String(source.rgb || calculated.rgb),
+    hsl: String(source.hsl || calculated.hsl),
+    oklch: String(source.oklch || calculated.oklch)
   };
-}
 
-function clearVariantPreviewObjectUrls() {
-  variantPreviewObjectUrls.forEach((url) => URL.revokeObjectURL(url));
-  variantPreviewObjectUrls = [];
-}
-
-function loadVariantsFromProduct(product) {
-  const colors = Array.isArray(product?.variants?.colors) ? product.variants.colors : [];
-  variantDrafts = colors
-    .filter((color) => color && (color.name || color.value))
-    .map((color) => {
-      const overrides = color.overrides && typeof color.overrides === "object" ? color.overrides : {};
-      return {
-        name: String(color.name || ""),
-        hex: color.hex || color.value || "#cccccc",
-        brand: String(overrides.brand || ""),
-        category: String(overrides.category || ""),
-        condition: String(overrides.condition || ""),
-        batteryHealth: overrides.batteryHealth ?? "",
-        description: String(overrides.description || ""),
-        specs: Array.isArray(overrides.specs) ? overrides.specs.map(String) : [],
-        includes: Array.isArray(overrides.includes) ? overrides.includes.map(String) : [],
-        images: Array.isArray(overrides.images) ? overrides.images.map(String) : [],
-        pendingFiles: [],
-        storage: Array.isArray(overrides.storage)
-          ? overrides.storage.map((item) => ({
-              name: String(item?.name || ""),
-              price: Number(item?.price) || 0,
-              oldPrice: Number(item?.oldPrice) || 0,
-              stock: item?.stock ?? ""
-            }))
-          : []
-      };
-    });
-  if (variantDrafts.length === 0) variantDrafts = [makeEmptyVariantDraft()];
-  activeVariantIndex = 0;
-  renderVariantTabs();
-  renderVariantEditor();
-}
-
-function resetVariantsEditor() {
-  clearVariantPreviewObjectUrls();
-  variantDrafts = [makeEmptyVariantDraft()];
-  activeVariantIndex = 0;
-  renderVariantTabs();
-  renderVariantEditor();
-}
-
-/* Lee el DOM del editor y actualiza el draft activo (para cambio de pestaña,
-   snapshot de cambios sin guardar y guardado). */
-function syncActiveVariantFromEditor() {
-  const draft = variantDrafts[activeVariantIndex];
-  if (!draft || !variantEditorEl) return;
-  draft.name = variantEditorEl.querySelector(".variant-name-input")?.value.trim() ?? draft.name;
-  draft.hex = variantEditorEl.querySelector(".variant-hex-input")?.value || draft.hex;
-  draft.brand = variantEditorEl.querySelector(".variant-brand-input")?.value.trim() ?? draft.brand;
-  draft.category = variantEditorEl.querySelector(".variant-category-input")?.value ?? draft.category;
-  draft.condition = variantEditorEl.querySelector(".variant-condition-input")?.value ?? draft.condition;
-  draft.batteryHealth = variantEditorEl.querySelector(".variant-battery-input")?.value ?? draft.batteryHealth;
-  draft.description = variantEditorEl.querySelector(".variant-description-input")?.value.trim() ?? draft.description;
-  draft.specs = [...variantEditorEl.querySelectorAll(".variant-spec-input")].map((i) => i.value.trim()).filter(Boolean);
-  draft.includes = [...variantEditorEl.querySelectorAll(".variant-include-input")].map((i) => i.value.trim()).filter(Boolean);
-  draft.storage = [...variantEditorEl.querySelectorAll(".variant-storage-row")].map((row) => {
-    const stockInput = row.querySelector(".variant-storage-stock")?.value;
-    return {
-      name: row.querySelector(".variant-storage-name")?.value.trim() || "",
-      price: Number(row.querySelector(".variant-storage-price")?.value) || 0,
-      oldPrice: Number(row.querySelector(".variant-storage-old-price")?.value) || 0,
-      stock: stockInput === "" || stockInput === undefined ? "" : normalizeStockValue(stockInput)
-    };
-  }).filter((item) => item.name);
-}
-
-function renderVariantTabs() {
-  if (!variantTabsEl) return;
-  variantTabsEl.innerHTML = variantDrafts.map((draft, index) => `
-    <button type="button" class="variant-tab ${index === activeVariantIndex ? "active" : ""}" data-variant-index="${index}" role="tab" aria-selected="${index === activeVariantIndex ? "true" : "false"}">
-      <span class="variant-tab-swatch" style="--swatch:${escapeHTML((draft.hex || "#cccccc").toLowerCase())}"></span>
-      <span class="variant-tab-name">${escapeHTML(draft.name.trim() || `Variante ${index + 1}`)}</span>
-      ${Object.keys(draft.overrides || {}).length || hasVariantContent(draft) ? '<i class="ph ph-pencil-simple-line variant-tab-dot" title="Tiene ficha propia" aria-hidden="true"></i>' : ""}
-    </button>
-  `).join("");
-  variantTabsEl.querySelectorAll("[data-variant-index]").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      syncActiveVariantFromEditor();
-      activeVariantIndex = Number(tab.dataset.variantIndex);
-      renderVariantTabs();
-      renderVariantEditor();
-    });
-  });
-}
-
-// ¿La variante tiene contenido propio que amerita un indicador visual?
-function hasVariantContent(draft) {
-  return Boolean(draft.brand || draft.category || draft.condition || draft.batteryHealth !== "" && draft.batteryHealth !== null || draft.description ||
-    (draft.specs?.length) || (draft.includes?.length) || (draft.images?.length) || (draft.pendingFiles?.length) || (draft.storage?.length));
-}
-
-function renderVariantEditor() {
-  if (!variantEditorEl) return;
-  clearVariantPreviewObjectUrls();
-  const draft = variantDrafts[activeVariantIndex] || variantDrafts[0];
-  if (!draft) return;
-
-  const categoryOptions = [...(document.getElementById("product-category")?.options || [])]
-    .map((option) => `<option value="${escapeHTML(option.value)}" ${option.value === draft.category ? "selected" : ""}>${escapeHTML(option.textContent)}</option>`)
-    .join("");
-
-  variantEditorEl.innerHTML = `
-    <div class="variant-editor-grid">
-      <div class="variant-editor-row">
-        <label class="variant-field">
-          <span>Nombre del color *</span>
-          <input type="text" class="variant-name-input" value="${escapeHTML(draft.name)}" placeholder="Titanio natural, Negro fantasma…">
-        </label>
-        <div class="variant-field">
-          <span>Color</span>
-          <div class="color-compact-control">
-            <input type="color" class="variant-color-picker" value="${escapeHTML((draft.hex || "#cccccc").toLowerCase())}" aria-label="Seleccionar color">
-            <input type="text" class="variant-hex-input" value="${escapeHTML(draft.hex || "#cccccc")}" maxlength="7" spellcheck="false" aria-label="Valor hexadecimal">
-          </div>
-        </div>
-        <label class="variant-field">
-          <span>Marca (opcional)</span>
-          <input type="text" class="variant-brand-input" value="${escapeHTML(draft.brand)}" placeholder="Vacío = hereda del producto base">
-        </label>
-      </div>
-
-      <div class="variant-editor-row">
-        <label class="variant-field">
-          <span>Categoría (opcional)</span>
-          <select class="variant-category-input custom-select">
-            <option value="">— Heredar del producto base —</option>
-            ${categoryOptions}
-          </select>
-        </label>
-        <label class="variant-field">
-          <span>Condición (opcional)</span>
-          <select class="variant-condition-input custom-select">
-            <option value="">— Heredar —</option>
-            <option value="nuevo" ${draft.condition === "nuevo" ? "selected" : ""}>Nuevo</option>
-            <option value="seminuevo" ${draft.condition === "seminuevo" ? "selected" : ""}>Seminuevo</option>
-          </select>
-        </label>
-        <label class="variant-field">
-          <span>Salud de batería (opcional)</span>
-          <input type="number" class="variant-battery-input" value="${escapeHTML(String(draft.batteryHealth ?? ""))}" min="0" max="100" placeholder="Vacío = hereda">
-        </label>
-      </div>
-
+  const row = document.createElement("div");
+  row.className = "dynamic-row color-row";
+  row.innerHTML = `
+    <div class="color-row-summary">
       <label class="variant-field">
-        <span>Descripción de la variante (opcional)</span>
-        <textarea class="variant-description-input" rows="3" placeholder="Vacío = usa la descripción del producto base">${escapeHTML(draft.description)}</textarea>
+        <span>Nombre del color</span>
+        <input type="text" class="color-name" value="${escapeHTML(color.name)}" placeholder="Titanio natural, Negro fantasma…">
       </label>
-
-      <div class="variant-subsection">
-        <h4 class="variant-subtitle"><i class="ph ph-images" aria-hidden="true"></i> Galería de la variante</h4>
-        <div class="variant-images-preview" id="variant-images-preview"></div>
-        <div class="variant-images-actions">
-          <label class="btn btn-secondary btn-sm">
-            <i class="ph ph-upload-simple" aria-hidden="true"></i> Subir imágenes
-            <input type="file" class="variant-image-file" accept="image/*" multiple hidden>
-          </label>
-          <input type="text" class="variant-image-url variant-field-input" placeholder="…o pega una URL de imagen y presiona Enter">
+      <div class="color-primary-control">
+        <span class="compact-field-label">Color y Hex</span>
+        <div class="color-compact-control">
+          <input type="color" class="color-value" value="${escapeHTML(color.hex.toLowerCase())}" aria-label="Seleccionar color">
+          <input type="text" class="color-hex" value="${escapeHTML(color.hex)}" placeholder="#F54927" maxlength="7" spellcheck="false" aria-label="Valor hexadecimal">
         </div>
       </div>
-
-      <div class="variant-subsection">
-        <h4 class="variant-subtitle"><i class="ph ph-hard-drives" aria-hidden="true"></i> Capacidades, precios y stock de la variante</h4>
-        <div class="dynamic-stack variant-storage-list"></div>
-        <button type="button" class="btn btn-dashed btn-sm variant-add-storage-btn"><i class="ph ph-plus" aria-hidden="true"></i> Agregar capacidad propia</button>
-      </div>
-
-      <div class="variant-subsection">
-        <h4 class="variant-subtitle"><i class="ph ph-cpu" aria-hidden="true"></i> Especificaciones de la variante</h4>
-        <div class="dynamic-stack variant-specs-list"></div>
-        <button type="button" class="btn btn-dashed btn-sm variant-add-spec-btn"><i class="ph ph-plus" aria-hidden="true"></i> Agregar especificación propia</button>
-      </div>
-
-      <div class="variant-subsection">
-        <h4 class="variant-subtitle"><i class="ph ph-package" aria-hidden="true"></i> Incluye (variante)</h4>
-        <div class="dynamic-stack variant-includes-list"></div>
-        <button type="button" class="btn btn-dashed btn-sm variant-add-include-btn"><i class="ph ph-plus" aria-hidden="true"></i> Agregar elemento propio</button>
-      </div>
+      <button type="button" class="remove-row-btn">Quitar</button>
     </div>
+    <details class="color-advanced">
+      <summary>
+        <i class="ph ph-sliders-horizontal" aria-hidden="true"></i>
+        Más información del color
+        <span class="color-advanced-hint">RGB · HSL · OKLCH</span>
+        <i class="ph ph-caret-down" aria-hidden="true"></i>
+      </summary>
+      <div class="color-advanced-grid">
+        <label class="variant-field">
+          <span>RGB</span>
+          <input type="text" class="color-rgb" value="${escapeHTML(color.rgb)}" placeholder="245, 73, 39" spellcheck="false">
+        </label>
+        <label class="variant-field">
+          <span>HSL</span>
+          <input type="text" class="color-hsl" value="${escapeHTML(color.hsl)}" placeholder="10, 91%, 56%" spellcheck="false">
+        </label>
+        <label class="variant-field">
+          <span>OKLCH</span>
+          <input type="text" class="color-oklch" value="${escapeHTML(color.oklch)}" placeholder="0.65, 0.21, 33" spellcheck="false">
+        </label>
+      </div>
+    </details>
   `;
 
-  /* Color: picker + hex sincronizados */
-  const picker = variantEditorEl.querySelector(".variant-color-picker");
-  const hexInput = variantEditorEl.querySelector(".variant-hex-input");
-  const syncHex = (value) => {
-    if (!/^#[0-9a-fA-F]{6}$/.test(value)) return;
-    picker.value = value.toLowerCase();
-    hexInput.value = value.toUpperCase();
-    draft.hex = value.toUpperCase();
-    renderVariantTabs();
-  };
-  picker?.addEventListener("input", () => syncHex(picker.value));
-  hexInput?.addEventListener("input", () => syncHex(hexInput.value.trim()));
-  hexInput?.addEventListener("blur", () => { hexInput.value = (hexInput.value.trim() || "#CCCCCC").toUpperCase(); });
-
-  /* Galería de la variante: subir archivos / pegar URLs */
-  const fileInput = variantEditorEl.querySelector(".variant-image-file");
-  const urlInput = variantEditorEl.querySelector(".variant-image-url");
-  fileInput?.addEventListener("change", () => {
-    Array.from(fileInput.files || []).forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
-      if (draft.pendingFiles.some((f) => f.name === file.name && f.size === file.size)) return;
-      if (draft.images.length + draft.pendingFiles.length >= MAX_PRODUCT_IMAGES) return;
-      draft.pendingFiles.push(file);
-    });
-    fileInput.value = "";
-    renderVariantImagesPreview(draft);
-  });
-  urlInput?.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    const url = urlInput.value.trim();
-    if (url && !draft.images.includes(url) && draft.images.length + draft.pendingFiles.length < MAX_PRODUCT_IMAGES) {
-      draft.images.push(url);
-      urlInput.value = "";
-      renderVariantImagesPreview(draft);
-    }
-  });
-  renderVariantImagesPreview(draft);
-
-  /* Filas dinámicas: capacidades, especificaciones, incluye */
-  const storageListEl = variantEditorEl.querySelector(".variant-storage-list");
-  draft.storage.forEach((item) => addVariantStorageRow(storageListEl, item));
-  variantEditorEl.querySelector(".variant-add-storage-btn")?.addEventListener("click", () => addVariantStorageRow(storageListEl));
-
-  const specsListEl = variantEditorEl.querySelector(".variant-specs-list");
-  draft.specs.forEach((spec) => addVariantTextRow(specsListEl, "variant-spec-input", "Ej: Pantalla 6.9\" LTPO", spec));
-  variantEditorEl.querySelector(".variant-add-spec-btn")?.addEventListener("click", () => addVariantTextRow(specsListEl, "variant-spec-input", "Ej: Pantalla 6.9\" LTPO"));
-
-  const includesListEl = variantEditorEl.querySelector(".variant-includes-list");
-  draft.includes.forEach((item) => addVariantTextRow(includesListEl, "variant-include-input", "Ej: Cargador 45W", item));
-  variantEditorEl.querySelector(".variant-add-include-btn")?.addEventListener("click", () => addVariantTextRow(includesListEl, "variant-include-input", "Ej: Cargador 45W"));
-
-  /* El nombre se refleja en la pestaña al instante */
-  variantEditorEl.querySelector(".variant-name-input")?.addEventListener("input", () => {
-    syncActiveVariantFromEditor();
-    renderVariantTabs();
-  });
-}
-
-function renderVariantImagesPreview(draft) {
-  const preview = variantEditorEl?.querySelector("#variant-images-preview");
-  if (!preview) return;
-  clearVariantPreviewObjectUrls();
-  preview.innerHTML = "";
-
-  const total = draft.images.length + draft.pendingFiles.length;
-  if (total === 0) {
-    preview.innerHTML = '<div class="media-preview-empty"><i class="ph ph-images" aria-hidden="true"></i> Sin imágenes propias (la variante usará la galería del producto base).</div>';
-    return;
-  }
-
-  const addItem = (src, type, index, alt) => {
-    const item = document.createElement("div");
-    item.className = `media-preview-item ${type === "pending" ? "is-pending" : ""} ${preview.children.length === 0 ? "is-primary" : ""}`;
-    item.innerHTML = `
-      <img src="${escapeHTML(src)}" alt="${escapeHTML(alt)}">
-      ${preview.children.length === 0 ? '<span class="media-primary-badge"><i class="ph ph-star" aria-hidden="true"></i> Portada</span>' : ""}
-      <button type="button" class="media-remove-btn" data-media-type="${type}" data-media-index="${index}" aria-label="Quitar imagen"><i class="ph ph-x" aria-hidden="true"></i></button>
-    `;
-    item.querySelector("img")?.addEventListener("error", (event) => { event.currentTarget.style.opacity = ".25"; });
-    item.querySelector(".media-remove-btn")?.addEventListener("click", () => {
-      if (type === "existing") draft.images.splice(index, 1);
-      else draft.pendingFiles.splice(index, 1);
-      renderVariantImagesPreview(draft);
-      renderVariantTabs();
-    });
-    preview.appendChild(item);
+  const picker = row.querySelector(".color-value");
+  const hexInput = row.querySelector(".color-hex");
+  const syncCalculatedValues = (hexValue) => {
+    const values = getColorRepresentations(hexValue);
+    picker.value = values.hex.toLowerCase();
+    hexInput.value = values.hex;
+    row.querySelector(".color-rgb").value = values.rgb;
+    row.querySelector(".color-hsl").value = values.hsl;
+    row.querySelector(".color-oklch").value = values.oklch;
   };
 
-  draft.images.forEach((url, index) => addItem(url, "existing", index, `Imagen variante ${index + 1}`));
-  draft.pendingFiles.forEach((file, index) => {
-    const objectUrl = URL.createObjectURL(file);
-    variantPreviewObjectUrls.push(objectUrl);
-    addItem(objectUrl, "pending", index, file.name);
+  picker?.addEventListener("input", () => syncCalculatedValues(picker.value));
+  hexInput?.addEventListener("input", () => {
+    if (/^#[0-9a-f]{6}$/i.test(hexInput.value.trim())) syncCalculatedValues(hexInput.value);
   });
-}
-
-/* Filas dinámicas dentro del editor de variante */
-function addVariantTextRow(container, inputClass, placeholder, value = "") {
-  if (!container) return;
-  const row = document.createElement("div");
-  row.className = "dynamic-row variant-text-row";
-  row.innerHTML = `
-    <input type="text" class="${inputClass}" value="${escapeHTML(value)}" placeholder="${escapeHTML(placeholder)}">
-    <button type="button" class="remove-row-btn" aria-label="Quitar">Quitar</button>
-  `;
+  hexInput?.addEventListener("blur", () => syncCalculatedValues(hexInput.value));
   row.querySelector(".remove-row-btn")?.addEventListener("click", () => row.remove());
-  container.appendChild(row);
-}
-
-function addVariantStorageRow(container, item = { name: "256GB", price: 0, oldPrice: 0, stock: "" }) {
-  if (!container) return;
-  const row = document.createElement("div");
-  row.className = "dynamic-row variant-storage-row";
-  const stockValue = item.stock === "" || item.stock === null || item.stock === undefined ? "" : Math.max(0, Number(item.stock) || 0);
-  row.innerHTML = `
-    <label class="variant-field"><span>Capacidad</span>
-      <input type="text" class="variant-storage-name" value="${escapeHTML(item.name || "")}" placeholder="256 GB" aria-label="Capacidad">
-    </label>
-    <label class="variant-field"><span>Precio normal</span>
-      <input type="number" class="variant-storage-old-price" value="${Number(item.oldPrice) || 0}" min="0" step="100" aria-label="Precio normal">
-    </label>
-    <label class="variant-field"><span>Precio oferta</span>
-      <input type="number" class="variant-storage-price" value="${Number(item.price) || 0}" min="0" step="100" aria-label="Precio de oferta">
-    </label>
-    <label class="variant-field"><span>Stock</span>
-      <input type="number" class="variant-storage-stock" value="${stockValue}" min="0" step="1" placeholder="Vacío = hereda" aria-label="Stock">
-    </label>
-    <button type="button" class="remove-row-btn" aria-label="Quitar capacidad">Quitar</button>
-  `;
-  row.querySelector(".remove-row-btn")?.addEventListener("click", () => row.remove());
-  container.appendChild(row);
-}
-
-/* Acciones sobre las pestañas de variantes */
-function addVariant() {
-  syncActiveVariantFromEditor();
-  variantDrafts.push(makeEmptyVariantDraft());
-  activeVariantIndex = variantDrafts.length - 1;
-  renderVariantTabs();
-  renderVariantEditor();
-  variantEditorEl?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-function duplicateActiveVariant() {
-  syncActiveVariantFromEditor();
-  const source = variantDrafts[activeVariantIndex];
-  if (!source) return;
-  const copy = {
-    ...source,
-    specs: [...source.specs],
-    includes: [...source.includes],
-    images: [...source.images],
-    pendingFiles: [],
-    storage: source.storage.map((item) => ({ ...item })),
-    name: source.name ? `Copia de ${source.name}` : ""
-  };
-  variantDrafts.splice(activeVariantIndex + 1, 0, copy);
-  activeVariantIndex += 1;
-  renderVariantTabs();
-  renderVariantEditor();
-}
-
-function removeActiveVariant() {
-  if (variantDrafts.length === 0) return;
-  const targetName = variantDrafts[activeVariantIndex]?.name || `Variante ${activeVariantIndex + 1}`;
-  showConfirm(
-    "Quitar variante",
-    `La variante <strong>${escapeHTML(targetName)}</strong> se quitará del formulario. El cambio se aplicará al guardar; hasta entonces puedes cancelar sin perder nada.`,
-    () => {
-      syncActiveVariantFromEditor();
-      variantDrafts.splice(activeVariantIndex, 1);
-      if (variantDrafts.length === 0) variantDrafts = [makeEmptyVariantDraft()];
-      activeVariantIndex = Math.min(activeVariantIndex, variantDrafts.length - 1);
-      renderVariantTabs();
-      renderVariantEditor();
-      captureFormBaseline();
-    },
-    { tone: "danger", okLabel: "Sí, quitar" }
-  );
-}
-
-/* Deja la variante sin ficha propia: hereda todo del producto base */
-function clearActiveVariantOverrides() {
-  syncActiveVariantFromEditor();
-  const draft = variantDrafts[activeVariantIndex];
-  if (!draft) return;
-  draft.brand = "";
-  draft.category = "";
-  draft.condition = "";
-  draft.batteryHealth = "";
-  draft.description = "";
-  draft.specs = [];
-  draft.includes = [];
-  draft.images = [];
-  draft.pendingFiles = [];
-  draft.storage = [];
-  renderVariantEditor();
-  renderVariantTabs();
-}
-
-/* Construye el objeto overrides de una variante. Solo incluye campos con
-   contenido real: lo vacío hereda del producto base (compatibilidad total). */
-function buildVariantOverrides(draft) {
-  const overrides = {};
-  if (draft.brand) overrides.brand = draft.brand;
-  if (draft.category) overrides.category = draft.category;
-  if (draft.condition) {
-    overrides.condition = draft.condition;
-    overrides.badge = draft.condition === "nuevo" ? "Nuevo" : "Seminuevo";
-  }
-  const battery = normalizeBatteryHealth(draft.batteryHealth);
-  if (battery !== null) overrides.batteryHealth = battery;
-  if (draft.description) overrides.description = draft.description;
-  if (draft.specs.length) overrides.specs = [...draft.specs];
-  if (draft.includes.length) overrides.includes = [...draft.includes];
-  const variantImages = uniqueImageUrls([...(draft.uploadedUrls || []), ...draft.images]);
-  if (variantImages.length) {
-    overrides.images = variantImages;
-    overrides.image = variantImages[0];
-  }
-  if (draft.storage.length) {
-    overrides.storage = draft.storage.map((item) => ({
-      name: item.name,
-      price: Number(item.price) || 0,
-      oldPrice: Number(item.oldPrice) || 0,
-      stock: item.stock === "" ? null : normalizeStockValue(item.stock)
-    }));
-  }
-  return Object.keys(overrides).length ? overrides : null;
-}
-
-/* Convierte los drafts en variants.colors para guardar en Supabase */
-function collectVariantsForSave() {
-  syncActiveVariantFromEditor();
-  return variantDrafts
-    .filter((draft) => draft.name.trim())
-    .map((draft) => {
-      const calculated = getColorRepresentations(draft.hex || "#cccccc");
-      const overrides = buildVariantOverrides(draft);
-      return {
-        name: draft.name.trim(),
-        // value se conserva como alias para el selector del cliente actual.
-        value: calculated.hex,
-        hex: calculated.hex,
-        rgb: calculated.rgb,
-        hsl: calculated.hsl,
-        oklch: calculated.oklch,
-        ...(overrides ? { overrides } : {})
-      };
-    });
-}
-
-/* Sube a Cloudinary los archivos pendientes de TODAS las variantes */
-async function uploadVariantImages(submitBtn) {
-  for (let index = 0; index < variantDrafts.length; index += 1) {
-    const draft = variantDrafts[index];
-    if (!draft.pendingFiles.length) continue;
-    const urls = await uploadProductImages(draft.pendingFiles, submitBtn);
-    draft.uploadedUrls = [...(draft.uploadedUrls || []), ...urls];
-    draft.images = uniqueImageUrls([...(draft.uploadedUrls || []), ...draft.images]);
-    draft.pendingFiles = [];
-  }
-}
-
-/* Descarga el estado original completo de un producto como archivo JSON.
-   Sirve como respaldo externo e inmediato antes de sobrescribirlo. */
-function downloadProductSnapshot(product) {
-  try {
-    const payload = {
-      _meta: {
-        tipo: "respaldo_previo_edicion",
-        productId: String(product.id),
-        descargadoEn: new Date().toISOString(),
-        restaurarCon: "scripts/restore_backup_supabase.mjs o pegando el JSON en Supabase"
-      },
-      producto: product
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    link.href = url;
-    link.download = `respaldo_producto-${String(product.id).replace(/[^\w-]/g, "")}_${stamp}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
-  } catch (err) {
-    console.warn("No se pudo descargar el respaldo previo del producto:", err);
-  }
+  colorsList.appendChild(row);
 }
 
 function addStorageRow(name = "128GB", price = 0, oldPrice = 0, stock = null) {
@@ -2650,10 +2199,6 @@ async function submitProductForm() {
       uploadedImageUrls = await uploadProductImages(pendingImageFiles, submitBtn);
     }
 
-    // Subida de imágenes propias de cada variante (a Cloudinary, sin tocar
-    // recursos existentes: solo se agregan archivos nuevos).
-    await uploadVariantImages(submitBtn);
-
     const orderedImageUrls = pendingImagesFirst
       ? [...uploadedImageUrls, ...directImageUrls]
       : [...directImageUrls, ...uploadedImageUrls];
@@ -2672,9 +2217,20 @@ async function submitProductForm() {
       .map((input) => input.value.trim())
       .filter(Boolean);
 
-    // Variantes de color con ficha independiente (overrides). Los colores sin
-    // contenido propio se guardan igual que siempre: compatibilidad total.
-    const colors = collectVariantsForSave();
+    const colors = [...colorsList.querySelectorAll(".color-row")]
+      .map((row) => {
+        const calculated = getColorRepresentations(row.querySelector(".color-hex")?.value || row.querySelector(".color-value")?.value);
+        return {
+          name: row.querySelector(".color-name")?.value.trim() || "",
+          // value se conserva como alias para el selector del cliente actual.
+          value: calculated.hex,
+          hex: calculated.hex,
+          rgb: row.querySelector(".color-rgb")?.value.trim() || calculated.rgb,
+          hsl: row.querySelector(".color-hsl")?.value.trim() || calculated.hsl,
+          oklch: row.querySelector(".color-oklch")?.value.trim() || calculated.oklch
+        };
+      })
+      .filter((color) => color.name);
 
     const storageVars = [...storageList.querySelectorAll(".dynamic-row")]
       .map((row) => {
@@ -2723,11 +2279,6 @@ async function submitProductForm() {
     if (submitBtn) setButtonLabel(submitBtn, "Guardando en Supabase...", "cloud-arrow-up");
 
     if (editingProductId) {
-      // Condición de seguridad: antes de modificar un producto publicado,
-      // conservar su estado original como archivo descargado (copia externa,
-      // recuperable sin depender del navegador ni del historial).
-      const original = products.find((item) => String(item.id) === String(editingProductId));
-      if (original) downloadProductSnapshot(original);
       // Actualizar documento existente
       productData.id = String(editingProductId);
       const productRef = doc(db, "productos", String(editingProductId));
