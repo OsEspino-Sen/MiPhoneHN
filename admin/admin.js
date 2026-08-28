@@ -1561,7 +1561,7 @@ function openProductModal(productId) {
   deleteProductBtn.hidden = !isEditing;
   if (drawerDangerZone) drawerDangerZone.hidden = !isEditing;
   if (drawerUpdateNotice) drawerUpdateNotice.hidden = !isEditing;
-  updateDrawerModeChip(null, false);
+  updateDrawerModeChip();
   if (drawerModeCopy) {
     drawerModeCopy.textContent = isEditing
       ? "Los cambios reemplazarán la información publicada"
@@ -2032,47 +2032,61 @@ function renderVariantColorMode(draft) {
   // una variante no tiene sentido (eliminar borra todo el grupo).
   if (drawerDangerZone) drawerDangerZone.hidden = isVariant || !editingProductId;
 
-  // Zona de riesgo (eliminar producto): SOLO en el producto principal. Desde
-  // una variante no tiene sentido (eliminar borra todo el grupo).
-  if (drawerDangerZone) drawerDangerZone.hidden = isVariant || !editingProductId;
-
   // Identificador premium del modo de edición: el chip se tiñe del color de la
-  // variante activa; el producto principal se muestra en negro sólido.
-  updateDrawerModeChip(draft, isVariant);
+  // variante activa, o del color representativo del producto principal.
+  updateDrawerModeChip();
 
   if (drawerModeCopy) {
     drawerModeCopy.textContent = isVariant
-      ? `Estás editando la variante${draft?.colorName ? ` "${draft.colorName}"` : ""} — se guarda dentro del producto principal`
+      ? `Estás editando la variante${draft?.colorName ? ` "${draft.colorName}"` : ""}`
       : (editingProductId
         ? "Los cambios reemplazarán la información publicada"
         : "Completa las secciones y guarda para publicar");
   }
 }
 
-// Aplica el color de la variante al chip del encabezado (con contraste automático)
-// o el estilo premium negro para el producto principal.
-function updateDrawerModeChip(draft, isVariant) {
+// Aplica el color identificador del chip del encabezado (con contraste
+// automático). Variante activa → su color; producto principal → su primer color.
+function updateDrawerModeChip() {
   if (!drawerModeChip) return;
-  if (isVariant && draft) {
-    const hex = normalizeHexColor(draft.hex || "#cccccc");
+  const isVariant = activeVariantIndex > 0;
+  let hex = null;
+  let label = "";
+
+  if (isVariant) {
+    const vd = variantDrafts[activeVariantIndex];
+    hex = normalizeHexColor(vd?.hex || "#cccccc");
+    label = vd?.colorName || "Variante";
+  } else {
+    const mainColors = (typeof getListColors === "function" ? getListColors() : null)
+      || variantDrafts[0]?.colors || [];
+    const first = mainColors.find((c) => c && c.name) || mainColors[0];
+    if (first?.name) {
+      hex = normalizeHexColor(first.value || first.hex || "#cccccc");
+      label = first.name;
+    }
+  }
+
+  if (hex && label) {
     drawerModeChip.classList.add("is-variant");
     drawerModeChip.style.setProperty("--chip-bg", hex);
-    if (drawerModeChipText) drawerModeChipText.textContent = draft.colorName || "Variante";
+    if (drawerModeChipText) drawerModeChipText.textContent = label;
     if (drawerModeSwatch) {
       drawerModeSwatch.style.setProperty("--swatch", hex);
       drawerModeSwatch.style.display = "inline-block";
     }
-    const brightness = (() => {
-      const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-      return (r * 299 + g * 587 + b * 114) / 1000;
-    })();
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
     drawerModeChip.style.color = brightness > 160 ? "#0e101c" : "#ffffff";
   } else {
     drawerModeChip.classList.remove("is-variant");
+    drawerModeChip.classList.add("is-editing");
     drawerModeChip.style.removeProperty("--chip-bg");
     drawerModeChip.style.removeProperty("color");
     if (drawerModeChipText) drawerModeChipText.textContent = editingProductId ? "Edición" : "Nuevo";
-    if (drawerModeSwatch) drawerModeSwatch.style.display = editingProductId ? "none" : "none";
+    if (drawerModeSwatch) drawerModeSwatch.style.display = "none";
   }
 }
 
@@ -2083,7 +2097,7 @@ function updateVariantHexInput(hex, updateDraft = true) {
   if (updateDraft) {
     const d = variantDrafts[activeVariantIndex];
     if (d) { d.hex = value.toUpperCase(); renderVariantBar(); }
-    if (activeVariantIndex > 0) updateDrawerModeChip(variantDrafts[activeVariantIndex], true);
+    if (activeVariantIndex > 0) updateDrawerModeChip();
   }
 }
 
@@ -2327,7 +2341,14 @@ function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
     if (/^#[0-9a-f]{6}$/i.test(hexInput.value.trim())) syncCalculatedValues(hexInput.value);
   });
   hexInput?.addEventListener("blur", () => syncCalculatedValues(hexInput.value));
-  row.querySelector(".remove-row-btn")?.addEventListener("click", () => row.remove());
+  const nameInput = row.querySelector(".color-name");
+  nameInput?.addEventListener("input", updateDrawerModeChip);
+  picker?.addEventListener("change", updateDrawerModeChip);
+  hexInput?.addEventListener("change", updateDrawerModeChip);
+  row.querySelector(".remove-row-btn")?.addEventListener("click", () => {
+    row.remove();
+    updateDrawerModeChip();
+  });
   colorsList.appendChild(row);
 }
 
