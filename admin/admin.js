@@ -590,6 +590,11 @@ const variantColorPicker = document.getElementById("variant-color-picker");
 const variantColorHexInput = document.getElementById("variant-color-hex");
 const fsColorsTitle = document.getElementById("fs-colors-title");
 const fsColorsCopy = document.getElementById("fs-colors-copy");
+/* Indicador flotante de "qué variante estoy editando" */
+const variantEditingIndicator = document.getElementById("variant-editing-indicator");
+const variantEditingLabel = document.getElementById("variant-editing-label") || variantEditingIndicator?.querySelector(".variant-editing-label");
+const variantEditingSwatch = document.getElementById("variant-editing-swatch");
+let variantBarObserver = null;
 const fileDropzone = document.getElementById("file-dropzone");
 const productImageFileInput = document.getElementById("product-image-file");
 const productImageUrlsInput = document.getElementById("product-image");
@@ -1589,6 +1594,9 @@ function closeProductModal() {
 }
 
 function forceCloseProductModal() {
+  variantBarObserver?.disconnect();
+  variantBarObserver = null;
+  if (variantEditingIndicator) variantEditingIndicator.classList.remove("visible");
   productModal.hidden = true;
   document.body.style.overflow = "";
   editingProductId = null;
@@ -2049,6 +2057,9 @@ function renderVariantColorMode(draft) {
         ? "Los cambios reemplazarán la información publicada"
         : "Completa las secciones y guarda para publicar");
   }
+
+  // Mantener la píldora flotante sincronizada con la variante activa.
+  updateVariantEditingIndicator();
 }
 
 function updateVariantHexInput(hex, updateDraft = true) {
@@ -2084,6 +2095,36 @@ function renderVariantBar() {
     btn.addEventListener("click", () => removeVariant(Number(btn.dataset.variantRemove)));
   });
   if (variantBar) variantBar.hidden = false;
+  setupVariantBarObserver();
+}
+
+/* Detecta cuándo la barra de variantes sale de la vista (scroll) para mostrar
+   la píldora flotante con el nombre de la variante activa. */
+function setupVariantBarObserver() {
+  if (!variantBar || !variantEditingIndicator || typeof IntersectionObserver === "undefined") return;
+  variantBarObserver?.disconnect();
+  variantBarObserver = new IntersectionObserver((entries) => {
+    const barraVisible = entries.some((entry) => entry.isIntersecting);
+    variantEditingIndicator.classList.toggle("visible", !barraVisible);
+  }, { root: document.getElementById("drawer-body") || null, threshold: 0 });
+  variantBarObserver.observe(variantBar);
+}
+
+/* Actualiza el contenido de la píldora flotante según la variante activa. */
+function updateVariantEditingIndicator() {
+  if (!variantEditingIndicator) return;
+  const isVariant = activeVariantIndex > 0;
+  const draft = variantDrafts[activeVariantIndex];
+  if (isVariant && draft) {
+    if (variantEditingLabel) variantEditingLabel.textContent = draft.colorName || `Variante ${activeVariantIndex}`;
+    if (variantEditingSwatch) {
+      variantEditingSwatch.style.setProperty("--swatch", draft.hex || "#cccccc");
+      variantEditingSwatch.style.display = "inline-block";
+    }
+  } else {
+    if (variantEditingLabel) variantEditingLabel.textContent = "Producto principal";
+    if (variantEditingSwatch) variantEditingSwatch.style.display = "none";
+  }
 }
 
 function switchVariant(index) {

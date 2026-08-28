@@ -708,6 +708,14 @@
         <div class="drawer-body" id="drawer-body">
           <input type="hidden" id="product-id">
 
+          <!-- Indicador flotante: qué variante estoy editando (aparece al hacer scroll) -->
+          <div class="variant-editing-indicator" id="variant-editing-indicator" aria-live="polite">
+            <span class="variant-editing-indicator-pill">
+              <span class="variant-editing-swatch" aria-hidden="true"></span>
+              <span class="variant-editing-label">Producto principal</span>
+            </span>
+          </div>
+
           <!-- Aviso de edición -->
           <div class="drawer-notice" id="drawer-update-notice" hidden>
             <span class="drawer-notice-icon"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i></span>
