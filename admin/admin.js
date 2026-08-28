@@ -528,6 +528,18 @@ let existingImageUrls = [];
 let pendingImageFiles = [];
 let pendingImagesFirst = false;
 let previewObjectUrls = [];
+
+/* ==========================================================================
+   VARIANTES DE PRODUCTO — copia íntegra del formulario por variante.
+   La primera entrada (índice 0) es SIEMPRE el producto principal. Cada
+   variante (índice >0) guarda su copia completa del formulario (todos los
+   campos, galería y archivos) de forma independiente pero agrupada bajo el
+   mismo producto. Solo se persiste al guardar, dentro de variants.colors con
+   `overrides` completos.
+   ========================================================================== */
+let variantDrafts = [];
+let activeVariantIndex = 0;
+let variantPreviewObjectUrls = [];
 /* Detección de cambios sin guardar del Drawer de producto. */
 let formSnapshot = null;
 let formIsDirty = false;
@@ -568,6 +580,16 @@ const confirmTitle = document.getElementById("confirm-title");
 const confirmMessage = document.getElementById("confirm-message");
 const confirmCancelBtn = document.getElementById("confirm-cancel-btn");
 const confirmOkBtn = document.getElementById("confirm-ok-btn");
+/* Barra de variantes: producto principal + variantes de ficha completa */
+const variantBar = document.getElementById("variant-bar");
+const variantBarTabs = document.getElementById("variant-bar-tabs");
+const addVariantBarBtn = document.getElementById("add-variant-bar-btn");
+const variantColorEditor = document.getElementById("variant-color-editor");
+const variantColorNameInput = document.getElementById("variant-color-name");
+const variantColorPicker = document.getElementById("variant-color-picker");
+const variantColorHexInput = document.getElementById("variant-color-hex");
+const fsColorsTitle = document.getElementById("fs-colors-title");
+const fsColorsCopy = document.getElementById("fs-colors-copy");
 const fileDropzone = document.getElementById("file-dropzone");
 const productImageFileInput = document.getElementById("product-image-file");
 const productImageUrlsInput = document.getElementById("product-image");
@@ -693,6 +715,29 @@ function init() {
   addSpecBtn?.addEventListener("click", () => addSpecRow());
   addColorBtn?.addEventListener("click", () => addColorRow());
   addStorageBtn?.addEventListener("click", () => addStorageRow());
+  /* Variantes de producto */
+  addVariantBarBtn?.addEventListener("click", () => {
+    const draft = snapshotFormToDraft(addVariantBarBtn);
+    const next = cloneDraft(draft);
+    next.isVariant = true;
+    next.colorName = "";
+    next.hex = "#cccccc";
+    variantDrafts.push(next);
+    activeVariantIndex = variantDrafts.length - 1;
+    applyDraftToForm(next);
+    renderVariantBar();
+    variantBar?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+  variantColorNameInput?.addEventListener("input", () => {
+    const draft = variantDrafts[activeVariantIndex];
+    if (draft) { draft.colorName = variantColorNameInput.value.trim(); renderVariantBar(); }
+  });
+  variantColorPicker?.addEventListener("input", () => { updateVariantHexInput(variantColorPicker.value); });
+  variantColorHexInput?.addEventListener("input", () => {
+    if (/^#[0-9a-fA-F]{6}$/.test(variantColorHexInput?.value?.trim() || "")) {
+      updateVariantHexInput(variantColorHexInput.value.trim());
+    }
+  });
   confirmCancelBtn?.addEventListener("click", closeConfirm);
   confirmOverlay?.addEventListener("click", closeConfirm);
   confirmOkBtn?.addEventListener("click", () => {
@@ -1548,6 +1593,9 @@ function forceCloseProductModal() {
   document.body.style.overflow = "";
   editingProductId = null;
   formSnapshot = null;
+  clearVariantPreviewObjectUrls();
+  variantDrafts = [];
+  activeVariantIndex = 0;
   formIsDirty = false;
   clearFieldErrors();
   clearPreviewObjectUrls();
@@ -1583,6 +1631,25 @@ function computeFormSnapshot() {
 
   parts.push(existingImageUrls.join("¦"));
   parts.push(String(pendingImageFiles.length));
+
+  // Variantes: incluir los drafts completos para detectar cambios sin guardar.
+  syncActiveVariantFromForm();
+  parts.push(variantDrafts.map((draft) => JSON.stringify({
+    colorName: draft.colorName,
+    hex: draft.hex,
+    title: draft.title,
+    brand: draft.brand,
+    category: draft.category,
+    condition: draft.condition,
+    batteryHealth: draft.batteryHealth,
+    description: draft.description,
+    includes: draft.includes,
+    specs: draft.specs,
+    storage: draft.storage,
+    galleryUrls: draft.galleryUrls,
+    pendingCount: (draft.pendingFiles || []).length,
+    colors: draft.colors
+  })).join("¦"));
 
   return parts.join("?");
 }
@@ -1700,6 +1767,9 @@ function fillProductForm(product) {
       addStorageRow(item.name, item.price, item.oldPrice, item.stock);
     }
   });
+
+  // Inicializar el editor de variantes (producto principal + variantes).
+  loadVariantsFromProduct(product);
 }
 
 function normalizeIncludes(items) {
@@ -1822,6 +1892,285 @@ function getColorRepresentations(hexValue) {
   };
 }
 
+/* ==========================================================================
+   VARIANTES DE PRODUCTO — snapshot del formulario completo por variante
+   ========================================================================== */
+
+function getFormValue(id) {
+  return document.getElementById(id)?.value ?? "";
+}
+
+function setFormValue(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value ?? "";
+}
+
+function getListValues(listId, sel) {
+  const list = document.getElementById(listId);
+  return list ? [...list.querySelectorAll(sel)].map((i) => i.value) : [];
+}
+
+function getListColors() {
+  return colorsList ? [...colorsList.querySelectorAll(".color-row")].map((row) => ({
+    name: row.querySelector(".color-name")?.value || "",
+    value: row.querySelector(".color-hex")?.value || row.querySelector(".color-value")?.value || "#cccccc"
+  })) : [];
+}
+
+function getStorageRows() {
+  return storageList ? [...storageList.querySelectorAll(".dynamic-row")].map((row) => ({
+    name: row.querySelector(".storage-name")?.value || "",
+    price: Number(row.querySelector(".storage-price")?.value) || 0,
+    oldPrice: Number(row.querySelector(".storage-old-price")?.value) || 0,
+    stock: row.querySelector(".storage-stock")?.value ?? ""
+  })) : [];
+}
+
+// Lee TODOS los campos del formulario (sin depender de un draft existente).
+function captureFormToObject() {
+  return {
+    isVariant: activeVariantIndex > 0,
+    colorName: variantColorNameInput?.value.trim() || "",
+    hex: variantColorHexInput?.value || "#cccccc",
+    title: getFormValue("product-title"),
+    brand: getFormValue("product-brand"),
+    category: getFormValue("product-category"),
+    condition: getFormValue("product-condition"),
+    batteryHealth: getFormValue("product-battery-health"),
+    description: getFormValue("product-description"),
+    galleryUrls: [...existingImageUrls],
+    pendingFiles: [...pendingImageFiles],
+    pendingImagesFirst,
+    includes: getListValues("includes-list", ".include-input"),
+    specs: getListValues("specs-list", ".spec-input"),
+    storage: getStorageRows(),
+    colors: getListColors()
+  };
+}
+
+function snapshotFormToDraft() {
+  return captureFormToObject();
+}
+
+// Sincroniza el formulario (incluida la galería) hacia el draft activo.
+function syncActiveVariantFromForm() {
+  const draft = variantDrafts[activeVariantIndex];
+  if (!draft) return;
+  draft.isVariant = activeVariantIndex > 0;
+  Object.assign(draft, captureFormToObject());
+}
+
+// Restaura una variante (snapshot) en el formulario COMPLETO.
+function applyDraftToForm(draft) {
+  if (!draft) return;
+  activeVariantIndex = variantDrafts.indexOf(draft) >= 0 ? variantDrafts.indexOf(draft) : 0;
+
+  setFormValue("product-title", draft.title);
+  setFormValue("product-brand", draft.brand);
+  setFormValue("product-category", draft.category || "iphones");
+  setFormValue("product-condition", draft.condition || "nuevo");
+  setFormValue("product-battery-health", draft.batteryHealth);
+  setFormValue("product-description", draft.description);
+
+  existingImageUrls = [...(draft.galleryUrls || [])];
+  pendingImageFiles = [...(draft.pendingFiles || [])];
+  pendingImagesFirst = !!draft.pendingImagesFirst;
+  if (productImageUrlsInput) productImageUrlsInput.value = existingImageUrls.join("\n");
+  renderProductImagesPreview();
+
+  includesList.innerHTML = "";
+  ((draft.includes || []).length ? draft.includes : [""]).forEach((item) => addIncludeRow(item));
+  specsList.innerHTML = "";
+  ((draft.specs || []).length ? draft.specs : [""]).forEach((item) => addSpecRow(item));
+  storageList.innerHTML = "";
+  const storage = (draft.storage && draft.storage.length) ? draft.storage : [{ name: "128GB", price: 0, oldPrice: 0, stock: null }];
+  storage.forEach((item) => addStorageRow(item.name, item.price, item.oldPrice, item.stock));
+
+  renderVariantColorMode(draft);
+  syncActiveVariantFromForm();
+  renderVariantBar();
+}
+
+function renderVariantColorMode(draft) {
+  const isVariant = activeVariantIndex > 0;
+  if (variantColorEditor) variantColorEditor.hidden = !isVariant;
+  if (colorsList) colorsList.hidden = isVariant;
+  const addColorBtn = document.getElementById("add-color-btn");
+  if (addColorBtn) addColorBtn.hidden = isVariant;
+  if (isVariant) {
+    variantColorNameInput.value = draft.colorName || "";
+    updateVariantHexInput(draft.hex || "#cccccc", false);
+  }
+}
+
+function updateVariantHexInput(hex, updateDraft = true) {
+  const value = normalizeHexColor(hex);
+  variantColorPicker.value = value.toLowerCase();
+  variantColorHexInput.value = value.toUpperCase();
+  if (updateDraft) { const d = variantDrafts[activeVariantIndex]; if (d) { d.hex = value.toUpperCase(); renderVariantBar(); } }
+}
+
+function renderVariantBar() {
+  if (!variantBarTabs) return;
+  variantBarTabs.innerHTML = variantDrafts
+    .map((draft, index) => {
+      const isMain = index === 0;
+      const isActive = index === activeVariantIndex;
+      const label = isMain ? "Producto principal" : (draft.colorName || `Variante ${index}`);
+      const swatch = isMain
+        ? '<i class="ph-bold ph-house" aria-hidden="true"></i>'
+        : `<span class="variant-bar-swatch" style="--swatch:${escapeHTML((draft.hex || "#cccccc").toLowerCase())}"></span>`;
+      return `
+        <div class="variant-bar-tab ${isActive ? "active" : ""} ${isMain ? "is-main" : ""}">
+          <button type="button" class="variant-bar-tab-btn" data-variant-index="${index}" role="tab" aria-selected="${isActive ? "true" : "false"}">
+            ${swatch}<span>${escapeHTML(label)}</span>
+          </button>
+          ${!isMain ? `<button type="button" class="variant-bar-remove" data-variant-remove="${index}" aria-label="Quitar variante" title="Quitar variante"><i class="ph ph-x" aria-hidden="true"></i></button>` : ""}
+        </div>`;
+    })
+    .join("");
+  variantBarTabs.querySelectorAll("[data-variant-index]").forEach((btn) => {
+    btn.addEventListener("click", () => switchVariant(Number(btn.dataset.variantIndex)));
+  });
+  variantBarTabs.querySelectorAll("[data-variant-remove]").forEach((btn) => {
+    btn.addEventListener("click", () => removeVariant(Number(btn.dataset.variantRemove)));
+  });
+  if (variantBar) variantBar.hidden = false;
+}
+
+function switchVariant(index) {
+  if (index === activeVariantIndex) return;
+  const current = variantDrafts[activeVariantIndex];
+  if (current) Object.assign(current, snapshotFormToDraft());
+  activeVariantIndex = Math.max(0, Math.min(index, variantDrafts.length - 1));
+  applyDraftToForm(variantDrafts[activeVariantIndex]);
+  renderVariantBar();
+}
+
+function removeVariant(index) {
+  if (index <= 0 || index >= variantDrafts.length) return;
+  const draft = variantDrafts[index];
+  showConfirm(
+    "Quitar variante",
+    `Se quitará la variante <strong>${escapeHTML(draft?.colorName || `Variante ${index}`)}</strong>. El cambio se aplicará al guardar el producto; hasta entonces puedes cancelar sin perder nada.`,
+    () => {
+      syncActiveVariantFromForm();
+      variantDrafts.splice(index, 1);
+      if (activeVariantIndex >= variantDrafts.length) activeVariantIndex = variantDrafts.length - 1;
+      applyDraftToForm(variantDrafts[activeVariantIndex]);
+      renderVariantBar();
+      captureFormBaseline();
+    },
+    { tone: "danger", okLabel: "Sí, quitar" }
+  );
+}
+function clearVariantPreviewObjectUrls() {
+  if (!variantPreviewObjectUrls.length) return;
+  variantPreviewObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  variantPreviewObjectUrls = [];
+}
+
+// Reinicia el editor de variantes para un producto nuevo.
+function resetVariantsEditor() {
+  clearVariantPreviewObjectUrls();
+  activeVariantIndex = 0;
+  variantDrafts = [captureFormToObject()];
+  rangeVariantMode();
+  renderVariantBar();
+}
+
+function rangeVariantMode() {
+  renderVariantColorMode(variantDrafts[activeVariantIndex]);
+  if (variantBar) variantBar.hidden = false;
+}
+
+// Carga las variantes existentes de un producto en el editor.
+function loadVariantsFromProduct(product) {
+  clearVariantPreviewObjectUrls();
+  activeVariantIndex = 0;
+  const base = captureFormToObject();
+  variantDrafts = [base];
+
+  const colors = Array.isArray(product?.variants?.colors) ? product.variants.colors : [];
+  colors.forEach((color) => {
+    const over = color?.overrides && typeof color.overrides === "object" ? color.overrides : null;
+    if (!over) return;
+    const draft = cloneDraft(base);
+    draft.colorName = color.name || "";
+    draft.hex = color.hex || color.value || "#cccccc";
+    draft.title = String(over.title ?? base.title ?? "");
+    draft.brand = String(over.brand ?? base.brand ?? "");
+    draft.category = String(over.category ?? base.category ?? "");
+    draft.condition = String(over.condition ?? base.condition ?? "");
+    draft.batteryHealth = over.batteryHealth ?? base.batteryHealth ?? "";
+    draft.description = String(over.description ?? base.description ?? "");
+    draft.galleryUrls = Array.isArray(over.images) ? over.images.map(String) : (over.image ? [String(over.image)] : [...(base.galleryUrls || [])]);
+    draft.pendingFiles = [];
+    draft.includes = Array.isArray(over.includes) ? over.includes.map(String) : ["..."];
+    draft.specs = Array.isArray(over.specs) ? over.specs.map(String) : [...(base.specs || ["..."])];
+    draft.storage = Array.isArray(over.storage)
+      ? over.storage.map((s) => ({ name: String(s?.name || ""), price: Number(s?.price) || 0, oldPrice: Number(s?.oldPrice) || 0, stock: s?.stock ?? "" }))
+      : [...(base.storage || [])];
+    draft.isVariant = true;
+    variantDrafts.push(draft);
+  });
+
+  // Mostrar pestañas solo si hay variantes.
+  renderVariantBar();
+  rangeVariantMode();
+}
+
+/* Serializa las variantes en variants.colors para guardar en Supabase. */
+function collectVariantsForSave() {
+  syncActiveVariantFromForm();
+  const colors = [];
+  (variantDrafts[0]?.colors || []).forEach((c) => {
+    const calculated = getColorRepresentations(c.value || c.hex || "#cccccc");
+    colors.push({ name: c.name, value: calculated.hex, hex: calculated.hex, rgb: calculated.rgb, hsl: calculated.hsl, oklch: calculated.oklch });
+  });
+  variantDrafts.slice(1).forEach((draft) => {
+    if (!draft.colorName) return;
+    const calculated = getColorRepresentations(draft.hex || "#cccccc");
+    const images = uniqueImageUrls([...(draft.galleryUrls || []), ...(draft.uploadedUrls || [])]);
+    const overrides = {};
+    if (draft.title) overrides.title = draft.title;
+    if (draft.brand) overrides.brand = draft.brand;
+    if (draft.category) overrides.category = draft.category;
+    if (draft.condition) { overrides.condition = draft.condition; overrides.badge = draft.condition === "nuevo" ? "Nuevo" : "Seminuevo"; }
+    const battery = normalizeBatteryHealth(draft.batteryHealth);
+    if (battery !== null) overrides.batteryHealth = battery;
+    if (draft.description) overrides.description = draft.description;
+    if (draft.specs && draft.specs.length) overrides.specs = draft.specs.filter(Boolean);
+    if (draft.includes && draft.includes.length) overrides.includes = draft.includes.filter(Boolean);
+    if (images.length) { overrides.images = images; overrides.image = images[0]; }
+    if (draft.storage && draft.storage.length) {
+      overrides.storage = draft.storage
+        .map((s) => ({
+          name: s.name, price: Number(s.price) || 0, oldPrice: Number(s.oldPrice) || 0,
+          stock: s.stock === "" || s.stock === null || s.stock === undefined ? null : normalizeStockValue(s.stock)
+        }))
+        .filter((s) => s.name);
+    }
+    colors.push({
+      name: draft.colorName.trim(), value: calculated.hex, hex: calculated.hex,
+      rgb: calculated.rgb, hsl: calculated.hsl, oklch: calculated.oklch,
+      overrides: Object.keys(overrides).length ? overrides : undefined
+    });
+  });
+  return colors.filter((c) => c.name);
+}
+
+// Sube a Cloudinary las imágenes pendientes de TODAS las variantes (incl. la principal).
+async function uploadAllVariantsImages(submitBtn) {
+  for (let index = 0; index < variantDrafts.length; index += 1) {
+    const draft = variantDrafts[index];
+    if (!draft.pendingFiles || draft.pendingFiles.length === 0) continue;
+    const urls = await uploadProductImages(draft.pendingFiles, submitBtn);
+    draft.uploadedUrls = [...(draft.uploadedUrls || []), ...urls];
+    draft.galleryUrls = uniqueImageUrls([...(draft.uploadedUrls || []), ...(draft.galleryUrls || [])]);
+    draft.pendingFiles = [];
+  }
+}
 function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
   const source = colorOrName && typeof colorOrName === "object"
     ? colorOrName
@@ -2166,6 +2515,13 @@ async function submitProductForm() {
       setButtonLabel(submitBtn, "Procesando...", "spinner-gap");
     }
 
+    // Guardar variantes: primero persistir los campos del draft activo, luego
+    // subir todas las imágenes pendientes (producto + variantes).
+    syncActiveVariantFromForm();
+    await uploadAllVariantsImages(submitBtn);
+    // Asegurar que el formulario muestre el PRODUCTO PRINCIPAL para leer sus datos base.
+    applyDraftToForm(variantDrafts[0]);
+
     const title = document.getElementById("product-title").value.trim();
     const brand = document.getElementById("product-brand").value.trim();
     const category = document.getElementById("product-category").value;
@@ -2217,20 +2573,7 @@ async function submitProductForm() {
       .map((input) => input.value.trim())
       .filter(Boolean);
 
-    const colors = [...colorsList.querySelectorAll(".color-row")]
-      .map((row) => {
-        const calculated = getColorRepresentations(row.querySelector(".color-hex")?.value || row.querySelector(".color-value")?.value);
-        return {
-          name: row.querySelector(".color-name")?.value.trim() || "",
-          // value se conserva como alias para el selector del cliente actual.
-          value: calculated.hex,
-          hex: calculated.hex,
-          rgb: row.querySelector(".color-rgb")?.value.trim() || calculated.rgb,
-          hsl: row.querySelector(".color-hsl")?.value.trim() || calculated.hsl,
-          oklch: row.querySelector(".color-oklch")?.value.trim() || calculated.oklch
-        };
-      })
-      .filter((color) => color.name);
+    const colors = collectVariantsForSave();
 
     const storageVars = [...storageList.querySelectorAll(".dynamic-row")]
       .map((row) => {

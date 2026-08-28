@@ -717,6 +717,15 @@
             </div>
           </div>
 
+          <!-- BARRA DE VARIANTES: producto principal + variantes de ficha completa -->
+          <div class="variant-bar" id="variant-bar">
+            <div class="variant-bar-tabs" id="variant-bar-tabs" role="tablist" aria-label="Producto y variantes"></div>
+            <button type="button" id="add-variant-bar-btn" class="variant-bar-add">
+              <i class="ph-bold ph-plus-circle" aria-hidden="true"></i>
+              <span>Agregar variante de este producto</span>
+            </button>
+          </div>
+
           <!-- 01 · Información principal -->
           <section class="form-section" id="fs-main">
             <header class="fs-head">
@@ -856,14 +865,31 @@
             <header class="fs-head">
               <span class="fs-icon fs-icon--pink"><i class="ph-duotone ph-palette" aria-hidden="true"></i></span>
               <div class="fs-copy">
-                <h3 class="section-heading">Colores disponibles</h3>
-                <p>Variantes de color que el cliente podrá elegir en la tienda.</p>
+                <h3 class="section-heading" id="fs-colors-title">Colores disponibles</h3>
+                <p id="fs-colors-copy">Variantes de color que el cliente podrá elegir en la tienda.</p>
               </div>
               <span class="fs-chip">Opcional</span>
             </header>
             <div class="fs-body">
               <div id="colors-list" class="dynamic-stack"></div>
               <button type="button" id="add-color-btn" class="btn btn-dashed btn-block"><i class="ph ph-plus" aria-hidden="true"></i> Agregar color</button>
+              <!-- Editor del color de la variante activa (solo modo variante) -->
+              <div class="variant-color-editor" id="variant-color-editor" hidden>
+                <p class="variant-color-hint"><i class="ph ph-info" aria-hidden="true"></i> Este es el color con el que el cliente identificará y seleccionará esta variante en la tienda.</p>
+                <div class="variant-color-row">
+                  <label class="variant-field">
+                    <span>Nombre del color *</span>
+                    <input type="text" id="variant-color-name" placeholder="Naranja, Negro, Azul…">
+                  </label>
+                  <div class="variant-field">
+                    <span>Color</span>
+                    <div class="color-compact-control">
+                      <input type="color" id="variant-color-picker" value="#cccccc" aria-label="Seleccionar color">
+                      <input type="text" id="variant-color-hex" value="#CCCCCC" maxlength="7" spellcheck="false" aria-label="Valor hexadecimal">
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 

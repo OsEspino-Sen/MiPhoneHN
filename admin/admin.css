@@ -4378,6 +4378,155 @@ body #products-table-body .data-grid-row::before {
   border-color: var(--brand-2)
 }
 
+/* ==========================================================================
+   VARIANTES DE PRODUCTO — barra superior + editor de color de la variante
+   ========================================================================== */
+.variant-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1.5px solid #0071e3;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 113, 227, .08), rgba(0, 113, 227, .02));
+}
+
+.variant-bar-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.variant-bar-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.variant-bar-tab.active {
+  border-color: #0071e3;
+  box-shadow: inset 0 0 0 1px #0071e3;
+}
+
+.variant-bar-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  font: inherit;
+  font-size: .8125rem;
+  font-weight: 650;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.variant-bar-tab-btn i {
+  font-size: 1rem;
+  color: #0071e3;
+}
+
+.variant-bar-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--swatch, #cccccc);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+  flex: none;
+}
+
+.variant-bar-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 6px 6px 6px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: .85rem;
+}
+
+.variant-bar-remove:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.variant-bar-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #0071e3;
+  color: #fff;
+  font: inherit;
+  font-size: .875rem;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: var(--sh-sm);
+  transition: transform .15s ease, box-shadow .15s ease;
+  flex: none;
+}
+
+.variant-bar-add:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--sh-md);
+}
+
+.variant-bar-add i {
+  font-size: 1.1rem;
+}
+
+/* Editor del color de la variante dentro de la sección Colores */
+.variant-color-editor {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+
+.variant-color-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .8125rem;
+  color: var(--ink-3);
+  margin: 0 0 12px;
+}
+
+.variant-color-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .variant-color-row {
+    grid-template-columns: 1fr;
+  }
+  .variant-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .variant-bar-add {
+    justify-content: center;
+  }
+}
 /* Bottom announcement — WHAT'S NEW de referencia */
 .ref-bottom {
   position: relative;
