@@ -1,0 +1,16 @@
+
+> miphone-app@1.0.0 dev
+> concurrently -k -n "CLIENT,ADMIN" -c "cyan.bold,magenta.bold" "vite --config vite.client.config.js" "vite --config vite.admin.config.js"
+
+(node:6320) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[CLIENT] 
+[CLIENT]   [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m415[22m[2m[0m ms[22m
+[CLIENT] 
+[CLIENT]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[CLIENT] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[ADMIN] 
+[ADMIN]   [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m411[22m[2m[0m ms[22m
+[ADMIN] 
+[ADMIN]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+[ADMIN] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m

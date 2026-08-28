@@ -1,5 +1,4 @@
-// Prueba temporal de las funciones de guardado de variantes del ADMIN
-// usando el código real de admin/admin.js (funciones puras sin DOM).
+// Prueba del flujo de variantes del ADMIN: copia íntegra y alternancia.
 import fs from "node:fs";
 
 const src = fs.readFileSync("admin/admin.js", "utf8");
@@ -9,53 +8,76 @@ function extract(name) {
   if (idx < 0) throw new Error(`Función ${name} no encontrada`);
   const start = src.indexOf("{", idx);
   let depth = 0;
+  let inStr = null;
   for (let i = start; i < src.length; i++) {
-    if (src[i] === "{") depth++;
-    else if (src[i] === "}") { depth--; if (depth === 0) return src.slice(idx, i + 1); }
+    const c = src[i];
+    if (inStr) { if (c === inStr && src[i - 1] !== "\\") inStr = null; continue; }
+    if (c === "'" || c === "\"" || c === "`") { inStr = c; continue; }
+    if (c === "{") depth++;
+    else if (c === "}") { depth--; if (depth === 0) return src.slice(idx, i + 1); }
   }
   throw new Error(`Llaves desbalanceadas en ${name}`);
 }
 
 const code = [
-  "const MAX_PRODUCT_IMAGES = 8;",
-  extract("normalizeBatteryHealth"),
-  extract("normalizeStockValue"),
-  extract("uniqueImageUrls"),
-  extract("getColorRepresentations"),
-  extract("buildVariantOverrides"),
-  "return { buildVariantOverrides };"
+  extract("cloneDraft"),
+  "return { cloneDraft };"
 ].join("\n");
 
 const fns = new Function(code)();
+
 let failures = 0;
 const check = (desc, cond) => { console.log(`${cond ? "✔" : "✘"} ${desc}`); if (!cond) failures++; };
 
-/* 1. Variante con ficha completa */
-const draftCompleta = {
-  brand: "Samsung", category: "galaxy-s", condition: "seminuevo",
-  batteryHealth: 92, description: "Desc variante",
-  specs: ["Pantalla 6.9"], includes: ["Cargador"],
-  images: ["a.jpg", "b.jpg", "a.jpg"], storage: [{ name: "256GB", price: 28500, oldPrice: 30000, stock: "3" }]
+/* Escenario: el usuario llena el producto principal y pulsa "Agregar variante".
+   Se copia TODA la información (copia íntegra) a la variante, que luego se
+   edita de forma independiente. */
+const principal = {
+  isVariant: false, colorName: "", hex: "#cccccc",
+  title: "Samsung Galaxy S25 Ultra", brand: "Samsung", category: "galaxy", condition: "nuevo",
+  batteryHealth: "100", description: "Descripción base",
+  galleryUrls: ["base-1.jpg", "base-2.jpg"], pendingFiles: [{ name: "f.png" }],
+  includes: ["Cargador", "Cable"], specs: ["Pantalla 6.9\"", "Chip"],
+  storage: [{ name: "256GB", price: 28000, oldPrice: 30000, stock: "5" }],
+  colors: [{ name: "Negro", value: "#111" }]
 };
-const o1 = fns.buildVariantOverrides(draftCompleta);
-check("Ficha completa: todos los campos presentes", o1.brand === "Samsung" && o1.category === "galaxy-s" && o1.condition === "seminuevo");
-check("Badge derivado de condición", o1.badge === "Seminuevo");
-check("Batería normalizada", o1.batteryHealth === 92);
-check("Imágenes deduplicadas con portada", o1.images.join("|") === "a.jpg|b.jpg" && o1.image === "a.jpg");
-check("Capacidad con stock numérico", o1.storage[0].name === "256GB" && o1.storage[0].price === 28500 && o1.storage[0].stock === 3);
 
-/* 2. Variante vacía → sin overrides (hereda del base, compatibilidad total) */
-const draftVacia = { brand: "", category: "", condition: "", batteryHealth: "", description: "", specs: [], includes: [], images: [], storage: [] };
-check("Variante vacía → overrides null (sin overrides en BD)", fns.buildVariantOverrides(draftVacia) === null);
+// El botón crea una copia íntegra (cloneDraft) y luego se edita como variante.
+const variante = fns.cloneDraft(principal);
+variante.title = "Samsung S25 Ultra (Edición Naranja)";
+variante.brand = "Samsung";         // copiado
+variante.category = "galaxy";
+variante.condition = "seminuevo";   // cambio
+variante.colorName = "Naranja";     // color nuevo
+variante.hex = "#F54927";
+variante.galleryUrls = ["naranja-1.jpg"]; // galería propia
+variante.storage = [{ name: "512GB", price: 34000, oldPrice: 0, stock: "2" }];
 
-/* 3. Variante con solo imágenes → overrides solo con imágenes */
-const o3 = fns.buildVariantOverrides({ ...draftVacia, images: ["x.jpg"] });
-check("Solo imágenes → overrides con images+image, nada más", o3.images.join("|") === "x.jpg" && o3.image === "x.jpg" && !o3.brand && !o3.storage);
+/* 1. El principal NO fue mutado al crear la variante */
+check("El producto principal conserva su título", principal.title === "Samsung Galaxy S25 Ultra");
+check("El producto principal conserva su galería", principal.galleryUrls.join("|") === "base-1.jpg|base-2.jpg");
+check("El producto principal conserva sus capacidades", principal.storage[0].name === "256GB" && principal.storage[0].price === 28000);
 
-/* 4. Stock vacío → null (compatibilidad con inventario indefinido) */
-const o4 = fns.buildVariantOverrides({ ...draftVacia, storage: [{ name: "128GB", price: 100, oldPrice: 0, stock: "" }] });
-check("Stock vacío → null", o4.storage[0].stock === null);
+/* 2. La variante copió TODA la información del principal */
+check("La variante copia marca/categoría/condición del principal", variante.brand === "Samsung" && variante.category === "galaxy");
+check("La variante copió descripción, includes y specs", variante.description === "Descripción base" && variante.includes.join(",") === "Cargador,Cable" && variante.specs.join(",") === 'Pantalla 6.9",Chip');
+check("La variante copió los archivos pendientes", variante.pendingFiles.length === 1 && variante.pendingFiles[0].name === "f.png");
+
+/* 3. La variante tiene datos independientes */
+check("La variante puede tener título, galería, capacidades y condición distintos", variante.title === "Samsung S25 Ultra (Edición Naranja)" && variante.galleryUrls[0] === "naranja-1.jpg" && variante.storage[0].name === "512GB" && variante.storage[0].price === 34000 && variante.condition === "seminuevo");
+check("La variante tiene color propio", variante.colorName === "Naranja" && variante.hex === "#F54927");
+
+/* 4. Cada variante mantiene su propio estado al alternar:
+   estar en la variante, volver al principal → se restauran sus datos completos */
+const principal2 = fns.cloneDraft(principal);
+const variante2 = fns.cloneDraft(principal2);
+variante2.title = "Edición Roja";
+variante2.hex = "#e11";
+variante2.storage = [{ name: "128GB", price: 22000, oldPrice: 0, stock: "1" }];
+// Cambio a la variante, luego regreso al principal.
+const principalRestaurado = fns.cloneDraft(principal2);
+check("Al regresar al Producto principal se restauran sus datos completos", principalRestaurado.title === "Samsung Galaxy S25 Ultra" && principalRestaurado.storage[0].price === 28000 && principalRestaurado.condition === "nuevo" && principalRestaurado.galleryUrls[0] === "base-1.jpg");
 
 console.log("");
-console.log(failures === 0 ? "TODAS LAS PRUEBAS DEL ADMIN PASARON ✔" : `${failures} PRUEBAS FALLARON ✘`);
+console.log(failures === 0 ? "TODAS LAS PRUEBAS PASARON ✔" : `${failures} PRUEBAS FALLARON ✘`);
 process.exit(failures === 0 ? 0 : 1);

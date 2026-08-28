@@ -1952,6 +1952,29 @@ function snapshotFormToDraft() {
   return captureFormToObject();
 }
 
+// Copia profunda de un draft (cada variante es independiente del principal).
+function cloneDraft(draft) {
+  return {
+    isVariant: !!draft.isVariant,
+    title: draft.title,
+    brand: draft.brand,
+    category: draft.category,
+    condition: draft.condition,
+    batteryHealth: draft.batteryHealth,
+    description: draft.description,
+    galleryUrls: [...(draft.galleryUrls || [])],
+    pendingFiles: [...(draft.pendingFiles || [])],
+    pendingImagesFirst: !!draft.pendingImagesFirst,
+    includes: [...(draft.includes || [])],
+    specs: [...(draft.specs || [])],
+    storage: (draft.storage || []).map((s) => ({ ...s })),
+    colors: (draft.colors || []).map((c) => ({ ...c })),
+    colorName: draft.colorName || "",
+    hex: draft.hex || "#cccccc",
+    uploadedUrls: [...(draft.uploadedUrls || [])]
+  };
+}
+
 // Sincroniza el formulario (incluida la galería) hacia el draft activo.
 function syncActiveVariantFromForm() {
   const draft = variantDrafts[activeVariantIndex];
