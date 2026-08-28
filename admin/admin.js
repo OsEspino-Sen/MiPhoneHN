@@ -729,7 +729,7 @@ function init() {
     activeVariantIndex = variantDrafts.length - 1;
     applyDraftToForm(next);
     renderVariantBar();
-    variantBar?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    variantBarTabs?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   });
   variantColorNameInput?.addEventListener("input", () => {
     const draft = variantDrafts[activeVariantIndex];

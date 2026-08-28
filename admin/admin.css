@@ -4432,18 +4432,25 @@ body #products-table-body .data-grid-row::before {
   background: var(--surface-2);
 }
 
-/* Chip del encabezado (identificador del modo): estilos definidos junto a la
-   cabecera del drawer (.drawer-mode-chip). Aquí solo la barra de variantes. */
-
+/* Pestañas de producto/variantes: FIJAS durante todo el scroll del formulario.
+   Son hijas directas del contenedor con scroll (.drawer-body) para que el ancla
+   sticky dure toda la página; el botón "Agregar variante" queda fuera y se va. */
 .variant-bar-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 12;
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
   padding: 3px;
   border-radius: 9px;
-  background: var(--surface);
+  background: var(--surface-2);
   border: 1px solid var(--line);
+  box-shadow: 0 10px 22px -16px rgba(14, 16, 28, .45);
 }
+
+/* Chip del encabezado (identificador del modo): estilos definidos junto a la
+   cabecera del drawer (.drawer-mode-chip). Aquí solo la barra de variantes. */
 
 .variant-bar-tab {
   position: relative;
