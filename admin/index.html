@@ -700,21 +700,13 @@
           <h2 id="modal-title">Producto</h2>
           <p class="drawer-subtitle"><i></i> <span id="drawer-mode-copy">Los cambios se sincronizan con la tienda al guardar</span></p>
         </div>
-        <span class="drawer-mode-chip" id="drawer-mode-chip">Nuevo</span>
+        <span class="drawer-mode-chip" id="drawer-mode-chip"><i class="drawer-mode-swatch" aria-hidden="true"></i><span class="drawer-mode-chip-text">Nuevo</span></span>
         <button type="button" id="modal-close-btn" class="btn-close-drawer" aria-label="Cerrar"><i class="ph ph-x" aria-hidden="true"></i></button>
       </header>
 
       <form id="product-form" class="drawer-form" novalidate>
         <div class="drawer-body" id="drawer-body">
           <input type="hidden" id="product-id">
-
-          <!-- Indicador flotante: qué variante estoy editando (aparece al hacer scroll) -->
-          <div class="variant-editing-indicator" id="variant-editing-indicator" aria-live="polite">
-            <span class="variant-editing-indicator-pill">
-              <span class="variant-editing-swatch" aria-hidden="true"></span>
-              <span class="variant-editing-label">Producto principal</span>
-            </span>
-          </div>
 
           <!-- Aviso de edición -->
           <div class="drawer-notice" id="drawer-update-notice" hidden>

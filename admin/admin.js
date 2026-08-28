@@ -590,11 +590,9 @@ const variantColorPicker = document.getElementById("variant-color-picker");
 const variantColorHexInput = document.getElementById("variant-color-hex");
 const fsColorsTitle = document.getElementById("fs-colors-title");
 const fsColorsCopy = document.getElementById("fs-colors-copy");
-/* Indicador flotante de "qué variante estoy editando" */
-const variantEditingIndicator = document.getElementById("variant-editing-indicator");
-const variantEditingLabel = document.getElementById("variant-editing-label") || variantEditingIndicator?.querySelector(".variant-editing-label");
-const variantEditingSwatch = document.getElementById("variant-editing-swatch");
-let variantBarObserver = null;
+/* Chip del encabezado: identifica el modo de edición (principal/variante) por color */
+const drawerModeSwatch = document.getElementById("drawer-mode-swatch");
+const drawerModeChipText = document.getElementById("drawer-mode-chip-text");
 const fileDropzone = document.getElementById("file-dropzone");
 const productImageFileInput = document.getElementById("product-image-file");
 const productImageUrlsInput = document.getElementById("product-image");
@@ -1559,14 +1557,11 @@ function openProductModal(productId) {
     fillProductForm(product);
   }
 
-  // Estados visuales del rediseño: chip de modo, aviso y zona de riesgo.
+  // Estados visuales del rediseño: chip de modo (premium), aviso y zona de riesgo.
   deleteProductBtn.hidden = !isEditing;
   if (drawerDangerZone) drawerDangerZone.hidden = !isEditing;
   if (drawerUpdateNotice) drawerUpdateNotice.hidden = !isEditing;
-  if (drawerModeChip) {
-    drawerModeChip.textContent = isEditing ? "Edición" : "Nuevo";
-    drawerModeChip.classList.toggle("is-editing", isEditing);
-  }
+  updateDrawerModeChip(null, false);
   if (drawerModeCopy) {
     drawerModeCopy.textContent = isEditing
       ? "Los cambios reemplazarán la información publicada"
@@ -1594,9 +1589,6 @@ function closeProductModal() {
 }
 
 function forceCloseProductModal() {
-  variantBarObserver?.disconnect();
-  variantBarObserver = null;
-  if (variantEditingIndicator) variantEditingIndicator.classList.remove("visible");
   productModal.hidden = true;
   document.body.style.overflow = "";
   editingProductId = null;
@@ -2040,16 +2032,14 @@ function renderVariantColorMode(draft) {
   // una variante no tiene sentido (eliminar borra todo el grupo).
   if (drawerDangerZone) drawerDangerZone.hidden = isVariant || !editingProductId;
 
-  // Identificador persistente del modo de edición en el encabezado del drawer.
-  if (drawerModeChip) {
-    if (isVariant) {
-      drawerModeChip.textContent = `Variante: ${draft?.colorName || "sin color"}`;
-      drawerModeChip.classList.add("is-variant");
-    } else {
-      drawerModeChip.textContent = editingProductId ? "Edición" : "Nuevo";
-      drawerModeChip.classList.remove("is-variant");
-    }
-  }
+  // Zona de riesgo (eliminar producto): SOLO en el producto principal. Desde
+  // una variante no tiene sentido (eliminar borra todo el grupo).
+  if (drawerDangerZone) drawerDangerZone.hidden = isVariant || !editingProductId;
+
+  // Identificador premium del modo de edición: el chip se tiñe del color de la
+  // variante activa; el producto principal se muestra en negro sólido.
+  updateDrawerModeChip(draft, isVariant);
+
   if (drawerModeCopy) {
     drawerModeCopy.textContent = isVariant
       ? `Estás editando la variante${draft?.colorName ? ` "${draft.colorName}"` : ""} — se guarda dentro del producto principal`
@@ -2057,16 +2047,44 @@ function renderVariantColorMode(draft) {
         ? "Los cambios reemplazarán la información publicada"
         : "Completa las secciones y guarda para publicar");
   }
+}
 
-  // Mantener la píldora flotante sincronizada con la variante activa.
-  updateVariantEditingIndicator();
+// Aplica el color de la variante al chip del encabezado (con contraste automático)
+// o el estilo premium negro para el producto principal.
+function updateDrawerModeChip(draft, isVariant) {
+  if (!drawerModeChip) return;
+  if (isVariant && draft) {
+    const hex = normalizeHexColor(draft.hex || "#cccccc");
+    drawerModeChip.classList.add("is-variant");
+    drawerModeChip.style.setProperty("--chip-bg", hex);
+    if (drawerModeChipText) drawerModeChipText.textContent = draft.colorName || "Variante";
+    if (drawerModeSwatch) {
+      drawerModeSwatch.style.setProperty("--swatch", hex);
+      drawerModeSwatch.style.display = "inline-block";
+    }
+    const brightness = (() => {
+      const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000;
+    })();
+    drawerModeChip.style.color = brightness > 160 ? "#0e101c" : "#ffffff";
+  } else {
+    drawerModeChip.classList.remove("is-variant");
+    drawerModeChip.style.removeProperty("--chip-bg");
+    drawerModeChip.style.removeProperty("color");
+    if (drawerModeChipText) drawerModeChipText.textContent = editingProductId ? "Edición" : "Nuevo";
+    if (drawerModeSwatch) drawerModeSwatch.style.display = editingProductId ? "none" : "none";
+  }
 }
 
 function updateVariantHexInput(hex, updateDraft = true) {
   const value = normalizeHexColor(hex);
   variantColorPicker.value = value.toLowerCase();
   variantColorHexInput.value = value.toUpperCase();
-  if (updateDraft) { const d = variantDrafts[activeVariantIndex]; if (d) { d.hex = value.toUpperCase(); renderVariantBar(); } }
+  if (updateDraft) {
+    const d = variantDrafts[activeVariantIndex];
+    if (d) { d.hex = value.toUpperCase(); renderVariantBar(); }
+    if (activeVariantIndex > 0) updateDrawerModeChip(variantDrafts[activeVariantIndex], true);
+  }
 }
 
 function renderVariantBar() {
@@ -2095,36 +2113,6 @@ function renderVariantBar() {
     btn.addEventListener("click", () => removeVariant(Number(btn.dataset.variantRemove)));
   });
   if (variantBar) variantBar.hidden = false;
-  setupVariantBarObserver();
-}
-
-/* Detecta cuándo la barra de variantes sale de la vista (scroll) para mostrar
-   la píldora flotante con el nombre de la variante activa. */
-function setupVariantBarObserver() {
-  if (!variantBar || !variantEditingIndicator || typeof IntersectionObserver === "undefined") return;
-  variantBarObserver?.disconnect();
-  variantBarObserver = new IntersectionObserver((entries) => {
-    const barraVisible = entries.some((entry) => entry.isIntersecting);
-    variantEditingIndicator.classList.toggle("visible", !barraVisible);
-  }, { root: document.getElementById("drawer-body") || null, threshold: 0 });
-  variantBarObserver.observe(variantBar);
-}
-
-/* Actualiza el contenido de la píldora flotante según la variante activa. */
-function updateVariantEditingIndicator() {
-  if (!variantEditingIndicator) return;
-  const isVariant = activeVariantIndex > 0;
-  const draft = variantDrafts[activeVariantIndex];
-  if (isVariant && draft) {
-    if (variantEditingLabel) variantEditingLabel.textContent = draft.colorName || `Variante ${activeVariantIndex}`;
-    if (variantEditingSwatch) {
-      variantEditingSwatch.style.setProperty("--swatch", draft.hex || "#cccccc");
-      variantEditingSwatch.style.display = "inline-block";
-    }
-  } else {
-    if (variantEditingLabel) variantEditingLabel.textContent = "Producto principal";
-    if (variantEditingSwatch) variantEditingSwatch.style.display = "none";
-  }
 }
 
 function switchVariant(index) {
