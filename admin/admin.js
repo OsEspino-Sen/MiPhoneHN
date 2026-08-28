@@ -2057,7 +2057,7 @@ function updateDrawerModeChip(draft, isVariant) {
     const hex = normalizeHexColor(draft.hex || "#cccccc");
     drawerModeChip.classList.add("is-variant");
     drawerModeChip.style.setProperty("--chip-bg", hex);
-    if (drawerModeChipText) drawerModeChipText.textContent = `Variante · ${draft.colorName || "Variante"}`;
+    if (drawerModeChipText) drawerModeChipText.textContent = draft.colorName || "Variante";
     if (drawerModeSwatch) {
       drawerModeSwatch.style.setProperty("--swatch", hex);
       drawerModeSwatch.style.display = "inline-block";

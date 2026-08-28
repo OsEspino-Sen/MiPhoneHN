@@ -2539,7 +2539,18 @@ body #products-table-body .data-grid-row::before {
   font-family: var(--font-mono);
   font-size: .71875rem;
   color: var(--ink-3);
-  font-weight: 500
+  font-weight: 500;
+  /* El subtítulo puede ser largo (variante); se trunca para NO empujar el chip. */
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden
+}
+
+.drawer-subtitle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
 }
 
 .drawer-subtitle i {
@@ -2552,6 +2563,7 @@ body #products-table-body .data-grid-row::before {
 
 .drawer-mode-chip {
   flex-shrink: 0;
+  margin-left: auto;
   padding: 5px 12px;
   border-radius: var(--r-pill);
   background: var(--success-bg);
