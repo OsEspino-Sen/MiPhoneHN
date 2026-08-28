@@ -1751,10 +1751,13 @@ function fillProductForm(product) {
   (product.specs?.length ? product.specs : [""]).forEach((spec) => addSpecRow(spec));
 
   colorsList.innerHTML = "";
-  const colors = product.variants?.colors?.length
+  // Solo colores del producto principal: los colores con `overrides` son
+  // variantes y se cargan como pestañas (evita duplicados en el guardado).
+  const allColors = product.variants?.colors?.length
     ? product.variants.colors
     : [{ name: "", value: "#cccccc" }];
-  colors.forEach((color) => addColorRow(color));
+  const baseColors = allColors.filter((color) => !color.overrides || !Object.keys(color.overrides).length);
+  (baseColors.length ? baseColors : [{ name: "", value: "#cccccc" }]).forEach((color) => addColorRow(color));
 
   storageList.innerHTML = "";
   const storageVars = product.variants?.storage?.length
@@ -2180,7 +2183,16 @@ function collectVariantsForSave() {
       overrides: Object.keys(overrides).length ? overrides : undefined
     });
   });
-  return colors.filter((c) => c.name);
+  // Deduplicación: si un color base tiene el mismo nombre que una variante,
+  // la variante manda (evita que el selector del cliente resuelva el duplicado
+  // sin datos, que es lo que hacía que "no cambiara nada" al elegir color).
+  const variantNames = new Set(colors.filter((c) => c.overrides).map((c) => c.name.trim().toLowerCase()));
+  return colors.filter((c, i) => {
+    if (c.overrides) return true;
+    const isDuplicate = variantNames.has(String(c.name || "").trim().toLowerCase());
+    if (isDuplicate) console.warn(`Color base duplicado con variante, se omite: "${c.name}"`);
+    return !isDuplicate;
+  });
 }
 
 // Sube a Cloudinary las imágenes pendientes de TODAS las variantes (incl. la principal).

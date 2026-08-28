@@ -110,6 +110,30 @@ const productoConVacios = { ...productoConVariantes, variants: { ...productoConV
 const rVacio = fns.resolveVariantProduct(productoConVacios, "X");
 check("Overrides vacíos: base se conserva (brand, images, storage)", rVacio.brand === "Samsung (base)" && fns.getStorageOptions(rVacio)[0].price === 20000 && fns.getProductImages(rVacio).join("|") === "base-1.jpg");
 
+/* 5. REGRESIÓN (producto-11): color duplicado — el que tiene overrides manda */
+const productoDuplicado = {
+  id: "producto-11", title: "iPhone 17 Pro", brand: "Apple", category: "iphones", price: 28800,
+  description: "Desc base", images: ["silver-1.jpg"],
+  variants: {
+    storage: [{ name: "256GB", price: 28800, oldPrice: 0, stock: 10 }],
+    colors: [
+      { name: "Silver", value: "#EBEBEB" },
+      { name: "Naranja", value: "#FF7B00" },                                  // duplicado SIN overrides
+      { name: "Naranja", value: "#FF7B00", overrides: {                       // variante real
+        title: "iPhone 17 Pro", storage: [{ name: "128GB", price: 25000, oldPrice: 27000, stock: 3 }],
+        description: "Edición naranja", images: ["naranja-1.jpg"], specs: ["Spec naranja"], brand: "Apple"
+      } }
+    ]
+  }
+};
+const rDup = fns.resolveVariantProduct(productoDuplicado, "Naranja");
+check("Duplicado: el resolver encuentra la VARIANTE (no el color plano)", rDup !== productoDuplicado);
+check("Duplicado: storage de la variante (128GB @ 25000)", fns.getStorageOptions(rDup)[0].name === "128GB" && fns.getStorageOptions(rDup)[0].price === 25000);
+check("Duplicado: descripción de la variante", rDup.description === "Edición naranja");
+check("Duplicado: imágenes de la variante", fns.getProductImages(productoDuplicado, "Naranja")[0] === "naranja-1.jpg");
+const rSilver = fns.resolveVariantProduct(productoDuplicado, "Silver");
+check("Color base sin duplicar sigue heredando normal", rSilver === productoDuplicado && fns.getStorageOptions(rSilver)[0].price === 28800);
+
 console.log("");
 console.log(failures === 0 ? "TODAS LAS PRUEBAS PASARON ✔" : `${failures} PRUEBAS FALLARON ✘`);
 process.exit(failures === 0 ? 0 : 1);

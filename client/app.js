@@ -1922,13 +1922,17 @@ function optimizeCloudinaryUrl(url, width = 800) {
 }
 
 function getProductImages(product, colorName = "") {
-  const selectedColor = colorName
-    ? product?.variants?.colors?.find((color) => String(color.name) === String(colorName))
-    : null;
+  const candidateColors = colorName
+    ? (product?.variants?.colors || []).filter((color) => String(color.name) === String(colorName))
+    : [];
   // Prioridad de imágenes para una variante de color:
   //   1. color.images / color.image (formato legado ya soportado)
   //   2. color.overrides.images / color.overrides.image (ficha completa de la variante)
   //   3. imágenes generales del producto (resuelto o base)
+  // Con nombres duplicados, priorizar el color con overrides (variante real).
+  const selectedColor = candidateColors.length > 1
+    ? (candidateColors.find((color) => color.overrides) || candidateColors[candidateColors.length - 1])
+    : candidateColors[0];
   const variantImages = Array.isArray(selectedColor?.overrides?.images) && selectedColor.overrides.images.length
     ? selectedColor.overrides.images
     : selectedColor?.overrides?.image
@@ -1959,7 +1963,12 @@ function resolveVariantProduct(product, colorName = "") {
   if (!product || !colorName) return product;
   const colors = product?.variants?.colors;
   if (!Array.isArray(colors)) return product;
-  const color = colors.find((item) => String(item?.name) === String(colorName));
+  // Si hay varios colores con el mismo nombre (dato antiguo duplicado),
+  // priorizar el que tiene overrides: es la variante real.
+  const matches = colors.filter((item) => String(item?.name) === String(colorName));
+  const color = matches.length > 1
+    ? (matches.find((item) => item.overrides) || matches[matches.length - 1])
+    : matches[0];
   const overrides = color?.overrides;
   if (!overrides || typeof overrides !== "object") return product;
 
