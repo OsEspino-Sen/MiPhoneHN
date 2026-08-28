@@ -4380,82 +4380,110 @@ body #products-table-body .data-grid-row::before {
 
 /* ==========================================================================
    VARIANTES DE PRODUCTO — barra superior + editor de color de la variante
+   Diseño plano y profesional: botones negros, sin sombras, sin degradados.
    ========================================================================== */
 .variant-bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 10px;
   margin-bottom: 16px;
-  border: 1.5px solid #0071e3;
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(0, 113, 227, .08), rgba(0, 113, 227, .02));
+  background: var(--surface-2);
 }
 
 .variant-bar-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  flex: 1 1 auto;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 
 .variant-bar-tab {
   position: relative;
   display: inline-flex;
   align-items: center;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  overflow: hidden;
+  border-radius: 7px;
+  background: transparent;
 }
 
 .variant-bar-tab.active {
-  border-color: #0071e3;
-  box-shadow: inset 0 0 0 1px #0071e3;
+  background: var(--ink);
 }
 
 .variant-bar-tab-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 14px;
+  padding: 8px 14px;
   font: inherit;
-  font-size: .8125rem;
-  font-weight: 650;
-  color: var(--ink);
+  font-size: .78125rem;
+  font-weight: 600;
+  color: var(--ink-2);
   background: transparent;
   border: 0;
+  border-radius: 7px;
   cursor: pointer;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+
+.variant-bar-tab-btn:hover {
+  color: var(--ink);
+}
+
+.variant-bar-tab.active .variant-bar-tab-btn {
+  color: #fff;
 }
 
 .variant-bar-tab-btn i {
-  font-size: 1rem;
-  color: #0071e3;
+  font-size: .95rem;
+  color: var(--ink-3);
+}
+
+.variant-bar-tab.active .variant-bar-tab-btn i {
+  color: #fff;
 }
 
 .variant-bar-swatch {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--swatch, #cccccc);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18);
   flex: none;
+}
+
+.variant-bar-tab.active .variant-bar-swatch {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
 }
 
 .variant-bar-remove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  margin: 6px 6px 6px 0;
+  width: 22px;
+  height: 22px;
+  margin: 0 5px 0 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
-  color: var(--ink-3);
+  color: var(--ink-4, var(--ink-3));
   cursor: pointer;
-  font-size: .85rem;
+  font-size: .8rem;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+
+.variant-bar-tab.active .variant-bar-remove {
+  color: rgba(255, 255, 255, .65);
+}
+
+.variant-bar-tab.active .variant-bar-remove:hover {
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
 }
 
 .variant-bar-remove:hover {
@@ -4466,28 +4494,35 @@ body #products-table-body .data-grid-row::before {
 .variant-bar-add {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
   border: 0;
-  border-radius: 12px;
-  background: #0071e3;
+  border-radius: 9px;
+  background: var(--ink);
   color: #fff;
   font: inherit;
-  font-size: .875rem;
-  font-weight: 750;
+  font-size: .75rem;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
   cursor: pointer;
-  box-shadow: var(--sh-sm);
-  transition: transform .15s ease, box-shadow .15s ease;
-  flex: none;
+  transition: background var(--t-fast);
 }
 
 .variant-bar-add:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--sh-md);
+  background: #23262f;
+}
+
+.variant-bar-add:active {
+  background: #000;
 }
 
 .variant-bar-add i {
-  font-size: 1.1rem;
+  font-size: 1rem;
+  font-weight: 400;
 }
 
 /* Editor del color de la variante dentro de la sección Colores */
@@ -4518,13 +4553,6 @@ body #products-table-body .data-grid-row::before {
 @media (max-width: 640px) {
   .variant-color-row {
     grid-template-columns: 1fr;
-  }
-  .variant-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .variant-bar-add {
-    justify-content: center;
   }
 }
 /* Bottom announcement — WHAT'S NEW de referencia */

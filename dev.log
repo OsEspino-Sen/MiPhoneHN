@@ -14,3 +14,8 @@
 [ADMIN] 
 [ADMIN]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
 [ADMIN] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[ADMIN] [2m6:27:27 p. m.[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2madmin.js[22m
+[ADMIN] [2m6:35:36 p. m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/admin.css?direct[22m
+[ADMIN] [2m6:35:44 p. m.[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mindex.html[22m
+[ADMIN] [2m6:36:18 p. m.[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2madmin.js[22m
+[ADMIN] [2m6:36:38 p. m.[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2madmin.js[22m

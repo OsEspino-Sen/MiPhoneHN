@@ -2645,6 +2645,9 @@ async function submitProductForm() {
     if (submitBtn) setButtonLabel(submitBtn, "Guardando en Supabase...", "cloud-arrow-up");
 
     if (editingProductId) {
+      // Respaldo previo: conservar el estado original antes de modificar.
+      const original = products.find((item) => String(item.id) === String(editingProductId));
+      if (original) downloadProductSnapshot(original, "previo_edicion");
       // Actualizar documento existente
       productData.id = String(editingProductId);
       const productRef = doc(db, "productos", String(editingProductId));
@@ -2685,11 +2688,25 @@ async function submitProductForm() {
 async function handleDeleteProduct() {
   if (!editingProductId) return;
 
+  // Transparencia total: indicar cuántas variantes se eliminan junto al producto.
+  const product = products.find((item) => String(item.id) === String(editingProductId));
+  const variantCount = (product?.variants?.colors || []).filter((c) => c?.overrides && Object.keys(c.overrides).length).length;
+  const variantNames = (product?.variants?.colors || [])
+    .filter((c) => c?.overrides && Object.keys(c.overrides).length)
+    .map((c) => c.name)
+    .join(", ");
+
+  const variantWarning = variantCount > 0
+    ? `<br><br><strong>Este producto tiene ${variantCount} variante${variantCount === 1 ? "" : "s"} configurada${variantCount === 1 ? "" : "s"}${variantNames ? ` (${escapeHTML(variantNames)})` : ""}. Al eliminarlo se borra TODO el grupo: el producto principal y todas sus variantes.</strong>`
+    : "";
+
   showConfirm(
     "Eliminar producto",
-    "Esta acción eliminará permanentemente el producto del catálogo y de la tienda. No se puede deshacer.",
+    `Esta acción eliminará permanentemente el producto del catálogo y de la tienda. No se puede deshacer.${variantWarning}`,
     async () => {
       try {
+        // Respaldo previo: descarga el estado completo del producto antes de borrarlo.
+        if (product) downloadProductSnapshot(product, "previo_eliminacion");
         const productRef = doc(db, "productos", String(editingProductId));
         await deleteDoc(productRef);
         forceCloseProductModal();
@@ -2698,8 +2715,37 @@ async function handleDeleteProduct() {
         showAlert("Error al eliminar producto: " + error.message, "error");
       }
     },
-    { tone: "danger", okLabel: "Sí, eliminar" }
+    { tone: "danger", okLabel: "Sí, eliminar todo" }
   );
+}
+
+/* Descarga el estado original completo de un producto como archivo JSON.
+   Sirve como respaldo externo e inmediato antes de modificarlo o eliminarlo. */
+function downloadProductSnapshot(product, motivo = "previo_edicion") {
+  try {
+    const payload = {
+      _meta: {
+        tipo: `respaldo_${motivo}`,
+        productId: String(product.id),
+        descargadoEn: new Date().toISOString(),
+        variantesIncluidas: (product?.variants?.colors || []).filter((c) => c?.overrides).map((c) => c.name),
+        restaurarCon: "scripts/restore_backup_supabase.mjs o pegando el JSON en Supabase"
+      },
+      producto: product
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    link.href = url;
+    link.download = `respaldo_producto-${String(product.id).replace(/[^\w-]/g, "")}_${motivo}_${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (err) {
+    console.warn("No se pudo descargar el respaldo del producto:", err);
+  }
 }
 
 /* Helpers UI */
