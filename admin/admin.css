@@ -4403,6 +4403,7 @@ body #products-table-body .data-grid-row::before {
   height: 30px;
   padding: 0 12px;
   border-radius: 999px;
+  white-space: nowrap;
 }
 
 .drawer-mode-chip.is-variant {
@@ -4427,6 +4428,9 @@ body #products-table-body .data-grid-row::before {
 .drawer-mode-chip-text {
   font-weight: 700;
   letter-spacing: .02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 .variant-bar-tabs {
