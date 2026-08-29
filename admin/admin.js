@@ -578,7 +578,6 @@ const colorsList = document.getElementById("colors-list");
 const storageList = document.getElementById("storage-list");
 const addIncludeBtn = document.getElementById("add-include-btn");
 const addSpecBtn = document.getElementById("add-spec-btn");
-const addColorBtn = document.getElementById("add-color-btn");
 const addStorageBtn = document.getElementById("add-storage-btn");
 const confirmDialog = document.getElementById("confirm-dialog");
 const confirmOverlay = document.getElementById("confirm-overlay");
@@ -594,6 +593,10 @@ const variantColorEditor = document.getElementById("variant-color-editor");
 const variantColorNameInput = document.getElementById("variant-color-name");
 const variantColorPicker = document.getElementById("variant-color-picker");
 const variantColorHexInput = document.getElementById("variant-color-hex");
+const variantColorRgbInput = document.getElementById("variant-color-rgb");
+const variantColorHslInput = document.getElementById("variant-color-hsl");
+const variantColorOklchInput = document.getElementById("variant-color-oklch");
+const variantColorRemoveBtn = document.getElementById("variant-color-remove-btn");
 const fsColorsTitle = document.getElementById("fs-colors-title");
 const fsColorsCopy = document.getElementById("fs-colors-copy");
 const duplicateVariantBtn = document.getElementById("duplicate-variant-btn");
@@ -721,7 +724,6 @@ function init() {
   deleteProductBtn?.addEventListener("click", handleDeleteProduct);
   addIncludeBtn?.addEventListener("click", () => addIncludeRow());
   addSpecBtn?.addEventListener("click", () => addSpecRow());
-  addColorBtn?.addEventListener("click", () => addColorRow());
   addStorageBtn?.addEventListener("click", () => addStorageRow());
   /* Variantes de producto */
   addVariantBarBtn?.addEventListener("click", () => {
@@ -753,6 +755,8 @@ function init() {
       updateVariantHexInput(variantColorHexInput.value.trim());
     }
   });
+  /* Quitar variante desde la fila de color (mismo flujo que la barra de variantes). */
+  variantColorRemoveBtn?.addEventListener("click", () => removeVariant(activeVariantIndex));
   confirmCancelBtn?.addEventListener("click", closeConfirm);
   confirmOverlay?.addEventListener("click", closeConfirm);
   confirmOkBtn?.addEventListener("click", () => {
@@ -2026,8 +2030,6 @@ function renderVariantColorMode(draft) {
   const isVariant = activeVariantIndex > 0;
   if (variantColorEditor) variantColorEditor.hidden = !isVariant;
   if (colorsList) colorsList.hidden = isVariant;
-  const addColorBtn = document.getElementById("add-color-btn");
-  if (addColorBtn) addColorBtn.hidden = isVariant;
   if (isVariant) {
     variantColorNameInput.value = draft.colorName || "";
     updateVariantHexInput(draft.hex || "#cccccc", false);
@@ -2072,6 +2074,12 @@ function updateVariantHexInput(hex, updateDraft = true) {
   const value = normalizeHexColor(hex);
   variantColorPicker.value = value.toLowerCase();
   variantColorHexInput.value = value.toUpperCase();
+  // Representaciones calculadas del color de la variante (RGB · HSL · OKLCH),
+  // mismo comportamiento que las filas de color del producto principal.
+  const reps = getColorRepresentations(value);
+  if (variantColorRgbInput) variantColorRgbInput.value = reps.rgb;
+  if (variantColorHslInput) variantColorHslInput.value = reps.hsl;
+  if (variantColorOklchInput) variantColorOklchInput.value = reps.oklch;
   if (updateDraft) {
     const d = variantDrafts[activeVariantIndex];
     if (d) { d.hex = value.toUpperCase(); renderVariantBar(); }

@@ -4769,18 +4769,6 @@ body #products-table-body .data-grid-row::before {
   }
 }
 
-.variant-color-row {
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr);
-  gap: 12px;
-  align-items: end;
-}
-
-@media (max-width: 640px) {
-  .variant-color-row {
-    grid-template-columns: 1fr;
-  }
-}
 /* Bottom announcement — WHAT'S NEW de referencia */
 .ref-bottom {
   position: relative;
