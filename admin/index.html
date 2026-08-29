@@ -699,7 +699,7 @@
                           <th>Rol</th>
                           <th>Estado</th>
                           <th>Fecha de creación</th>
-                          <th class="ta-right">Acciones</th>
+                          <th>Acciones</th>
                         </tr>
                       </thead>
                       <tbody id="usuarios-tbody"></tbody>
@@ -1185,14 +1185,14 @@
     <div class="confirm-card confirm-card--wide compare-card">
       <span class="confirm-eyebrow">Revisión de producto parecido</span>
       <h3 id="compare-import-title">Verificación lado a lado</h3>
-      <p class="backup-modal-hint">A la izquierda lo que vas a importar (editable). A la derecha el parecido que ya existe en tu base de datos (<strong>solo lectura</strong>). Decide: descartarlo, ajustar parámetros o guardarlo tal cual.</p>
+      <p class="backup-modal-hint">Comparación de solo lectura con el <strong>mismo formato del formulario de creación</strong>: a la izquierda el que quieres importar, a la derecha el que ya existe. Si es el mismo, descártalo; si es otro, pásalo al formulario de creación, donde podrás editarlo y guardarlo con la validación anti-duplicados.</p>
       <div class="compare-panes">
         <section class="compare-pane">
-          <header class="compare-pane-head is-editable"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Quiero importar <span id="compare-import-id" class="compare-pane-id"></span></header>
+          <header class="compare-pane-head is-editable"><i class="ph ph-package" aria-hidden="true"></i> Quiero importar <span id="compare-import-id" class="compare-pane-id"></span><span class="compare-pane-tag">solo lectura</span></header>
           <div class="compare-pane-body" id="compare-editable"></div>
         </section>
         <section class="compare-pane">
-          <header class="compare-pane-head is-readonly"><i class="ph ph-eye" aria-hidden="true"></i> Ya existe: <span id="compare-existing-id" class="compare-pane-id"></span></header>
+          <header class="compare-pane-head is-readonly"><i class="ph ph-database" aria-hidden="true"></i> Ya existe en tu catálogo <span id="compare-existing-id" class="compare-pane-id"></span></header>
           <div class="compare-pane-body compare-readonly" id="compare-existing"></div>
         </section>
       </div>
