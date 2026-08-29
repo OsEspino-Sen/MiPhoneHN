@@ -6228,11 +6228,16 @@ async function runExportBackup() {
     const { data, error } = await supabase.from("productos").select("*").in("id", ids);
     if (error) throw error;
     const envelope = buildBackupEnvelope(data);
-    const saved = await saveBackupToFolder(envelope, `miphone-productos-${backupStamp()}.json`);
+    const nombreArchivo = `miphone-productos-${backupStamp()}.json`;
+    const saved = await saveBackupToFolder(envelope, nombreArchivo);
     if (!saved) {
       setBackupStatus("export-status", "Exportación cancelada.", "info");
       return;
     }
+    pushExportLog({
+      archivo: nombreArchivo,
+      items: data.map((p) => ({ id: p.id, title: p.title || p.id }))
+    });
     setBackupStatus("export-status", `Backup exportado con ${data.length} producto(s).`, "info");
     showAlert(`Backup exportado con ${data.length} producto(s).`, "success");
     // Todo fue exitoso: cerrar la ventana de exportación automáticamente.
@@ -6274,6 +6279,8 @@ let productoDuplicadoBloqueado = false;
 let dupLiveTimer = null;
 const IMPORT_LOG_KEY = "miphone_import_log";
 const IMPORT_LOG_MAX = 30;
+const EXPORT_LOG_KEY = "miphone_export_log";
+const EXPORT_LOG_MAX = 30;
 
 function cmpSafeHex(value) {
   return /^#[0-9a-fA-F]{3,8}$/.test(String(value || "")) ? value : "#cccccc";
@@ -6757,6 +6764,46 @@ function appendImportItems(items) {
   entry.items = [...(entry.items || []), ...items];
   localStorage.setItem(IMPORT_LOG_KEY, JSON.stringify(log.slice(0, IMPORT_LOG_MAX)));
   renderImportLog();
+}
+
+/* ---------- HISTORIAL DE EXPORTACIONES (localStorage, sin tocar la BD) ---------- */
+function getExportLog() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(EXPORT_LOG_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function pushExportLog({ archivo, items = [] }) {
+  const entry = { id: `exp-${Date.now()}`, createdAt: new Date().toISOString(), archivo: archivo || "", count: items.length, items };
+  const log = getExportLog();
+  log.unshift(entry);
+  localStorage.setItem(EXPORT_LOG_KEY, JSON.stringify(log.slice(0, EXPORT_LOG_MAX)));
+  renderExportLog();
+}
+
+function renderExportLog() {
+  const listEl = document.getElementById("export-log-list");
+  if (!listEl) return;
+  const log = getExportLog();
+  if (!log.length) {
+    listEl.innerHTML = `<p class="backup-history-empty">Sin exportaciones registradas todavía. Cada exportación manual queda registrada aquí con sus productos.</p>`;
+    return;
+  }
+  listEl.innerHTML = log.map((entry) => {
+    const fecha = new Date(entry.createdAt);
+    const items = (entry.items || []).map((it) => `<li><i class="ph ph-package" aria-hidden="true"></i> <strong>${escapeHTML(String(it.title || it.id))}</strong> <span>${escapeHTML(String(it.id))}</span></li>`).join("");
+    return `
+    <div class="backup-history-item import-log-item">
+      <div class="backup-history-info">
+        <div class="backup-history-line"><strong>${escapeHTML(fecha.toLocaleDateString())} ${escapeHTML(fecha.toLocaleTimeString())}</strong>${entry.archivo ? `<span class="import-log-file"><i class="ph ph-file-json" aria-hidden="true"></i> ${escapeHTML(entry.archivo)}</span>` : ""}</div>
+        <div class="import-log-chips"><span class="analysis-chip is-create"><i class="ph ph-download-simple" aria-hidden="true"></i> ${entry.count ?? (entry.items || []).length} producto(s) exportado(s)</span></div>
+        <ul class="import-log-items">${items}</ul>
+      </div>
+    </div>`;
+  }).join("");
 }
 
 const IMPORT_ACCIONES = {
@@ -7292,20 +7339,23 @@ async function validarDuplicadoProductoEnVivo() {
 async function clearBackupHistory() {
   const history = getBackupHistory();
   const log = getImportLog();
-  if (history.length === 0 && log.length === 0) {
+  const exp = getExportLog();
+  if (history.length === 0 && log.length === 0 && exp.length === 0) {
     showAlert("El historial ya está vacío.", "info");
     return;
   }
   const ok = await pedirLlave(
     "Limpiar historial de backups",
-    `Se borrarán ${history.length} respaldo(s) automático(s) y ${log.length} registro(s) de importación guardados en ESTE navegador. Tu catálogo y tu base de datos no se tocan. Introduce tu llave de acceso para confirmar.`
+    `Se borrarán ${history.length} respaldo(s) automático(s), ${log.length} registro(s) de importación y ${exp.length} registro(s) de exportación guardados en ESTE navegador. Tu catálogo y tu base de datos no se tocan. Introduce tu llave de acceso para confirmar.`
   );
   if (!ok) return;
   // Solo historiales locales del navegador: la BD y el catálogo no se tocan.
   localStorage.removeItem(BACKUP_HISTORY_KEY);
   localStorage.removeItem(IMPORT_LOG_KEY);
+  localStorage.removeItem(EXPORT_LOG_KEY);
   renderBackupHistory();
   renderImportLog();
+  renderExportLog();
   showAlert("Historial limpiado. Tu catálogo y tu base de datos no fueron tocados.", "success");
 }
 
@@ -7331,15 +7381,17 @@ function initBackupSystem() {
   });
   document.getElementById("import-template-btn")?.addEventListener("click", openTemplateImportModal);
 
-  // Sub-pestañas del historial (respaldos automáticos / importaciones).
+  // Sub-pestañas del historial (respaldos automáticos / importaciones / exportaciones).
   document.querySelectorAll(".backup-subtab").forEach((tab) => {
     tab.addEventListener("click", () => {
       document.querySelectorAll(".backup-subtab").forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
-      const esRespaldos = tab.dataset.histtab === "respaldos";
-      document.getElementById("backups-history-list").hidden = !esRespaldos;
-      document.getElementById("import-log-list").hidden = esRespaldos;
-      if (!esRespaldos) renderImportLog();
+      const cual = tab.dataset.histtab;
+      document.getElementById("backups-history-list").hidden = cual !== "respaldos";
+      document.getElementById("import-log-list").hidden = cual !== "importaciones";
+      document.getElementById("export-log-list").hidden = cual !== "exportaciones";
+      if (cual === "importaciones") renderImportLog();
+      if (cual === "exportaciones") renderExportLog();
     });
   });
 
