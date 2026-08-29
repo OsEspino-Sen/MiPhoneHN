@@ -6168,6 +6168,9 @@ async function runExportBackup() {
       return;
     }
     setBackupStatus("export-status", `Backup exportado con ${data.length} producto(s).`, "info");
+    showAlert(`Backup exportado con ${data.length} producto(s).`, "success");
+    // Todo fue exitoso: cerrar la ventana de exportación automáticamente.
+    setTimeout(() => closeBackupModalById("export-backup-modal"), 1500);
   } catch (err) {
     setBackupStatus("export-status", `Error al exportar: ${err.message || err}`, "error");
   } finally {
@@ -6178,19 +6181,92 @@ async function runExportBackup() {
 /* ------------------------------------------------------------------
    RESTAURAR / IMPORTAR (Configuración → Backup)
    ------------------------------------------------------------------ */
+/* ---------- IMPORTACIÓN INTELIGENTE ----------
+   Al importar un archivo: los productos que YA existen se descartan
+   automáticamente (cero duplicados, nada se sobrescribe), los NUEVOS se
+   crean directamente, y los PARECIDOS pasan a una revisión lado a lado
+   (editable vs solo lectura) antes de decidir. Todo queda registrado. */
+let importAnalysis = null;      // resultado del análisis del archivo
+let importReviewQueue = [];     // [{row, matchId}] pendientes de revisión
+let importCurrentIndex = 0;
+let importSummary = null;       // {archivo, descartados, creados, revisados}
+let currentImportLogId = null;
+const IMPORT_LOG_KEY = "miphone_import_log";
+const IMPORT_LOG_MAX = 30;
+
+function cmpSafeHex(value) {
+  return /^#[0-9a-fA-F]{3,8}$/.test(String(value || "")) ? value : "#cccccc";
+}
+
+async function analyzeImportProducts(fileProducts) {
+  // IDs que ya existen en el catálogo destino (por lotes para no saturar la URL).
+  const existingIds = new Set();
+  const ids = fileProducts.map((p) => String(p.id)).filter(Boolean);
+  for (let i = 0; i < ids.length; i += 100) {
+    const lote = ids.slice(i, i + 100);
+    try {
+      const { data } = await supabase.from("productos").select("id").in("id", lote);
+      (data || []).forEach((r) => existingIds.add(String(r.id)));
+    } catch { /* sin info de IDs: se depende del detector de duplicados */ }
+  }
+  const discarded = [], toCreate = [], review = [];
+  for (const p of fileProducts) {
+    if (existingIds.has(String(p.id))) {
+      discarded.push({ row: p, razon: "ya existe un producto con ese ID" });
+      continue;
+    }
+    const dup = findBackupDuplicate(p);
+    if (dup?.level === "identical") {
+      discarded.push({ row: p, razon: `ya existe un producto idéntico (${dup.id})` });
+      continue;
+    }
+    if (dup?.level === "similar") {
+      review.push({ row: p, matchId: dup.id });
+      continue;
+    }
+    toCreate.push(p);
+  }
+  return { discarded, toCreate, review };
+}
+
+function renderAnalysisChips(analysis) {
+  const el = document.getElementById("restore-analysis");
+  if (!el) return;
+  el.hidden = false;
+  document.getElementById("analysis-descartados").textContent = String(analysis.discarded.length);
+  document.getElementById("analysis-creados").textContent = String(analysis.toCreate.length);
+  document.getElementById("analysis-revision").textContent = String(analysis.review.length);
+}
+
 async function onRestoreFileChosen(event) {
   const file = event.target.files?.[0];
   backupRestorePayload = null;
+  importAnalysis = null;
+  importReviewQueue = [];
+  importSummary = null;
   document.getElementById("restore-backup-list").innerHTML = "";
+  document.getElementById("restore-analysis").hidden = true;
   document.getElementById("restore-run-btn").disabled = true;
-  const resultEl = document.getElementById("restore-result");
-  resultEl.hidden = true;
   setBackupStatus("restore-status", "");
   try {
     backupRestorePayload = await readBackupFile(file);
+    backupRestorePayload._archivo = file.name;
     document.getElementById("restore-file-label").innerHTML =
       `<i class="ph ph-check-circle" aria-hidden="true"></i> ${escapeHTML(file.name)} — ${backupRestorePayload.count} producto(s)`;
-    await renderRestoreBackupList(backupRestorePayload.products);
+    if (backupRestorePayload.count === 0) {
+      document.getElementById("restore-backup-list").innerHTML = `<div class="backup-list-empty">El archivo no contiene productos.</div>`;
+      setBackupStatus("restore-status", "El archivo no contiene productos.", "error");
+      return;
+    }
+    setBackupStatus("restore-status", "Analizando el archivo contra tu catálogo…");
+    importAnalysis = await analyzeImportProducts(backupRestorePayload.products);
+    renderAnalysisChips(importAnalysis);
+    if (importAnalysis.toCreate.length === 0 && importAnalysis.review.length === 0) {
+      setBackupStatus("restore-status", "Todos los productos del archivo ya existen en tu catálogo: no hay nada por crear.", "info");
+      return;
+    }
+    document.getElementById("restore-run-btn").disabled = false;
+    setBackupStatus("restore-status", `Listo: ${importAnalysis.discarded.length} se descartarán, ${importAnalysis.toCreate.length} se crearán${importAnalysis.review.length ? `, ${importAnalysis.review.length} esperan revisión` : ""}. Pulsa Importar.`);
   } catch (err) {
     setBackupStatus("restore-status", err.message, "error");
     document.getElementById("restore-file-label").textContent = "Haz clic para elegir un archivo .json";
@@ -6199,37 +6275,305 @@ async function onRestoreFileChosen(event) {
   }
 }
 
-async function renderRestoreBackupList(products) {
-  const listEl = document.getElementById("restore-backup-list");
-  if (!products.length) {
-    listEl.innerHTML = `<div class="backup-list-empty">El archivo no contiene productos.</div>`;
+async function runSmartImport() {
+  if (!esAdmin()) {
+    setBackupStatus("restore-status", "Solo un administrador puede importar productos.", "error");
     return;
   }
-  // Determinar destino por id: actualizará (existe) o creará (no existe).
-  let existingIds = new Set();
+  if (!backupRestorePayload?.products?.length || !importAnalysis) return;
+  const btn = document.getElementById("restore-run-btn");
+  setButtonBusy(btn, true, "Importando…");
   try {
-    const ids = products.map((p) => String(p.id));
-    const { data } = await supabase.from("productos").select("id").in("id", ids);
-    existingIds = new Set((data || []).map((r) => String(r.id)));
-  } catch { /* sin info de destino, se etiqueta genérico */ }
+    const creados = [];
+    for (const row of importAnalysis.toCreate) {
+      // Doble verificación: si el ID apareció mientras tanto, descartar en vez
+      // de sobrescribir. Nada del catálogo actual se pisa en esta ventana.
+      const { data: exists } = await supabase.from("productos").select("id").eq("id", String(row.id)).maybeSingle();
+      if (exists) {
+        importAnalysis.discarded.push({ row, razon: "apareció en el catálogo durante la importación" });
+        continue;
+      }
+      const { error } = await supabase.from("productos").upsert(camelToSnakeRow(row));
+      if (error) throw new Error(`Fallo al crear "${row.title || row.id}": ${error.message}`);
+      creados.push(row);
+    }
+    importReviewQueue = importAnalysis.review.map((r) => ({ ...r }));
+    importSummary = {
+      archivo: backupRestorePayload._archivo || "",
+      descartados: importAnalysis.discarded.length,
+      creados: creados.length,
+      revisados: 0
+    };
+    currentImportLogId = pushImportLog({
+      archivo: importSummary.archivo,
+      items: [
+        ...importAnalysis.discarded.map((d) => ({ id: d.row.id, title: d.row.title || d.row.id, accion: "descartado", detalle: d.razon })),
+        ...creados.map((r) => ({ id: r.id, title: r.title || r.id, accion: "creado", detalle: "producto nuevo creado desde el backup" })),
+        ...importReviewQueue.map((r) => ({ id: r.row.id, title: r.row.title || r.row.id, accion: "revision", detalle: `parecido a ${r.matchId}; pendiente de revisión` }))
+      ]
+    });
+    renderAnalysisChips(importAnalysis);
+    showAlert(`Importación: ${creados.length} creado(s), ${importAnalysis.discarded.length} descartado(s) por ya existir${importReviewQueue.length ? `, ${importReviewQueue.length} por revisar` : ""}.`, "success");
+    finishImportIfDone();
+  } catch (err) {
+    setBackupStatus("restore-status", err.message || String(err), "error");
+    showAlert(`Error al importar: ${err.message || err}`, "error");
+  } finally {
+    setButtonBusy(btn, false);
+    if (btn) btn.disabled = true; // la importación masiva es de una sola pasada
+  }
+}
 
-  listEl.innerHTML = products.map((p) => {
-    const exists = existingIds.has(String(p.id));
-    const dup = findBackupDuplicate(p);
-    return `
-    <label class="backup-product-item">
-      <input type="checkbox" class="restore-check" value="${escapeHTML(String(p.id))}" checked>
-      <span class="backup-item-title">${escapeHTML(p.title || "(sin título)")}</span>
-      ${backupDupBadge(dup)}
-      <span class="backup-item-dest ${exists ? "is-update" : "is-create"}">${exists ? "Actualizará" : "Creará nuevo"}</span>
-      <span class="backup-item-id">${escapeHTML(String(p.id))}</span>
-    </label>`;
-  }).join("");
-
-  document.querySelectorAll("#restore-backup-list .restore-check").forEach((chk) => {
-    chk.addEventListener("change", updateRestoreRunState);
+function renderImportReviewQueue() {
+  const listEl = document.getElementById("restore-backup-list");
+  if (!listEl) return;
+  if (importReviewQueue.length === 0) {
+    listEl.innerHTML = `<div class="backup-list-empty">Sin productos pendientes de revisión.</div>`;
+    return;
+  }
+  listEl.innerHTML = importReviewQueue.map((item, i) => `
+    <button type="button" class="backup-product-item backup-product-item--btn" data-review-index="${i}">
+      <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+      <span class="backup-item-title">${escapeHTML(item.row.title || "(sin título)")}</span>
+      <span class="backup-item-dest is-review">Se parece a ${escapeHTML(String(item.matchId))}</span>
+      <span class="backup-item-id">${escapeHTML(String(item.row.id))}</span>
+    </button>`).join("");
+  listEl.querySelectorAll("[data-review-index]").forEach((btn) => {
+    btn.addEventListener("click", () => openCompareForm(Number(btn.dataset.reviewIndex)));
   });
-  updateRestoreRunState();
+}
+
+function finishImportIfDone() {
+  renderImportReviewQueue();
+  if (importReviewQueue.length > 0) {
+    setBackupStatus("restore-status", `${importReviewQueue.length} producto(s) pendiente(s) de revisión. Revísalos abajo.`, "info");
+    return;
+  }
+  const s = importSummary || { descartados: 0, creados: 0, revisados: 0 };
+  setBackupStatus("restore-status", `Importación completada: ${s.creados} creado(s), ${s.descartados} descartado(s), ${s.revisados} revisado(s).`, "info");
+  showAlert(`Importación completada: ${s.creados} creado(s), ${s.descartados} descartado(s), ${s.revisados} revisado(s). Todo quedó en el historial de importaciones.`, "success");
+  // Todo fue exitoso: cerrar la ventana de importación automáticamente.
+  setTimeout(() => {
+    closeBackupModalById("compare-import-modal");
+    closeBackupModalById("restore-backup-modal");
+  }, 1600);
+}
+
+/* ---------- REVISIÓN LADO A LADO ---------- */
+function openCompareForm(index) {
+  importCurrentIndex = index;
+  const item = importReviewQueue[index];
+  if (!item) return;
+  document.getElementById("compare-import-id").textContent = `(${String(item.row.id)})`;
+  document.getElementById("compare-existing-id").textContent = `${String(item.matchId)} — solo lectura`;
+  buildCompareEditable(item.row);
+  buildCompareReadonly(item.matchId);
+  openBackupModalById("compare-import-modal");
+}
+
+function buildCompareEditable(row) {
+  const colors = Array.isArray(row?.variants?.colors) ? row.variants.colors : [];
+  const storage = Array.isArray(row?.variants?.storage) ? row.variants.storage : [];
+  const images = Array.isArray(row?.images) ? row.images : [];
+  const includes = Array.isArray(row?.includes) ? row.includes : [];
+  const specs = Array.isArray(row?.specs) ? row.specs : [];
+  const battery = row.battery_health ?? row.batteryHealth;
+  document.getElementById("compare-editable").innerHTML = `
+    <div class="cmp-grid">
+      <label class="cmp-field"><span>Nombre del producto</span><input type="text" id="cmp-title" value="${escapeHTML(row.title || "")}"></label>
+      <label class="cmp-field"><span>Marca</span><input type="text" id="cmp-brand" value="${escapeHTML(row.brand || "")}"></label>
+      <label class="cmp-field"><span>Categoría</span><input type="text" id="cmp-category" value="${escapeHTML(row.category || "")}"></label>
+      <label class="cmp-field"><span>Condición</span>
+        <select id="cmp-condition">
+          <option value="nuevo" ${row.condition === "nuevo" ? "selected" : ""}>Nuevo</option>
+          <option value="seminuevo" ${row.condition === "seminuevo" ? "selected" : ""}>Seminuevo</option>
+        </select>
+      </label>
+      <label class="cmp-field"><span>Salud de batería (%)</span><input type="number" id="cmp-battery" min="0" max="100" value="${battery ?? ""}"></label>
+    </div>
+    <label class="cmp-field"><span>Descripción</span><textarea id="cmp-description" rows="4">${escapeHTML(row.description || "")}</textarea></label>
+    <div class="cmp-grid2">
+      <label class="cmp-field"><span>Incluye (uno por línea)</span><textarea id="cmp-includes" rows="3">${escapeHTML(includes.join("\n"))}</textarea></label>
+      <label class="cmp-field"><span>Especificaciones (una por línea)</span><textarea id="cmp-specs" rows="3">${escapeHTML(specs.join("\n"))}</textarea></label>
+      <label class="cmp-field"><span>Colores (Nombre | #HEX)</span><textarea id="cmp-colors" rows="3">${escapeHTML(colors.map((c) => `${c.name || ""} | ${cmpSafeHex(c.hex || c.value)}`).join("\n"))}</textarea></label>
+      <label class="cmp-field"><span>Capacidades (Nombre | precio | precioNormal | stock)</span><textarea id="cmp-storage" rows="3">${escapeHTML(storage.map((s) => `${s.name || ""} | ${Number(s.price) || 0} | ${Number(s.oldPrice ?? s.old_price) || 0} | ${s.stock ?? ""}`).join("\n"))}</textarea></label>
+      <label class="cmp-field cmp-field--full"><span>Imágenes (una URL por línea)</span><textarea id="cmp-images" rows="3">${escapeHTML(images.join("\n"))}</textarea></label>
+    </div>`;
+}
+
+function buildCompareReadonly(matchId) {
+  const existing = (Array.isArray(products) ? products : []).find((p) => String(p.id) === String(matchId));
+  const el = document.getElementById("compare-existing");
+  if (!el) return;
+  if (!existing) { el.innerHTML = `<div class="backup-list-empty">No se encontró el producto existente.</div>`; return; }
+  const colors = Array.isArray(existing.variants?.colors) ? existing.variants.colors : [];
+  const storage = Array.isArray(existing.variants?.storage) ? existing.variants.storage : [];
+  const images = Array.isArray(existing.images) ? existing.images : [];
+  const includes = Array.isArray(existing.includes) ? existing.includes : [];
+  const specs = Array.isArray(existing.specs) ? existing.specs : [];
+  el.innerHTML = `
+    ${images[0] ? `<img class="cmp-hero" src="${escapeHTML(images[0])}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ""}
+    <h4 class="cmp-ro-title">${escapeHTML(existing.title || "")}</h4>
+    <p class="cmp-ro-meta">${escapeHTML(existing.brand || "")} · ${escapeHTML(existing.category || "")} · ${existing.condition === "seminuevo" ? "Seminuevo" : "Nuevo"}${existing.batteryHealth != null ? ` · batería ${escapeHTML(String(existing.batteryHealth))}%` : ""}</p>
+    ${existing.description ? `<p class="cmp-ro-desc">${escapeHTML(existing.description)}</p>` : ""}
+    ${includes.length ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Incluye</span><ul>${includes.map((i) => `<li>${escapeHTML(String(i))}</li>`).join("")}</ul></div>` : ""}
+    ${specs.length ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Especificaciones</span><ul>${specs.map((s) => `<li>${escapeHTML(String(s))}</li>`).join("")}</ul></div>` : ""}
+    ${colors.length ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Colores (${colors.length})</span><div class="cmp-ro-colors">${colors.map((c) => `<span class="cmp-ro-color"><i style="--swatch:${cmpSafeHex(c.hex || c.value)}" aria-hidden="true"></i>${escapeHTML(c.name || "")}</span>`).join("")}</div></div>` : ""}
+    ${storage.length ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Capacidades</span><table class="cmp-ro-storage"><thead><tr><th>Capacidad</th><th>Precio</th><th>Normal</th><th>Stock</th></tr></thead><tbody>${storage.map((s) => `<tr><td>${escapeHTML(s.name || "")}</td><td>${formatCurrency(Number(s.price) || 0)}</td><td>${formatCurrency(Number(s.oldPrice ?? s.old_price) || 0)}</td><td>${s.stock ?? "—"}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    ${images.length > 1 ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Imágenes (${images.length})</span><div class="cmp-ro-imgs">${images.slice(0, 6).map((u) => `<img src="${escapeHTML(u)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`).join("")}</div></div>` : ""}
+  `;
+}
+
+function collectCompareRow() {
+  const item = importReviewQueue[importCurrentIndex];
+  const row = camelToSnakeRow({ ...item.row });
+  const val = (id) => document.getElementById(id)?.value ?? "";
+  const lines = (id) => val(id).split("\n").map((l) => l.trim()).filter(Boolean);
+  row.title = val("cmp-title").trim();
+  row.brand = val("cmp-brand").trim();
+  row.category = val("cmp-category").trim() || row.category;
+  row.condition = val("cmp-condition") || "nuevo";
+  row.badge = row.condition === "nuevo" ? "Nuevo" : "Seminuevo";
+  const battery = val("cmp-battery").trim();
+  row.battery_health = battery === "" ? null : Math.min(100, Math.max(0, Math.round(Number(battery) || 0)));
+  row.description = val("cmp-description").trim();
+  row.includes = lines("cmp-includes");
+  row.specs = lines("cmp-specs");
+  row.images = lines("cmp-images");
+  row.image = row.images[0] || row.image || "";
+  const defaultColor = getColorRepresentations("#cccccc");
+  const colors = lines("cmp-colors").map((line) => {
+    const [name, hex] = line.split("|").map((s) => s.trim());
+    if (!name) return null;
+    const calculated = getColorRepresentations(hex || "#cccccc");
+    return { name, value: calculated.hex, hex: calculated.hex, rgb: calculated.rgb, hsl: calculated.hsl, oklch: calculated.oklch };
+  }).filter(Boolean);
+  const storage = lines("cmp-storage").map((line) => {
+    const parts = line.split("|").map((s) => s.trim());
+    if (!parts[0]) return null;
+    return {
+      name: parts[0],
+      price: Number(parts[1]) || 0,
+      oldPrice: Number(parts[2]) || 0,
+      stock: parts[3] === undefined || parts[3] === "" ? null : Math.max(0, Math.floor(Number(parts[3]) || 0))
+    };
+  }).filter(Boolean);
+  row.variants = {
+    ...(row.variants && typeof row.variants === "object" ? row.variants : {}),
+    colors: colors.length ? colors : [{ name: "Estándar", value: defaultColor.hex, ...defaultColor }],
+    storage
+  };
+  return row;
+}
+
+async function saveCompareImport() {
+  const item = importReviewQueue[importCurrentIndex];
+  if (!item) { closeBackupModalById("compare-import-modal"); return; }
+  const row = collectCompareRow();
+  const btn = document.getElementById("compare-save-btn");
+  setButtonBusy(btn, true, "Guardando…");
+  try {
+    // Nunca sobrescribir: si el ID apareció mientras tanto, no escribir nada.
+    const { data: exists } = await supabase.from("productos").select("id").eq("id", String(row.id)).maybeSingle();
+    if (exists) {
+      showAlert(`El ID ${escapeHTML(String(row.id))} ya existe ahora en el catálogo; no se escribió nada para evitar pisarlo.`, "error");
+      return;
+    }
+    const { error } = await supabase.from("productos").upsert(row);
+    if (error) throw error;
+    appendImportItems([{ id: row.id, title: row.title || row.id, accion: "importado", detalle: `revisado lado a lado contra ${item.matchId}; guardado con los valores verificados` }]);
+    if (importSummary) importSummary.revisados += 1;
+    importReviewQueue.splice(importCurrentIndex, 1);
+    closeBackupModalById("compare-import-modal");
+    finishImportIfDone();
+  } catch (err) {
+    showAlert(`Error al guardar: ${err.message || err}`, "error");
+  } finally {
+    setButtonBusy(btn, false);
+  }
+}
+
+function discardCompareImport() {
+  const item = importReviewQueue[importCurrentIndex];
+  if (!item) { closeBackupModalById("compare-import-modal"); return; }
+  showConfirm(
+    "Descartar producto",
+    `No se importará <strong>${escapeHTML(item.row.title || String(item.row.id))}</strong>. Quedará registrado en el historial de importaciones como descartado en la revisión.`,
+    () => {
+      appendImportItems([{ id: item.row.id, title: item.row.title || item.row.id, accion: "descartado", detalle: `descartado en la revisión lado a lado (parecido a ${item.matchId})` }]);
+      if (importSummary) importSummary.revisados += 1;
+      importReviewQueue.splice(importCurrentIndex, 1);
+      closeBackupModalById("compare-import-modal");
+      finishImportIfDone();
+    },
+    { tone: "danger", okLabel: "Sí, descartar" }
+  );
+}
+
+/* ---------- HISTORIAL DE IMPORTACIONES (localStorage, sin tocar la BD) ---------- */
+function getImportLog() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(IMPORT_LOG_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function pushImportLog({ archivo, items = [] }) {
+  const entry = { id: `imp-${Date.now()}`, createdAt: new Date().toISOString(), archivo: archivo || "", items };
+  const log = getImportLog();
+  log.unshift(entry);
+  localStorage.setItem(IMPORT_LOG_KEY, JSON.stringify(log.slice(0, IMPORT_LOG_MAX)));
+  renderImportLog();
+  return entry.id;
+}
+
+function appendImportItems(items) {
+  const log = getImportLog();
+  const entry = log.find((e) => e.id === currentImportLogId) || log[0];
+  if (!entry) return;
+  entry.items = [...(entry.items || []), ...items];
+  localStorage.setItem(IMPORT_LOG_KEY, JSON.stringify(log.slice(0, IMPORT_LOG_MAX)));
+  renderImportLog();
+}
+
+const IMPORT_ACCIONES = {
+  descartado: { icono: "ph-x-circle", clase: "is-discard", texto: "Descartado" },
+  creado: { icono: "ph-plus-circle", clase: "is-create", texto: "Creado" },
+  importado: { icono: "ph-check-circle", clase: "is-ok", texto: "Importado" },
+  revision: { icono: "ph-magnifying-glass", clase: "is-review", texto: "A revisión" }
+};
+
+function renderImportLog() {
+  const listEl = document.getElementById("import-log-list");
+  if (!listEl) return;
+  const log = getImportLog();
+  if (!log.length) {
+    listEl.innerHTML = `<p class="backup-history-empty">Sin importaciones registradas todavía. Cada importación queda registrada aquí con sus productos descartados, creados e importados.</p>`;
+    return;
+  }
+  listEl.innerHTML = log.map((entry) => {
+    const fecha = new Date(entry.createdAt);
+    const counts = {};
+    (entry.items || []).forEach((it) => { counts[it.accion] = (counts[it.accion] || 0) + 1; });
+    const chips = Object.entries(counts).map(([acc, n]) => {
+      const a = IMPORT_ACCIONES[acc] || { icono: "ph-dot", clase: "is-review", texto: acc };
+      return `<span class="analysis-chip ${a.clase}"><i class="ph ${a.icono}" aria-hidden="true"></i> ${n} ${a.texto.toLowerCase()}</span>`;
+    }).join("");
+    const items = (entry.items || []).map((it) => {
+      const a = IMPORT_ACCIONES[it.accion] || { icono: "ph-dot", clase: "" };
+      return `<li class="${a.clase || ""}"><i class="ph ${a.icono}" aria-hidden="true"></i> <strong>${escapeHTML(String(it.title || it.id))}</strong>${it.detalle ? ` — <span>${escapeHTML(it.detalle)}</span>` : ""}</li>`;
+    }).join("");
+    return `
+    <div class="backup-history-item import-log-item">
+      <div class="backup-history-info">
+        <div class="backup-history-line"><strong>${escapeHTML(fecha.toLocaleDateString())} ${escapeHTML(fecha.toLocaleTimeString())}</strong>${entry.archivo ? `<span class="import-log-file"><i class="ph ph-file-json" aria-hidden="true"></i> ${escapeHTML(entry.archivo)}</span>` : ""}</div>
+        <div class="import-log-chips">${chips}</div>
+        <ul class="import-log-items">${items}</ul>
+      </div>
+    </div>`;
+  }).join("");
 }
 
 function getSelectedRestoreProducts() {
@@ -6573,7 +6917,11 @@ function initBackupSystem() {
   document.getElementById("export-backup-btn")?.addEventListener("click", openExportBackupModal);
   document.getElementById("restore-backup-btn")?.addEventListener("click", async () => {
     backupRestorePayload = null;
+    importAnalysis = null;
+    importReviewQueue = [];
+    importSummary = null;
     document.getElementById("restore-backup-list").innerHTML = "";
+    document.getElementById("restore-analysis").hidden = true;
     document.getElementById("restore-run-btn").disabled = true;
     document.getElementById("restore-result").hidden = true;
     document.getElementById("restore-file-label").textContent = "Haz clic para elegir un archivo .json";
@@ -6583,6 +6931,22 @@ function initBackupSystem() {
   });
   document.getElementById("import-template-btn")?.addEventListener("click", openTemplateImportModal);
 
+  // Sub-pestañas del historial (respaldos automáticos / importaciones).
+  document.querySelectorAll(".backup-subtab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".backup-subtab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      const esRespaldos = tab.dataset.histtab === "respaldos";
+      document.getElementById("backups-history-list").hidden = !esRespaldos;
+      document.getElementById("import-log-list").hidden = esRespaldos;
+      if (!esRespaldos) renderImportLog();
+    });
+  });
+
+  // Revisión lado a lado.
+  document.getElementById("compare-discard-btn")?.addEventListener("click", discardCompareImport);
+  document.getElementById("compare-save-btn")?.addEventListener("click", saveCompareImport);
+
   document.getElementById("export-select-all")?.addEventListener("change", (event) => {
     document.querySelectorAll("#export-backup-list .export-check").forEach((c) => { c.checked = event.target.checked; });
     updateExportCount();
@@ -6591,7 +6955,7 @@ function initBackupSystem() {
   document.getElementById("export-cancel-btn")?.addEventListener("click", () => closeBackupModalById("export-backup-modal"));
 
   document.getElementById("restore-file-input")?.addEventListener("change", onRestoreFileChosen);
-  document.getElementById("restore-run-btn")?.addEventListener("click", () => runRestoreBackup());
+  document.getElementById("restore-run-btn")?.addEventListener("click", () => runSmartImport());
   document.getElementById("restore-cancel-btn")?.addEventListener("click", () => closeBackupModalById("restore-backup-modal"));
 
   document.getElementById("template-file-input")?.addEventListener("change", onTemplateFileChosen);
