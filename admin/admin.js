@@ -3037,7 +3037,11 @@ async function submitProductForm() {
       images: borradorDup.galleryUrls || [],
       variants: { colors: borradorDup.colors || [], storage: borradorDup.storage || [] }
     };
-    const duplicado = buscarDuplicadoEnCatalogo(candidatoDup, isEditing ? String(editingProductId) : null);
+    const duplicado = buscarDuplicadoEnLista(
+      candidatoDup,
+      isEditing ? String(editingProductId) : null,
+      await fetchCatalogoLigero()
+    );
     if (duplicado && duplicado.matched >= 5) {
       setFieldError("product-title", `Este producto ya existe (${duplicado.id}): mismas características. No se permiten duplicados.`);
       document.getElementById("product-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -6253,12 +6257,13 @@ async function analyzeImportProducts(fileProducts) {
     } catch { /* sin info de IDs: se depende del detector de duplicados */ }
   }
   const discarded = [], toCreate = [], review = [];
+  const catalogoDup = await fetchCatalogoLigero();
   for (const p of fileProducts) {
     if (existingIds.has(String(p.id))) {
       discarded.push({ row: p, razon: "ya existe un producto con ese ID", matchId: String(p.id) });
       continue;
     }
-    const dup = findBackupDuplicate(p);
+    const dup = findBackupDuplicate(p, catalogoDup);
     if (dup?.level === "identical") {
       discarded.push({ row: p, razon: `ya existe un producto idéntico (${dup.id})`, matchId: dup.id });
       continue;
@@ -6997,14 +7002,31 @@ function backupFacets(row) {
   };
 }
 
-/* Busca en el catálogo actual el producto con el mismo título que más facetas
+/* Catálogo LIGERO leído DIRECTAMENTE de la base de datos para las
+   comparaciones de duplicados. NO depende del array en memoria (`products`),
+   que puede estar vacío o desactualizado si realtime falla: así el bloqueo
+   anti-duplicados nunca se puede saltar. */
+async function fetchCatalogoLigero() {
+  try {
+    const { data, error } = await supabase
+      .from("productos")
+      .select("id,title,brand,category,images,variants");
+    if (error) throw error;
+    if (Array.isArray(data) && data.length) return data;
+  } catch (err) {
+    console.warn("[backup] No se pudo leer el catálogo para duplicados:", err);
+  }
+  return Array.isArray(products) ? products : [];
+}
+
+/* Busca en una lista de productos el que tenga el mismo título que más facetas
    comparta con el candidato (marca, categoría, colores, capacidades, imágenes).
    excludeId: ID a ignorar (el propio producto en edición). */
-function buscarDuplicadoEnCatalogo(candidate, excludeId = null) {
+function buscarDuplicadoEnLista(candidate, excludeId, lista) {
   const f = backupFacets(candidate);
   if (!f.title) return null;
   let best = null;
-  for (const cand of (Array.isArray(products) ? products : [])) {
+  for (const cand of (Array.isArray(lista) ? lista : [])) {
     if (excludeId && String(cand?.id) === String(excludeId)) continue;
     if (normalizeCatalogText(cand?.title) !== f.title) continue;
     const c = backupFacets(cand);
@@ -7020,8 +7042,8 @@ function buscarDuplicadoEnCatalogo(candidate, excludeId = null) {
   return best;
 }
 
-function findBackupDuplicate(fileRow) {
-  const best = buscarDuplicadoEnCatalogo(fileRow);
+function findBackupDuplicate(fileRow, lista = products) {
+  const best = buscarDuplicadoEnLista(fileRow, null, lista);
   if (!best) return null;
   if (best.matched >= 5) return { level: "identical", ...best };
   if (best.matched >= 3) return { level: "similar", ...best };
@@ -7046,11 +7068,13 @@ async function onTemplateFileChosen(event) {
   setBackupStatus("template-status", "");
   try {
     backupTemplatePayload = await readBackupFile(file);
+    backupTemplatePayload._archivo = file.name;
+    const catalogoDup = await fetchCatalogoLigero();
     document.getElementById("template-file-label").innerHTML =
       `<i class="ph ph-check-circle" aria-hidden="true"></i> ${escapeHTML(file.name)} — ${backupTemplatePayload.count} producto(s)`;
     const listEl = document.getElementById("template-import-list");
     listEl.innerHTML = backupTemplatePayload.products.map((p) => {
-      const dup = findBackupDuplicate(p);
+      const dup = findBackupDuplicate(p, catalogoDup);
       return `
       <button type="button" class="backup-product-item backup-product-item--btn" data-template-id="${escapeHTML(String(p.id))}">
         <i class="ph ph-arrow-bend-down-right" aria-hidden="true"></i>
@@ -7118,7 +7142,7 @@ function liberarBloqueoDuplicado() {
   try { updateVariantColorWarning(); } catch { /* no bloquea */ }
 }
 
-function validarDuplicadoProductoEnVivo() {
+async function validarDuplicadoProductoEnVivo() {
   try {
     if (!productModal || productModal.hidden) return;
     const saveBtn = document.getElementById("save-product-btn");
@@ -7132,7 +7156,13 @@ function validarDuplicadoProductoEnVivo() {
       images: draft.galleryUrls || [],
       variants: { colors: draft.colors || [], storage: draft.storage || [] }
     };
-    const dup = buscarDuplicadoEnCatalogo(candidatoDup, editingProductId);
+    // Consulta DIRECTA a la BD (no al array en memoria): el bloqueo funciona
+    // aunque realtime no haya cargado el catálogo.
+    const catalogo = await fetchCatalogoLigero();
+    // El usuario pudo seguir escribiendo durante la consulta: aplicar solo si
+    // el título sigue siendo el mismo.
+    if (String(getFormValue("product-title") || "").trim().toLowerCase() !== title.toLowerCase()) return;
+    const dup = buscarDuplicadoEnLista(candidatoDup, editingProductId, catalogo);
     if (dup && dup.matched >= 5) {
       productoDuplicadoBloqueado = true;
       setFieldError("product-title", `Este producto ya existe (${dup.id}): mismas características. No se permiten duplicados.`);
