@@ -3092,9 +3092,6 @@ async function submitProductForm() {
     if (submitBtn) setButtonLabel(submitBtn, "Guardando en Supabase...", "cloud-arrow-up");
 
     if (editingProductId) {
-      // Respaldo previo: conservar el estado original antes de modificar.
-      const original = products.find((item) => String(item.id) === String(editingProductId));
-      if (original) downloadProductSnapshot(original, "previo_edicion");
       // Actualizar documento existente
       productData.id = String(editingProductId);
       const productRef = doc(db, "productos", String(editingProductId));
@@ -3156,8 +3153,9 @@ async function handleDeleteProduct() {
     `Esta acción eliminará permanentemente el producto del catálogo y de la tienda. No se puede deshacer.${variantWarning}`,
     async () => {
       try {
-        // Respaldo previo: descarga el estado completo del producto antes de borrarlo.
-        if (product) downloadProductSnapshot(product, "previo_eliminacion");
+        // Respaldo previo: el estado completo del producto se guarda en el
+        // HISTORIAL LOCAL de la pestaña Backup (sin descargar nada a la PC).
+        if (product) storeProductSnapshot(product, "previo_eliminacion");
         const productRef = doc(db, "productos", String(editingProductId));
         await deleteDoc(productRef);
         forceCloseProductModal();
@@ -3168,35 +3166,6 @@ async function handleDeleteProduct() {
     },
     { tone: "danger", okLabel: "Sí, eliminar todo" }
   );
-}
-
-/* Descarga el estado original completo de un producto como archivo JSON.
-   Sirve como respaldo externo e inmediato antes de modificarlo o eliminarlo. */
-function downloadProductSnapshot(product, motivo = "previo_edicion") {
-  try {
-    const payload = {
-      _meta: {
-        tipo: `respaldo_${motivo}`,
-        productId: String(product.id),
-        descargadoEn: new Date().toISOString(),
-        variantesIncluidas: (product?.variants?.colors || []).filter((c) => c?.overrides).map((c) => c.name),
-        restaurarCon: "scripts/restore_backup_supabase.mjs o pegando el JSON en Supabase"
-      },
-      producto: product
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    link.href = url;
-    link.download = `respaldo_producto-${String(product.id).replace(/[^\w-]/g, "")}_${motivo}_${stamp}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
-  } catch (err) {
-    console.warn("No se pudo descargar el respaldo del producto:", err);
-  }
 }
 
 /* Helpers UI */
@@ -6251,6 +6220,28 @@ function updateRestoreRunState() {
   if (btn) btn.disabled = getSelectedRestoreProducts().length === 0;
 }
 
+/* Guarda un snapshot de un producto en el HISTORIAL LOCAL (pestaña Backup)
+   SIN descargar nada a la computadora. Usado, p. ej., antes de eliminar un
+   producto: el estado queda recuperable desde Configuración → Backup. */
+function storeProductSnapshot(product, motivo = "previo_eliminacion") {
+  try {
+    const envelope = buildBackupEnvelope([product]);
+    const history = getBackupHistory();
+    history.unshift({
+      id: `bkp-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      motivo,
+      productIds: [String(product?.id || "")],
+      titles: [product?.title || product?.id || "(sin título)"],
+      data: envelope
+    });
+    localStorage.setItem(BACKUP_HISTORY_KEY, JSON.stringify(history.slice(0, BACKUP_HISTORY_MAX)));
+    renderBackupHistory();
+  } catch (err) {
+    console.warn("No se pudo guardar el respaldo en el historial local:", err);
+  }
+}
+
 async function createAutoSafetyBackup(productsToWrite) {
   // Snapshot del estado ACTUAL de los productos que se van a modificar.
   const ids = productsToWrite.map((p) => String(p.id));
@@ -6370,11 +6361,14 @@ function renderBackupHistory() {
     const fecha = new Date(entry.createdAt);
     const stamp = `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`;
     const titles = (entry.titles || entry.productIds || []).map(escapeHTML).join(", ");
+    const motivoLabel = entry.motivo === "previo_eliminacion"
+      ? `<em class="backup-history-motivo">Previa a eliminación</em>`
+      : "";
     return `
     <div class="backup-history-item">
       <div class="backup-history-info">
         <strong>${escapeHTML(stamp)}</strong>
-        <span>${escapeHTML(String(entry.productIds?.length || 0))} producto(s): ${titles}</span>
+        <span>${motivoLabel}${escapeHTML(String(entry.productIds?.length || 0))} producto(s): ${titles}</span>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" data-restore-history="${escapeHTML(entry.id)}">
         <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restaurar
