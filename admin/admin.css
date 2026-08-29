@@ -5601,8 +5601,12 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 
 /* Comparación lado a lado (importar vs existente) */
 .confirm-card--wide.compare-card{width:min(1100px,96vw)}
-/* La ventana de importación queda ATRÁS (blur) mientras el drawer de creación está abierto */
-#restore-backup-modal.is-behind .confirm-card{filter:blur(5px);opacity:.75;pointer-events:none}
+/* La ventana de importación queda ATRÁS (blur) mientras el drawer de creación
+   está abierto: baja de z-index (70 → 55) para que el drawer (z-index 60) la
+   pinte POR ENCIMA con su propio overlay. Al cerrarse el drawer se quita esta
+   clase y la ventana vuelve a z-index 70, nítida. */
+#restore-backup-modal.is-behind{z-index:55;pointer-events:none}
+#restore-backup-modal.is-behind .confirm-card{filter:blur(5px);opacity:.8;pointer-events:none}
 .compare-panes{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
 .compare-pane{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
 .compare-pane-head{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:.8125rem;font-weight:800;border-bottom:1px solid var(--line)}
