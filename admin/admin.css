@@ -5306,6 +5306,9 @@ body #products-table-body .data-grid-row::before {
 .usuarios-table tbody tr:last-child td{border-bottom:none}
 
 .usuario-cell{display:flex;align-items:center;gap:10px}
+/* La columna de correo se CENTRA: encabezado y contenido quedan alineados
+   (el resto de columnas mantiene el contenido a la izquierda). */
+.usuarios-table .usuario-correo{text-align:center}
 .usuario-avatar{width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8125rem;color:#1f5fd6;background:linear-gradient(135deg,rgba(36,64,232,.14),rgba(0,178,255,.12));border:1px solid rgba(36,64,232,.18);border-radius:12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .usuario-cell-info{display:flex;flex-direction:column;gap:1px;min-width:0}
 .usuario-cell-info strong{color:var(--ink,#1d2a44);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
