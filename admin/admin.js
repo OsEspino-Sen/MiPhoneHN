@@ -6872,6 +6872,19 @@ async function runRestoreBackup(productsOverride = null) {
     return;
   }
   const products = (productsOverride || getSelectedRestoreProducts()).map(camelToSnakeRow);
+  // ANTI-DUPLICADOS POR NOMBRE al restaurar: si el ID del respaldo ya existe,
+  // se actualiza ese producto; si no existe pero hay otro con el MISMO NOMBRE,
+  // se restaura SOBRE ese producto. Nunca se crea un duplicado con igual nombre.
+  const catalogoRestauracion = await fetchCatalogoLigero();
+  for (const row of products) {
+    if (row._targetId) {
+      row.id = row._targetId;
+    } else if (!catalogoRestauracion.some((c) => String(c.id) === String(row.id))) {
+      const mismoNombre = catalogoRestauracion.find((c) => normalizeCatalogText(c.title) === normalizeCatalogText(row.title));
+      if (mismoNombre) row.id = mismoNombre.id;
+    }
+    delete row._targetId;
+  }
   if (products.length === 0) {
     setBackupStatus("restore-status", "Selecciona al menos un producto.", "error");
     return;
@@ -6946,13 +6959,13 @@ const BACKUP_HISTORY_TIPOS = {
     etiqueta: "Previa a eliminación",
     clase: "is-eliminacion",
     titulo: "El producto fue ELIMINADO después de guardar este respaldo",
-    detalle: (n) => `Guarda ${n === 1 ? "el producto" : "los productos"} tal como estaba${n === 1 ? "" : "n"} ANTES de eliminarlo${n === 1 ? "" : "s"}. Al restaurar, el producto se <strong>vuelve a crear</strong> con toda su información (variantes, imágenes y precios incluidos).`
+    detalle: (n) => `Guarda ${n === 1 ? "el producto" : "los productos"} ANTES de eliminarlo${n === 1 ? "" : "s"}. Restaurar lo${n === 1 ? "" : "s"} crea de nuevo con toda su información.`
   },
   previo_restauracion: {
     etiqueta: "Antes de restaurar",
     clase: "is-restauracion",
     titulo: "Copia del estado previo a una restauración",
-    detalle: (n) => `Guarda ${n === 1 ? "el producto" : "los productos"} tal como estaba${n === 1 ? "" : "n"} ANTES de que una restauración lo${n === 1 ? "" : "s"} sobrescribiera. Al restaurar, se <strong>revierte</strong> a ese estado anterior.`
+    detalle: (n) => `Restaurar revierte ${n === 1 ? "el producto" : "los productos"} a este estado anterior.`
   }
 };
 
@@ -6981,7 +6994,7 @@ function renderBackupHistory() {
       <div class="backup-history-info">
         <div class="backup-history-line">${badge}<strong>${escapeHTML(stamp)}</strong></div>
         <span>${escapeHTML(String(n))} producto(s): ${titles}</span>
-        <span class="backup-history-efecto">${accion} Si el producto ya existe se <strong>sobrescribe</strong>; si no existe, se <strong>vuelve a crear</strong>. No afecta a otros productos.</span>
+        <span class="backup-history-efecto">Restaurar devuelve el producto a este estado guardado. Si ya existe se actualiza; si no, se vuelve a crear.</span>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" data-restore-history="${escapeHTML(entry.id)}">
         <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restaurar
@@ -7000,33 +7013,35 @@ function renderBackupHistory() {
         ? `<strong>${tipo.etiqueta}:</strong> ${tipo.detalle(n)}`
         : `Contiene ${n} producto(s) tal como estaban en el momento del respaldo.`;
 
-      // Verificar contra la BD qué se ACTUALIZARÁ (ya existe) y qué se CREARÁ.
+      // Verificar contra la BD qué se ACTUALIZARÁ (ya existe por ID o por nombre) y qué se CREARÁ.
       let existentes = [], nuevos = [];
       try {
-        const ids = products.map((p) => String(p.id)).filter(Boolean);
-        const existingIds = new Set();
-        for (let i = 0; i < ids.length; i += 100) {
-          const { data } = await supabase.from("productos").select("id").in("id", ids.slice(i, i + 100));
-          (data || []).forEach((r) => existingIds.add(String(r.id)));
-        }
-        existentes = products.filter((p) => existingIds.has(String(p.id)));
-        nuevos = products.filter((p) => !existingIds.has(String(p.id)));
+        const catalogo = await fetchCatalogoLigero();
+        const targets = products.map((p) => {
+          const byId = catalogo.find((c) => String(c.id) === String(p.id));
+          if (byId) return { row: p, targetId: byId.id, existe: true };
+          const byName = catalogo.find((c) => normalizeCatalogText(c.title) === normalizeCatalogText(p.title));
+          if (byName) return { row: p, targetId: byName.id, existe: true };
+          return { row: p, targetId: null, existe: false };
+        });
+        existentes = targets.filter((t) => t.existe).map((t) => ({ ...t.row, _targetId: t.targetId }));
+        nuevos = targets.filter((t) => !t.existe).map((t) => t.row);
       } catch {
         nuevos = products; // sin verificación, asumir restauración completa
       }
 
-      const nombre = (p) => `<strong>${escapeHTML(p.title || String(p.id))}</strong> <span class="backup-item-id">${escapeHTML(String(p.id))}</span>`;
+      const nombre = (p) => `<strong>${escapeHTML(p.title || String(p.id))}</strong>`;
       const partes = [];
       if (existentes.length) {
-        partes.push(`🔁 Se <strong>ACTUALIZARÁ${existentes.length > 1 ? "N" : ""}</strong> porque ya existe${existentes.length > 1 ? "N" : ""} en tu catálogo (volverá al estado de este respaldo):<br>${existentes.map(nombre).join("<br>")}`);
+        partes.push(`♻️ ${existentes.map(nombre).join(", ")} ya existe${existentes.length > 1 ? "N" : ""} en tu catálogo → se <strong>ACTUALIZARÁ${existentes.length > 1 ? "N" : ""}</strong> al estado de este respaldo.`);
       }
       if (nuevos.length) {
-        partes.push(`📦 Se <strong>RESTAURARÁ${nuevos.length > 1 ? "N" : ""}</strong> creando${nuevos.length > 1 ? "los" : "lo"} de nuevo (no existe${nuevos.length > 1 ? "N" : ""} actualmente en la base de datos):<br>${nuevos.map(nombre).join("<br>")}`);
+        partes.push(`📦 ${nuevos.map(nombre).join(", ")} no existe${nuevos.length > 1 ? "N" : ""} → se <strong>RESTAURARÁ${nuevos.length > 1 ? "N" : ""}</strong> creándolo${nuevos.length > 1 ? "s" : ""} de nuevo.`);
       }
       const queHara = partes.length ? partes.join("<br><br>") : "No hay productos que restaurar.";
       showConfirm(
-        "¿Qué vas a restaurar?",
-        `${queGuarda}<br><br>${queHara}<br><br>Se generará otro respaldo de seguridad antes de escribir. Ningún otro producto se modifica.`,
+        "Restaurar respaldo",
+        `${queGuarda}<br><br>${queHara}<br><br><span style="opacity:.75">Se genera un respaldo de seguridad antes de escribir.</span>`,
         () => runRestoreBackup(products)
       );
     });
