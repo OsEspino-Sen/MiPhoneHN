@@ -6995,3 +6995,23 @@ function initBackupSystem() {
 }
 
 initBackupSystem();
+
+/* ==========================================================================
+   BADGE DE ENTORNO — DESARROLLO vs PRODUCCIÓN
+   --------------------------------------------------------------------------
+   Garantiza de un vistazo contra qué proyecto trabaja este panel:
+   - VITE_APP_ENV=local (tu .env local) → "DESARROLLO" (proyecto miphone-dev).
+   - Sin esa variable (la app desplegada en Vercel) → "PRODUCCIÓN".
+   Al pasar el cursor muestra la URL de Supabase para confirmarlo.
+   ========================================================================== */
+(() => {
+  const esLocal = String(import.meta.env.VITE_APP_ENV || "").toLowerCase() === "local";
+  const badge = document.getElementById("env-badge");
+  if (!badge) return;
+  badge.textContent = esLocal ? "DESARROLLO" : "PRODUCCIÓN";
+  badge.classList.add(esLocal ? "is-dev" : "is-prod");
+  badge.title = esLocal
+    ? `Panel conectado al proyecto de DESARROLLO (${import.meta.env.VITE_SUPABASE_URL || "?"}). Activar mantenimiento aquí NO afecta a la tienda publicada.`
+    : `Panel conectado a PRODUCCIÓN (${import.meta.env.VITE_SUPABASE_URL || "?"}). Las acciones aquí afectan a la tienda publicada.`;
+  badge.hidden = false;
+})();
