@@ -235,6 +235,21 @@ function renderFormCategories() {
 }
 
 let categoryEditingId = null; // id de la categoría en edición inline (null = ninguna)
+let categoryImageEditingId = null; // id de la categoría con el editor de imagen abierto (null = ninguno)
+let categoryAddImage = null; // imagen pendiente de la categoría nueva: { url } o { file }
+let categoryAddObjectUrl = null; // object URL para la vista previa de la categoría nueva
+
+const CATEGORY_FALLBACK_IMAGE =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">` +
+    `<rect width="120" height="120" fill="#eef1f6"/>` +
+    `<circle cx="60" cy="52" r="20" fill="#dde7f3"/>` +
+    `<rect x="48" y="30" width="24" height="46" rx="5" fill="#ffffff"/>` +
+    `<rect x="50" y="33" width="20" height="38" rx="3" fill="#f3f6fa"/>` +
+    `<circle cx="60" cy="68" r="2" fill="#c2ccda"/>` +
+    `</svg>`
+  );
 
 function renderCategoryList() {
   const list = document.getElementById("category-list");
@@ -243,7 +258,8 @@ function renderCategoryList() {
   categories.forEach((cat, index) => {
     const count = products.filter(p => p.category === cat.id).length;
     const item = document.createElement("div");
-    item.className = "category-list-item" + (cat.id === categoryEditingId ? " is-editing" : "");
+    const editingImage = cat.id === categoryImageEditingId;
+    item.className = "category-list-item" + ((cat.id === categoryEditingId || editingImage) ? " is-editing" : "");
 
     if (cat.id === categoryEditingId) {
       // Modo edición inline: reemplaza el prompt nativo del navegador.
@@ -256,13 +272,40 @@ function renderCategoryList() {
           </div>
         </div>
       `;
+    } else if (editingImage) {
+      // Modo edición de imagen inline: URL, subida desde el equipo y vista previa.
+      item.innerHTML = `
+        <div class="category-image-editor">
+          <div class="category-image-editor-head">
+            <div class="category-list-thumb${cat.image ? "" : " is-fallback"}">
+              ${cat.image ? `<img src="${escapeHTML(cat.image)}" alt="">` : `<img src="${CATEGORY_FALLBACK_IMAGE}" alt="">`}
+            </div>
+            <input type="url" class="category-image-input" value="${escapeHTML(cat.image || "")}" placeholder="URL de la imagen…" aria-label="URL de la imagen">
+            <label class="btn btn-secondary btn-sm category-image-file-btn">
+              <i class="ph ph-upload-simple" aria-hidden="true"></i> Subir
+              <input type="file" class="category-image-file" accept="image/*" hidden>
+            </label>
+          </div>
+          <div class="category-image-editor-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-cat-image-save="${escapeHTML(cat.id)}"><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+            ${cat.image ? `<button type="button" class="btn btn-danger-ghost btn-sm" data-cat-image-remove="${escapeHTML(cat.id)}"><i class="ph ph-trash" aria-hidden="true"></i> Quitar imagen</button>` : ""}
+            <button type="button" class="btn btn-secondary btn-sm" data-cat-image-cancel title="Cancelar" aria-label="Cancelar"><i class="ph ph-x" aria-hidden="true"></i></button>
+          </div>
+        </div>
+      `;
     } else {
       item.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+        <div class="category-list-thumb${cat.image ? "" : " is-fallback"}">
+          ${cat.image ? `<img src="${escapeHTML(cat.image)}" alt="" loading="lazy">` : `<img src="${CATEGORY_FALLBACK_IMAGE}" alt="">`}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
           <span class="category-list-label">${escapeHTML(cat.label)}</span>
           <span style="font-family:var(--font-mono);font-size:.6875rem;color:var(--ink-3);font-weight:600">${escapeHTML(cat.id)} · ${count} prod</span>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
+          <button type="button" class="btn btn-secondary btn-sm" data-cat-image="${escapeHTML(cat.id)}" title="Cambiar imagen de la categoría" aria-label="Cambiar imagen">
+            <i class="ph ph-image" aria-hidden="true"></i>
+          </button>
           <button type="button" class="btn btn-secondary btn-sm" data-cat-edit="${escapeHTML(cat.id)}" title="Renombrar categoría">
             <i class="ph ph-pencil-simple" aria-hidden="true"></i>
             <span>Editar</span>
@@ -295,10 +338,83 @@ function renderCategoryList() {
         .then(() => { categoryEditingId = null; showAlert("Categoría actualizada correctamente", "success"); })
         .catch((err) => showAlert("Error al actualizar categoría: " + err.message, "error"));
     });
+
+    const imageInput = item.querySelector(".category-image-input");
+    const imageFileInput = item.querySelector(".category-image-file");
+    if (imageInput) {
+      imageInput.focus();
+      imageInput.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); item.querySelector("[data-cat-image-save]")?.click(); }
+        else if (ev.key === "Escape") { categoryImageEditingId = null; renderCategoryList(); }
+      });
+      if (imageFileInput) {
+        imageFileInput.addEventListener("change", async () => {
+          const file = imageFileInput.files?.[0];
+          if (!file) return;
+          if (file.size > MAX_IMAGE_SIZE) {
+            showAlert("La imagen supera el tamaño máximo de 8 MB.", "error");
+            imageFileInput.value = "";
+            return;
+          }
+          const saveBtn = item.querySelector("[data-cat-image-save]");
+          if (imageInput.dataset.uploading === "1") return;
+          imageInput.dataset.uploading = "1";
+          if (saveBtn) saveBtn.disabled = true;
+          imageInput.value = "Subiendo…";
+          try {
+            const url = await uploadToCloudinary(file);
+            imageInput.value = url;
+            showAlert("Imagen subida. Pulsa Guardar para aplicarla.", "success");
+          } catch (err) {
+            imageInput.value = cat.image || "";
+            showAlert("Error al subir la imagen: " + err.message, "error");
+          } finally {
+            imageInput.dataset.uploading = "";
+            if (saveBtn) saveBtn.disabled = false;
+            imageFileInput.value = "";
+          }
+        });
+      }
+      item.querySelector("[data-cat-image-cancel]")?.addEventListener("click", () => { categoryImageEditingId = null; renderCategoryList(); });
+      item.querySelector("[data-cat-image-save]")?.addEventListener("click", async () => {
+        const url = imageInput.value.trim();
+        if (!url) { showAlert("Ingresa o sube una imagen primero.", "error"); return; }
+        const saveBtn = item.querySelector("[data-cat-image-save]");
+        if (saveBtn) saveBtn.disabled = true;
+        try {
+          await setDoc(doc(db, "categorias", cat.id), { image: url }, { merge: true });
+          categoryImageEditingId = null;
+          showAlert("Imagen de categoría actualizada", "success");
+        } catch (err) {
+          showAlert("Error al guardar la imagen: " + categoryImageErrorHint(err), "error");
+          if (saveBtn) saveBtn.disabled = false;
+        }
+      });
+      item.querySelector("[data-cat-image-remove]")?.addEventListener("click", async () => {
+        const removeBtn = item.querySelector("[data-cat-image-remove]");
+        if (removeBtn) removeBtn.disabled = true;
+        try {
+          await setDoc(doc(db, "categorias", cat.id), { image: null }, { merge: true });
+          categoryImageEditingId = null;
+          showAlert("Imagen de categoría eliminada", "success");
+        } catch (err) {
+          showAlert("Error al eliminar la imagen: " + categoryImageErrorHint(err), "error");
+          if (removeBtn) removeBtn.disabled = false;
+        }
+      });
+    }
   });
   list.querySelectorAll("[data-cat-edit]").forEach(btn => {
     btn.addEventListener("click", () => {
       categoryEditingId = btn.dataset.catEdit;
+      categoryImageEditingId = null;
+      renderCategoryList();
+    });
+  });
+  list.querySelectorAll("[data-cat-image]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      categoryImageEditingId = btn.dataset.catImage;
+      categoryEditingId = null;
       renderCategoryList();
     });
   });
@@ -329,8 +445,66 @@ function renderCategoryList() {
   });
 }
 
+function resetCategoryAddImage() {
+  if (categoryAddObjectUrl) {
+    URL.revokeObjectURL(categoryAddObjectUrl);
+    categoryAddObjectUrl = null;
+  }
+  categoryAddImage = null;
+  const preview = document.getElementById("category-add-image-preview");
+  const fileInput = document.getElementById("category-add-image-file");
+  const urlInput = document.getElementById("category-add-image-url");
+  const clearBtn = document.getElementById("category-add-image-clear");
+  if (fileInput) fileInput.value = "";
+  if (urlInput) urlInput.value = "";
+  if (preview) {
+    preview.hidden = true;
+    preview.innerHTML = "";
+  }
+  if (clearBtn) clearBtn.hidden = true;
+}
+
+function previewCategoryAddImage() {
+  const preview = document.getElementById("category-add-image-preview");
+  if (!preview) return;
+  let url = categoryAddImage?.url || "";
+  if (!url && categoryAddImage?.file) {
+    if (categoryAddObjectUrl) URL.revokeObjectURL(categoryAddObjectUrl);
+    categoryAddObjectUrl = URL.createObjectURL(categoryAddImage.file);
+    url = categoryAddObjectUrl;
+  }
+  const clearBtn = document.getElementById("category-add-image-clear");
+  if (url) {
+    preview.innerHTML = `<img src="${escapeHTML(url)}" alt="Vista previa de la imagen de categoría">`;
+    preview.hidden = false;
+    if (clearBtn) clearBtn.hidden = false;
+  } else {
+    preview.hidden = true;
+    preview.innerHTML = "";
+    if (clearBtn) clearBtn.hidden = true;
+  }
+}
+
+function categoryImageErrorHint(err) {
+  const msg = (err && err.message) || "";
+  if (/image/i.test(msg) && /categor(ias|y)/i.test(msg)) {
+    return "Falta la columna \"image\" en la tabla categorias. Ejecuta en el SQL Editor de Supabase: ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS image VARCHAR;";
+  }
+  if (err) {
+    try {
+      console.error("Error Supabase categorias (detalle):", JSON.stringify({ message: err.message, details: err.details, hint: err.hint, code: err.code }));
+    } catch {
+      console.error("Error Supabase categorias:", err);
+    }
+  }
+  const parts = [err?.message, err?.details, err?.hint].filter(Boolean);
+  return parts.join(" — ") || "Error desconocido";
+}
+
 function openCategoryModal() {
   categoryEditingId = null;
+  categoryImageEditingId = null;
+  resetCategoryAddImage();
   renderCategoryList();
   const catModal = document.getElementById("category-modal");
   if (catModal) catModal.hidden = false;
@@ -338,6 +512,8 @@ function openCategoryModal() {
 
 function closeCategoryModal() {
   categoryEditingId = null;
+  categoryImageEditingId = null;
+  resetCategoryAddImage();
   const catModal = document.getElementById("category-modal");
   if (catModal) catModal.hidden = true;
 }
@@ -632,12 +808,25 @@ function init() {
       showAlert(`La categoría "${escapeHTML(name)}" ya existe.`, "error");
       return;
     }
+    const addBtn = addCategoryBtnModal;
     try {
-      await setDoc(doc(db, "categorias", id), { label: name });
+      let image = null;
+      if (categoryAddImage?.file) {
+        addBtn.disabled = true;
+        addBtn.innerHTML = '<i class="ph ph-spinner ph-spin" aria-hidden="true"></i> Subiendo…';
+        image = await uploadToCloudinary(categoryAddImage.file);
+      } else if (categoryAddImage?.url) {
+        image = categoryAddImage.url;
+      }
+      await setDoc(doc(db, "categorias", id), { label: name, image });
       if (newCategoryName) newCategoryName.value = "";
+      resetCategoryAddImage();
       showAlert("Categoría creada correctamente", "success");
     } catch (err) {
-      showAlert("Error al crear categoría: " + err.message, "error");
+      showAlert("Error al crear categoría: " + categoryImageErrorHint(err), "error");
+    } finally {
+      addBtn.disabled = false;
+      addBtn.innerHTML = '<i class="ph ph-plus" aria-hidden="true"></i> Agregar';
     }
   });
 
@@ -646,6 +835,37 @@ function init() {
       addCategoryBtnModal?.click();
     }
   });
+
+  // Imagen de la categoría nueva: subida desde el equipo o URL, con vista previa.
+  const categoryAddImageFile = document.getElementById("category-add-image-file");
+  const categoryAddImageUrl = document.getElementById("category-add-image-url");
+  const categoryAddImageClear = document.getElementById("category-add-image-clear");
+
+  categoryAddImageFile?.addEventListener("change", () => {
+    const file = categoryAddImageFile.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_IMAGE_SIZE) {
+      showAlert("La imagen supera el tamaño máximo de 8 MB.", "error");
+      categoryAddImageFile.value = "";
+      return;
+    }
+    categoryAddImage = { file };
+    if (categoryAddImageUrl) categoryAddImageUrl.value = "";
+    previewCategoryAddImage();
+  });
+
+  categoryAddImageUrl?.addEventListener("input", () => {
+    const url = categoryAddImageUrl.value.trim();
+    if (url) {
+      categoryAddImage = { url };
+      if (categoryAddImageFile) categoryAddImageFile.value = "";
+    } else if (categoryAddImage && !categoryAddImage.file) {
+      categoryAddImage = null;
+    }
+    previewCategoryAddImage();
+  });
+
+  categoryAddImageClear?.addEventListener("click", resetCategoryAddImage);
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -4598,4 +4818,45 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   cargarUsuarios();
   console.log('[Usuarios] Módulo de usuarios listo');
 })();
+
+/* ==========================================================================
+   IDENTIDAD VISUAL — Logotipo oficial en la marca del panel
+   Sustituye la iconografía genérica por el logotipo real de la empresa:
+   sidebar (Mi Phone HN), login y sección de usuarios.
+   ========================================================================== */
+(() => {
+  async function aplicarLogoAdmin() {
+    try {
+      const snap = await getDoc(doc(db, 'imagenes', 'logo'));
+      const data = snap.exists() ? snap.data() : null;
+      const url = data?.url || data?.data;
+      if (!url) return;
+
+      const src = url.startsWith('data:') ? url : url + '?t=' + Date.now();
+
+      // Sidebar: [LOGO] junto al nombre "Mi Phone HN"
+      const sideMark = document.querySelector('.sidebar-brand-mark');
+      if (sideMark) {
+        sideMark.innerHTML = `<img src="${src}" alt="Mi Phone HN" class="brand-logo-img">`;
+        sideMark.classList.add('has-logo');
+      }
+
+      // Sección "Usuarios del sistema" (antes usaba iconografía genérica ph-users)
+      const usersIcon = document.querySelector('.settings-users-card .settings-image-icon');
+      if (usersIcon) {
+        usersIcon.innerHTML = `<img src="${src}" alt="Mi Phone HN" class="brand-logo-img">`;
+        usersIcon.classList.add('has-logo');
+      }
+    } catch (err) {
+      console.warn('No se pudo cargar el logotipo en el panel:', err);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', aplicarLogoAdmin);
+  } else {
+    aplicarLogoAdmin();
+  }
+})();
+
 

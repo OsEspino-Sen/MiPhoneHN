@@ -6,3 +6,6 @@ dist/
 
 .vercel
 .env*
+
+# Respaldos locales de datos (no deben versionarse: contienen info de la BD)
+backup/

@@ -2492,7 +2492,10 @@ body #products-table-body .data-grid-row::before {
   padding: 20px 28px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
-  flex-shrink: 0
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10
 }
 
 .drawer-heading-icon {
@@ -2580,11 +2583,16 @@ body #products-table-body .data-grid-row::before {
 .drawer-body {
   flex: 1;
   overflow-y: auto;
-  padding: 28px;
+  padding: 0 28px 28px 28px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   scroll-behavior: smooth
+}
+
+.drawer-body > .drawer-notice:first-child,
+.drawer-body > .form-section:first-of-type {
+  margin-top: 28px;
 }
 
 /* --- Aviso de actualización --- */
@@ -2651,6 +2659,41 @@ body #products-table-body .data-grid-row::before {
   padding: 18px 22px;
   background: var(--surface-2);
   border-bottom: 1px solid var(--line-soft)
+}
+
+/* — Variantes sticky: el encabezado de Colores y Almacenamiento se pega bajo el drawer-header al hacer scroll — */
+#fs-colors,
+#fs-storage {
+  overflow: visible;
+}
+
+#fs-colors .fs-head,
+#fs-storage .fs-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  /* mantiene el borde pegado al del drawer-header y evita transparencias al superponerse */
+  box-shadow: 0 1px 0 var(--line-soft);
+}
+
+/* — Barra de variantes (tabs Producto principal / Naranja …) pegada al header — */
+.variant-bar-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  /* extiende el fondo/borde a todo el ancho del drawer y elimina el hueco con el header */
+  margin: 0 -28px;
+  padding: 12px 28px;
+  /* evita que el contenido se transparente al pegarse */
+  backdrop-filter: saturate(1.02);
+}
+
+#variant-bar-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 9;
 }
 
 .fs-icon {
@@ -3773,6 +3816,126 @@ body #products-table-body .data-grid-row::before {
   flex: 1
 }
 
+.category-list-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  flex-shrink: 0
+}
+
+.category-list-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block
+}
+
+.category-image-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%
+}
+
+.category-image-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 8px
+}
+
+.category-image-editor-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center
+}
+
+.category-image-input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  font-size: .8125rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  outline: none;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast)
+}
+
+.category-image-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent)
+}
+
+.category-image-file-btn {
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap
+}
+
+.category-add-image {
+  display: flex;
+  flex-direction: column;
+  gap: 8px
+}
+
+.category-image-preview {
+  width: 84px;
+  height: 84px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  flex-shrink: 0
+}
+
+.category-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block
+}
+
+.category-image-row {
+  display: flex;
+  gap: 8px;
+  align-items: center
+}
+
+.category-image-row input[type="url"] {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  font-size: .8125rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  outline: none;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast)
+}
+
+.category-image-row input[type="url"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent)
+}
+
+.category-image-clear {
+  flex-shrink: 0
+}
+
+.category-image-hint {
+  font-size: .6875rem;
+  color: var(--ink-3);
+  margin: 0
+}
+
 /* Responsive — respirable */
 @media(max-width:1180px) {
   .metrics-grid {
@@ -4872,3 +5035,53 @@ body[data-rol="editor"] .settings-tab[data-tab="llaves"],
 body[data-rol="editor"] .settings-tab[data-tab="usuarios"]{display:none}
 body[data-rol="editor"] .settings-save-btn{display:none}
 body[data-rol="editor"] .settings-file-btn{display:none}
+
+/* ==========================================================================
+   IDENTIDAD VISUAL — Logotipo oficial en la marca del panel
+   ========================================================================== */
+.sidebar-brand-mark.has-logo,
+.login-brand-mark.has-logo,
+.settings-users-card .settings-image-icon.has-logo {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.sidebar-brand-mark img,
+.login-brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.settings-users-card .settings-image-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+/* El ícono genérico de teléfono de la marca de login jamás debe verse. */
+.login-brand-mark i {
+  display: none;
+}
+
+/* Si aún no hay logo, la caja de marca no se muestra (evita un cuadrado vacío). */
+.login-brand-mark:empty {
+  display: none;
+}
+
+/* Mismo criterio en toda la identidad visual del panel: los íconos genéricos
+   que representan a la empresa nunca deben verse; solo el logotipo oficial. */
+.sidebar-brand-mark i,
+.settings-users-card .settings-image-icon i {
+  display: none;
+}
+
+.sidebar-brand-mark:empty,
+.settings-users-card .settings-image-icon:empty {
+  display: none;
+}
+

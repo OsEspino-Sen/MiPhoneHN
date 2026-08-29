@@ -7,20 +7,26 @@
   <meta name="theme-color" content="#0071e3">
   <title>Mi Phone HN | Celulares Nuevos y Seminuevos en Honduras</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="preload" href="./fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="./fonts/QGYvz_MVcBeNP4NJtEtq.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="app.js" defer></script>
 </head>
 <body>
+  <div id="page-loader" class="page-loader" aria-hidden="true">
+    <div class="page-loader-inner">
+      <span class="page-loader-brand">Mi Phone <span>HN</span></span>
+      <span class="page-loader-bar" role="presentation"></span>
+    </div>
+  </div>
   <div class="announcement-bar" id="announcement-bar">
     <span class="announcement-text" id="announcement-text">Envíos seguros a nivel nacional vía Rápido Cargo desde Choluteca</span>
   </div>
 
   <header class="site-header">
     <div class="header-container">
-      <a href="#hero" class="logo" aria-label="Mi Phone HN, inicio">Mi Phone <span>HN</span></a>
+      <a href="#hero" class="logo" aria-label="Mi Phone HN, inicio"><span class="brand-logo-img" aria-hidden="true"></span><span class="brand-logo-text">Mi Phone <span>HN</span></span></a>
 
       <nav class="nav-menu" id="nav-menu" aria-label="Navegación principal">
         <a href="#hero" class="nav-link active">Inicio</a>
@@ -126,37 +132,50 @@
       </div>
     </section>
 
+    <section id="shop-categories" class="shop-categories" aria-labelledby="categories-title">
+      <div class="section-container">
+        <div class="categories-head">
+          <span class="shop-eyebrow">Explora</span>
+          <h2 class="categories-title" id="categories-title">Nuestras categorías de productos</h2>
+          <p class="categories-subtitle">Selecciona una categoría para ver sus equipos disponibles.</p>
+        </div>
+        <div class="category-grid" id="category-grid" aria-live="polite">
+          <div class="category-card category-card--skeleton" aria-hidden="true"></div>
+          <div class="category-card category-card--skeleton" aria-hidden="true"></div>
+          <div class="category-card category-card--skeleton" aria-hidden="true"></div>
+          <div class="category-card category-card--skeleton" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="featured-section" class="featured-section" aria-labelledby="featured-title">
+      <div class="section-container">
+        <div class="section-header">
+          <h2 class="section-title" id="featured-title">Destacados de la semana</h2>
+          <p class="section-subtitle">Los equipos que más nos piden en Mi Phone HN, listos para explorar.</p>
+        </div>
+
+        <div class="featured-carousel">
+          <div class="featured-track" id="featured-track" aria-label="Productos destacados"></div>
+          <button type="button" class="featured-nav featured-prev" id="featured-prev" aria-label="Productos anteriores">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <button type="button" class="featured-nav featured-next" id="featured-next" aria-label="Siguientes productos">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section id="catalog-section" class="catalog-section">
       <div class="section-container">
         <div class="section-header">
-          <h2 class="section-title">Catálogo de productos</h2>
+          <h2 class="section-title">Explora nuestros productos</h2>
           <p class="section-subtitle">Explora nuestra selección de celulares, iPads y accesorios.</p>
-        </div>
-
-        <div class="catalog-controls">
-          <div class="search-box">
-            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" stroke-width="2"/>
-              <path stroke-linecap="round" stroke-width="2" d="M21 21l-4.35-4.35"/>
-            </svg>
-            <label class="sr-only" for="search-input">Buscar productos</label>
-            <input type="search" id="search-input" placeholder="Buscar por modelo o marca (ej. iPhone 13)..." autocomplete="off">
-          </div>
-
-          <div class="filter-groups" aria-label="Filtros de catálogo">
-            <div class="filter-group" aria-label="Categorías">
-              <button type="button" class="filter-tab active" data-category="all">Todos</button>
-              <button type="button" class="filter-tab" data-category="iphones">iPhones</button>
-              <button type="button" class="filter-tab" data-category="samsung">Samsung</button>
-              <button type="button" class="filter-tab" data-category="ipads">iPads</button>
-              <button type="button" class="filter-tab" data-category="accessories">Accesorios</button>
-            </div>
-            <div class="filter-group" aria-label="Condición">
-              <button type="button" class="filter-tag active" data-condition="all">Cualquiera</button>
-              <button type="button" class="filter-tag" data-condition="nuevo">Nuevos</button>
-              <button type="button" class="filter-tag" data-condition="seminuevo">Seminuevos</button>
-            </div>
-          </div>
         </div>
 
         <div class="products-grid" id="products-grid" aria-live="polite"></div>
@@ -185,33 +204,66 @@
         <div class="financing-card">
           <div class="financing-info">
             <h2 id="financing-title">Calculadora de extrafinanciamiento</h2>
-            <p>Estrena hoy pagando en cómodas cuotas de 3, 6, 9 o 12 meses sin intereses utilizando tus tarjetas de crédito BAC Credomatic o Ficohsa.</p>
-            <div class="bank-badges">
-              <span class="badge bank-bac">BAC Credomatic</span>
-              <span class="badge bank-ficohsa">Ficohsa</span>
-            </div>
+            <p>Elige tu banco, ingresa el monto y descubre al instante tu cuota mensual con tasas preferenciales, sin hacer cálculos.</p>
+            <ul class="financing-features">
+              <li>Resultados al instante, sin botón</li>
+              <li>Tasas exclusivas BAC y Ficohsa</li>
+              <li>Consulta final por WhatsApp</li>
+            </ul>
           </div>
 
-          <div class="financing-calculator">
-            <div class="form-group">
-              <label for="calc-amount">Monto del producto (lempiras):</label>
-              <input type="number" id="calc-amount" value="15000" min="1000" max="100000" step="500">
+          <div class="financing-calculator" id="financing-calc">
+            <div class="calc-step">
+              <div class="calc-step-head">
+                <span class="calc-step-num">1</span>
+                <div>
+                  <h3 class="calc-step-title">Elige tu banco</h3>
+                  <p class="calc-step-hint">Solo uno puede estar seleccionado</p>
+                </div>
+              </div>
+              <div class="bank-cards" id="bank-cards" role="radiogroup" aria-label="Banco para extrafinanciamiento"></div>
             </div>
-            <div class="form-group">
-              <label for="calc-months">Plazo de cuotas:</label>
-              <select id="calc-months">
-                <option value="3">3 meses sin intereses</option>
-                <option value="6" selected>6 meses sin intereses</option>
-                <option value="9">9 meses sin intereses</option>
-                <option value="12">12 meses sin intereses</option>
-              </select>
+
+            <div class="calc-step">
+              <div class="calc-step-head">
+                <span class="calc-step-num">2</span>
+                <div>
+                  <h3 class="calc-step-title">Monto del producto</h3>
+                  <p class="calc-step-hint">Se actualiza mientras escribes</p>
+                </div>
+              </div>
+              <label class="amount-field" for="calc-amount">
+                <span class="amount-currency">L.</span>
+                <input type="number" id="calc-amount" inputmode="numeric" value="15000" min="0" step="100" placeholder="0">
+              </label>
             </div>
-            <div class="calc-result">
-              <span class="calc-label">Cuota mensual estimada:</span>
-              <span class="calc-value" id="calc-value">L. 2,500 / mes</span>
+
+            <div class="calc-step">
+              <div class="calc-step-head">
+                <span class="calc-step-num">3</span>
+                <div>
+                  <h3 class="calc-step-title">Elige tu plazo</h3>
+                  <p class="calc-step-hint">Planes del banco seleccionado</p>
+                </div>
+              </div>
+              <div class="plan-cards" id="plan-cards" role="radiogroup" aria-label="Plazo de pagos"></div>
             </div>
-            <p class="calc-note">*Sujeto a disponibilidad de cupo en la tarjeta de crédito.</p>
-            <a id="calc-whatsapp-btn" href="https://wa.me/50488238432" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-block">Consultar por WhatsApp</a>
+
+            <div class="results-panel" id="calc-results" aria-live="polite">
+              <div class="result-main">
+                <span class="result-label">Cuota mensual</span>
+                <span class="result-amount" id="result-monthly">L. 0</span>
+                <span class="result-sub" id="result-summary">Selecciona banco, monto y plazo</span>
+              </div>
+              <div class="result-rows">
+                <div class="result-row"><span>Precio del producto</span><strong id="result-price">L. 0</strong></div>
+                <div class="result-row"><span>Interés aplicado</span><strong id="result-interest">L. 0</strong></div>
+                <div class="result-row"><span>Total a pagar</span><strong id="result-total">L. 0</strong></div>
+                <div class="result-row"><span>Tasa del plan</span><strong id="result-rate">0%</strong></div>
+              </div>
+              <a id="calc-whatsapp-btn" href="https://wa.me/50488238432" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-block">Consultar por WhatsApp</a>
+              <p class="calc-note">*Sujeto a disponibilidad de cupo y aprobación del banco.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -362,7 +414,7 @@
     <div class="section-container">
       <div class="footer-grid">
         <div class="footer-col brand-col">
-          <a href="#hero" class="footer-logo">Mi Phone <span>HN</span></a>
+          <a href="#hero" class="footer-logo"><span class="brand-logo-img" aria-hidden="true"></span><span class="brand-logo-text">Mi Phone <span>HN</span></span></a>
           <p class="footer-desc" id="footer-desc">El distribuidor de confianza para celulares premium nuevos y seminuevos garantizados en la zona sur y a nivel nacional.</p>
         </div>
 
@@ -378,14 +430,22 @@
 
         <div class="footer-col">
           <h3>Contacto y logística</h3>
-          <div class="footer-contact-item">
+          <a class="footer-contact-item" id="footer-location-link" href="https://maps.app.goo.gl/cjzQ44NaB5RFY4X77" target="_blank" rel="noopener noreferrer">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             <span id="footer-location">Choluteca, Honduras</span>
-          </div>
+          </a>
           <a class="footer-contact-item" id="footer-wa-link" href="https://wa.me/50488238432" target="_blank" rel="noopener noreferrer">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
             <span id="footer-phone">+504 8823-8432</span>
           </a>
+          <div class="footer-social">
+            <a href="https://www.instagram.com/miphone_hn/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de Mi Phone HN">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><defs><linearGradient id="ig-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#feda75"/><stop offset="25%" stop-color="#fa7e1e"/><stop offset="50%" stop-color="#d62976"/><stop offset="75%" stop-color="#962fbf"/><stop offset="100%" stop-color="#4f5bd5"/></linearGradient></defs><rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="url(#ig-grad)"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" stroke="url(#ig-grad)"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" stroke="url(#ig-grad)"/></svg>
+            </a>
+            <a href="https://www.tiktok.com/@miphone_hn?lang=es-419" target="_blank" rel="noopener noreferrer" aria-label="TikTok de Mi Phone HN">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="tt-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#25F4EE"/><stop offset="55%" stop-color="#010101"/><stop offset="100%" stop-color="#FE2C55"/></linearGradient></defs><path fill="url(#tt-grad)" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+            </a>
+          </div>
           <div class="footer-contact-item">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             <span id="footer-shipping">Envíos vía Rápido Cargo</span>
