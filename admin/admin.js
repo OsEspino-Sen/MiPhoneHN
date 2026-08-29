@@ -6844,11 +6844,9 @@ async function createAutoSafetyBackup(productsToWrite) {
   if (currentRows.length === 0) return;
 
   const envelope = buildBackupEnvelope(currentRows);
-  // 1) Copia descargada (red de seguridad física).
-  try {
-    downloadBackupJSON(envelope, `auto-respaldo-pre-restauracion-${backupStamp()}.json`);
-  } catch { /* la descarga no debe bloquear la restauración */ }
-  // 2) Historial local en el navegador (recuperable desde la pestaña Backup).
+  // Historial local en el navegador (recuperable desde la pestaña Backup).
+  // NADA se descarga a la computadora: los únicos archivos que se descargan
+  // son los que el administrador exporta manualmente.
   try {
     const history = getBackupHistory();
     history.unshift({
