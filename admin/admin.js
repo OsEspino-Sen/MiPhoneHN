@@ -6218,12 +6218,12 @@ async function analyzeImportProducts(fileProducts) {
   const discarded = [], toCreate = [], review = [];
   for (const p of fileProducts) {
     if (existingIds.has(String(p.id))) {
-      discarded.push({ row: p, razon: "ya existe un producto con ese ID" });
+      discarded.push({ row: p, razon: "ya existe un producto con ese ID", matchId: String(p.id) });
       continue;
     }
     const dup = findBackupDuplicate(p);
     if (dup?.level === "identical") {
-      discarded.push({ row: p, razon: `ya existe un producto idéntico (${dup.id})` });
+      discarded.push({ row: p, razon: `ya existe un producto idéntico (${dup.id})`, matchId: dup.id });
       continue;
     }
     if (dup?.level === "similar") {
@@ -6267,6 +6267,7 @@ async function onRestoreFileChosen(event) {
     setBackupStatus("restore-status", "Analizando el archivo contra tu catálogo…");
     importAnalysis = await analyzeImportProducts(backupRestorePayload.products);
     renderAnalysisChips(importAnalysis);
+    renderImportResultsList();
     if (importAnalysis.toCreate.length === 0 && importAnalysis.review.length === 0) {
       setBackupStatus("restore-status", "Todos los productos del archivo ya existen en tu catálogo: no hay nada por crear.", "info");
       return;
@@ -6330,35 +6331,62 @@ async function runSmartImport() {
   }
 }
 
-function renderImportReviewQueue() {
+function renderImportResultsList() {
   const listEl = document.getElementById("restore-backup-list");
   if (!listEl) return;
-  if (importReviewQueue.length === 0) {
-    listEl.innerHTML = `<div class="backup-list-empty">Sin productos pendientes de revisión.</div>`;
+  const discarded = importAnalysis?.discarded || [];
+  if (importReviewQueue.length === 0 && discarded.length === 0) {
+    listEl.innerHTML = `<div class="backup-list-empty">Sin productos pendientes: todo fue importado o descartado.</div>`;
     return;
   }
-  listEl.innerHTML = importReviewQueue.map((item, i) => `
-    <button type="button" class="backup-product-item backup-product-item--btn" data-review-index="${i}">
-      <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-      <span class="backup-item-title">${escapeHTML(item.row.title || "(sin título)")}</span>
-      <span class="backup-item-dest is-review">Se parece a ${escapeHTML(String(item.matchId))}</span>
-      <span class="backup-item-id">${escapeHTML(String(item.row.id))}</span>
-    </button>`).join("");
+  let html = "";
+  if (importReviewQueue.length > 0) {
+    html += `<div class="backup-list-section">Pendientes de revisión (parecidos)</div>`;
+    html += importReviewQueue.map((item, i) => `
+      <button type="button" class="backup-product-item backup-product-item--btn" data-review-index="${i}">
+        <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+        <span class="backup-item-title">${escapeHTML(item.row.title || "(sin título)")}</span>
+        <span class="backup-item-dest is-review">Se parece a ${escapeHTML(String(item.matchId))}</span>
+        <span class="backup-item-id">${escapeHTML(String(item.row.id))}</span>
+      </button>`).join("");
+  }
+  if (discarded.length > 0) {
+    html += `<div class="backup-list-section">Descartados por ya existir — clic para verificar lado a lado</div>`;
+    html += discarded.map((d, i) => `
+      <button type="button" class="backup-product-item backup-product-item--btn" data-discarded-index="${i}">
+        <i class="ph ph-seal-check" aria-hidden="true"></i>
+        <span class="backup-item-title">${escapeHTML(d.row.title || "(sin título)")}</span>
+        <span class="backup-item-dest is-update">Ya existe (${escapeHTML(String(d.matchId))})</span>
+        <span class="backup-item-id">${escapeHTML(String(d.row.id))}</span>
+      </button>`).join("");
+  }
+  listEl.innerHTML = html;
   listEl.querySelectorAll("[data-review-index]").forEach((btn) => {
     btn.addEventListener("click", () => openCompareForm(Number(btn.dataset.reviewIndex)));
+  });
+  listEl.querySelectorAll("[data-discarded-index]").forEach((btn) => {
+    btn.addEventListener("click", () => openDiscardedCompare(Number(btn.dataset.discardedIndex)));
   });
 }
 
 function finishImportIfDone() {
-  renderImportReviewQueue();
-  if (importReviewQueue.length > 0) {
-    setBackupStatus("restore-status", `${importReviewQueue.length} producto(s) pendiente(s) de revisión. Revísalos abajo.`, "info");
+  renderImportResultsList();
+  const pendientes = importReviewQueue.length;
+  const descartados = importAnalysis?.discarded?.length || 0;
+  if (pendientes > 0) {
+    setBackupStatus("restore-status", `${pendientes} producto(s) pendiente(s) de revisión. Revísalos abajo.`, "info");
+    return;
+  }
+  if (descartados > 0) {
+    // Importación exitosa: los descartados quedan listados y se pueden
+    // verificar lado a lado antes de cerrar la ventana.
+    setBackupStatus("restore-status", `Importación completada: ${importSummary?.creados || 0} creado(s), ${descartados} ya existían (verificables abajo).`, "info");
     return;
   }
   const s = importSummary || { descartados: 0, creados: 0, revisados: 0 };
   setBackupStatus("restore-status", `Importación completada: ${s.creados} creado(s), ${s.descartados} descartado(s), ${s.revisados} revisado(s).`, "info");
   showAlert(`Importación completada: ${s.creados} creado(s), ${s.descartados} descartado(s), ${s.revisados} revisado(s). Todo quedó en el historial de importaciones.`, "success");
-  // Todo fue exitoso: cerrar la ventana de importación automáticamente.
+  // Todo fue exitoso y no quedó nada por verificar: cerrar automáticamente.
   setTimeout(() => {
     closeBackupModalById("compare-import-modal");
     closeBackupModalById("restore-backup-modal");
@@ -6396,19 +6424,44 @@ function openTemplateCompare(row, matchId) {
   openBackupModalById("compare-import-modal");
 }
 
+/* Revisión de un producto auto-descartado por "ya existe": verifica lado a
+   lado si realmente es el mismo. Si lo es, se mantiene descartado; si es otro
+   producto, se crea como nuevo con ID secuencial (nunca sobrescribe). */
+function openDiscardedCompare(index) {
+  const d = importAnalysis?.discarded?.[index];
+  if (!d) return;
+  compareMode = "discarded";
+  templateCompareRow = d.row;
+  templateCompareMatchId = d.matchId;
+  importCurrentIndex = index;
+  document.getElementById("compare-import-id").textContent = `(${String(d.row.id)})`;
+  document.getElementById("compare-existing-id").textContent = `${String(d.matchId)} — solo lectura`;
+  setCompareButtons("discarded");
+  buildCompareEditable(d.row);
+  buildCompareReadonly(d.matchId);
+  openBackupModalById("compare-import-modal");
+}
+
 function setCompareButtons(mode) {
   const saveBtn = document.getElementById("compare-save-btn");
   const discardBtn = document.getElementById("compare-discard-btn");
-  if (saveBtn) {
-    saveBtn.innerHTML = mode === "template"
-      ? `<i class="ph ph-file-arrow-down" aria-hidden="true"></i> Cargar en el formulario`
-      : `<i class="ph ph-check" aria-hidden="true"></i> Guardar e importar`;
-  }
-  if (discardBtn) {
-    discardBtn.innerHTML = mode === "template"
-      ? `<i class="ph ph-x-circle" aria-hidden="true"></i> No es el mismo, descartar`
-      : `<i class="ph ph-x-circle" aria-hidden="true"></i> Descartar (no importar)`;
-  }
+  const labels = {
+    import: {
+      save: `<i class="ph ph-check" aria-hidden="true"></i> Guardar e importar`,
+      discard: `<i class="ph ph-x-circle" aria-hidden="true"></i> Descartar (no importar)`
+    },
+    template: {
+      save: `<i class="ph ph-file-arrow-down" aria-hidden="true"></i> Es otro, cargar en el formulario`,
+      discard: `<i class="ph ph-x-circle" aria-hidden="true"></i> Es el mismo, descartar`
+    },
+    discarded: {
+      save: `<i class="ph ph-plus-circle" aria-hidden="true"></i> Es otro, crear como producto nuevo`,
+      discard: `<i class="ph ph-x-circle" aria-hidden="true"></i> Es el mismo, descartar`
+    }
+  };
+  const l = labels[mode] || labels.import;
+  if (saveBtn) saveBtn.innerHTML = l.save;
+  if (discardBtn) discardBtn.innerHTML = l.discard;
 }
 
 function buildCompareEditable(row) {
@@ -6516,6 +6569,34 @@ async function saveCompareImport() {
     if (row) loadProductAsTemplate(row);
     return;
   }
+  // Modo descartado: el usuario verificó y concluye que ES OTRO producto →
+  // se crea como nuevo con ID secuencial. Jamás sobrescribe el existente.
+  if (compareMode === "discarded") {
+    const base = templateCompareRow;
+    if (!base) { closeBackupModalById("compare-import-modal"); return; }
+    const row = collectCompareRow();
+    const btn = document.getElementById("compare-save-btn");
+    setButtonBusy(btn, true, "Creando…");
+    try {
+      const nuevoId = await obtenerSiguienteId("productos", "contador_productos", "producto-");
+      row.id = nuevoId;
+      const { error } = await supabase.from("productos").upsert(row);
+      if (error) throw error;
+      appendImportItems([{ id: row.id, title: row.title || row.id, accion: "importado", detalle: `verificado lado a lado contra ${templateCompareMatchId}: es otro producto; creado como nuevo` }]);
+      const idx = importAnalysis?.discarded?.findIndex((d) => String(d.row.id) === String(base.id));
+      if (idx >= 0) importAnalysis.discarded.splice(idx, 1);
+      if (importSummary) { importSummary.creados += 1; importSummary.descartados = Math.max(0, importSummary.descartados - 1); importSummary.revisados += 1; }
+      renderAnalysisChips(importAnalysis);
+      closeBackupModalById("compare-import-modal");
+      showAlert(`Producto creado como ${row.id} (el existente ${templateCompareMatchId} quedó intacto).`, "success");
+      finishImportIfDone();
+    } catch (err) {
+      showAlert(`Error al crear: ${err.message || err}`, "error");
+    } finally {
+      setButtonBusy(btn, false);
+    }
+    return;
+  }
   const item = importReviewQueue[importCurrentIndex];
   if (!item) { closeBackupModalById("compare-import-modal"); return; }
   const row = collectCompareRow();
@@ -6543,6 +6624,13 @@ async function saveCompareImport() {
 }
 
 function discardCompareImport() {
+  // Modo descartado: confirma que ES el mismo → sigue descartado, no se toca nada.
+  if (compareMode === "discarded") {
+    appendImportItems([{ id: templateCompareRow?.id || "", title: templateCompareRow?.title || templateCompareRow?.id || "", accion: "descartado", detalle: `confirmado manualmente: es el mismo producto (${templateCompareMatchId})` }]);
+    closeBackupModalById("compare-import-modal");
+    showAlert("Confirmado: es el mismo producto, sigue descartado.", "info");
+    return;
+  }
   // Modo plantilla: descartar solo cierra la revisión, no hay nada que borrar.
   if (compareMode === "template") {
     closeBackupModalById("compare-import-modal");
