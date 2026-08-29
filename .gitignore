@@ -9,3 +9,6 @@ dist/
 
 # Logs del dev server
 dev_test_*.log
+
+# Respaldos locales de datos (contienen informacion de la BD)
+backup/
