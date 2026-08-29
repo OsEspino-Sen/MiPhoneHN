@@ -5569,6 +5569,9 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 .backup-item-dest{font-size:.6875rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--r-pill);padding:3px 9px;flex-shrink:0}
 .backup-item-dest.is-update{background:var(--accent-soft);color:var(--accent);border:1px solid #C7D2FE}
 .backup-item-dest.is-create{background:var(--success-bg);color:var(--success);border:1px solid var(--success-line)}
+.backup-item-dup{display:inline-flex;align-items:center;gap:4px;font-size:.6875rem;font-weight:800;border-radius:var(--r-pill);padding:3px 9px;flex-shrink:0;white-space:nowrap}
+.backup-item-dup.identical{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-line)}
+.backup-item-dup.similar{background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-line)}
 .backup-list-empty,.backup-list-loading{padding:18px;text-align:center;font-size:.8125rem;color:var(--ink-3)}
 
 .backup-file-drop{display:flex;align-items:center;gap:10px;justify-content:center;padding:18px;border:1px dashed var(--line-strong);border-radius:var(--r-md);background:var(--surface-2);cursor:pointer;font-size:.8125rem;font-weight:700;color:var(--ink-2);margin-bottom:14px;transition:var(--t-fast)}
