@@ -5548,7 +5548,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
               <div class="usuario-cell-info"><strong>${esc(nombre)}</strong>${yo ? '<em class="usuario-yo">(tú)</em>' : ''}</div>
             </div>
           </td>
-          <td class="usuario-correo">${esc(u.correo) || '—'}</td>
+          <td>${esc(u.correo) || '—'}</td>
           <td><span class="rol-pill ${rl.clase}"><i class="ph ${rl.icon}" aria-hidden="true"></i>${esc(rl.texto)}</span></td>
           <td><span class="estado-pill ${activo ? 'is-active' : 'is-inactive'}">${activo ? 'Activo' : 'Bloqueado'}</span></td>
           <td>${fmtFecha(u.fechaCreacion)}</td>
