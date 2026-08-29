@@ -780,6 +780,10 @@
                     </div>
                     <div id="backups-history-list" class="backups-history-list"></div>
                     <div id="import-log-list" class="backups-history-list" hidden></div>
+                    <div class="backup-history-footer">
+                      <button type="button" id="clear-history-btn" class="btn btn-danger-ghost btn-sm"><i class="ph ph-eraser" aria-hidden="true"></i> Limpiar historial</button>
+                      <span class="backup-history-scope"><i class="ph ph-info" aria-hidden="true"></i> Este historial vive en este navegador: no se sincroniza entre equipos ni sobrevive a borrar los datos del navegador. Tu respaldo fuerte es el export manual.</span>
+                    </div>
                   </div>
                 </article>
               </div>
@@ -1198,9 +1202,25 @@
     </div>
   </div>
 
+  <!-- MODAL LIMPIAR HISTORIAL (con clave de confirmación) -->
+  <div id="clear-history-modal" class="confirm-backdrop" role="alertdialog" aria-labelledby="clear-history-title" hidden>
+    <div class="confirm-overlay" data-close-backup="clear-history-modal"></div>
+    <div class="confirm-card confirm-card--centered">
+      <div class="confirm-icon unsaved-icon--warning"><i class="ph ph-eraser" aria-hidden="true"></i></div>
+      <span class="confirm-eyebrow">Confirmación</span>
+      <h3 id="clear-history-title">¿Limpiar todo el historial?</h3>
+      <p>Se borrarán <strong id="clear-history-counts">0</strong> guardados <strong>en este navegador</strong>: los respaldos automáticos (incluidas las copias "previa a eliminación") y el registro de importaciones.<br><br>Tu catálogo, tu base de datos y tus archivos exportados <strong>no se tocan</strong>. Esta acción no se puede deshacer.</p>
+      <input type="text" id="clear-history-input" class="llave-prompt-input" placeholder="Escribe ELIMINAR para confirmar" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <div class="llave-prompt-error" id="clear-history-error" hidden>Escribe ELIMINAR (en mayúsculas) para confirmar.</div>
+      <div class="confirm-button-group">
+        <button type="button" id="clear-history-cancel" class="btn btn-secondary">Cancelar</button>
+        <button type="button" id="clear-history-ok" class="btn btn-danger-solid">Limpiar historial</button>
+      </div>
+    </div>
+  </div>
+
   <div id="category-modal" class="confirm-backdrop" role="dialog" aria-labelledby="category-modal-title" hidden>
-    <div class="confirm-overlay" id="category-overlay"></div>
-    <div class="confirm-card category-card">
+    <div class="confirm-overlay" id="category-overlay"></div>    <div class="confirm-card category-card">
       <div class="confirm-card-head">
         <div class="confirm-icon confirm-icon--blue"><i class="ph ph-tag" aria-hidden="true"></i></div>
         <div>
