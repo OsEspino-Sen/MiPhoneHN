@@ -360,7 +360,7 @@ textarea:focus {
    AVISO DE PRODUCTO DUPLICADO — compacto, flat y discreto
    ========================================================================== */
 .duplicate-warning{
-  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  display:flex;align-items:center;gap:10px;padding:10px 14px;margin-top:10px;
   border:1px solid var(--danger-line);border-left:3px solid var(--danger);
   border-radius:var(--r-sm);background:var(--danger-bg);
   animation:dupFade .25s ease
@@ -5330,10 +5330,15 @@ body #products-table-body .data-grid-row::before {
 
 .usuarios-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.8125rem}
 .usuarios-table thead th{text-align:center;font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3,#5b7aa3);padding:12px 10px;border-bottom:1px solid var(--line-soft,#e6ecf5);background:rgba(240,247,255,.35)}
-/* Usuario y Correo electrónico van a la IZQUIERDA (etiqueta y contenido
-   alineados), el resto de columnas mantiene su encabezado centrado. */
+/* Alineación de columnas de Usuarios:
+   - Usuario / Correo electrónico → IZQUIERDA (etiqueta y contenido)
+   - Rol / Estado / Fecha de creación → CENTRADOS
+   - Acciones → etiqueta centrada, botones a la derecha */
 .usuarios-table thead th.ta-left{text-align:left}
-.usuarios-table tbody td{padding:12px 10px;border-bottom:1px solid var(--line-soft,#e6ecf5);vertical-align:middle;text-align:left}
+.usuarios-table thead th.ta-right{text-align:right}
+.usuarios-table tbody td{padding:12px 10px;border-bottom:1px solid var(--line-soft,#e6ecf5);vertical-align:middle;text-align:center}
+.usuarios-table tbody td.ta-left{text-align:left}
+.usuarios-table tbody td.ta-right{text-align:right}
 .usuarios-table tbody tr{transition:background var(--t-fast,.2s)}
 .usuarios-table tbody tr:hover{background:rgba(36,64,232,.04)}
 .usuarios-table tbody tr:last-child td{border-bottom:none}
@@ -5354,11 +5359,12 @@ body #products-table-body .data-grid-row::before {
 .estado-pill.is-inactive{color:#cd3d4a;background:rgba(230,57,70,.12)}
 
 .ta-right{text-align:right}
-/* La tabla de usuarios: ENCABEZADOS centrados sobre su columna, pero
-   CONTENIDO alineado a la izquierda para una lectura cómoda. Los botones
-   de acciones también se alinean a la izquierda (ganan a
-   .table-actions > justify-content:flex-end). */
-.usuarios-table .table-actions{justify-content:flex-start}
+/* Tabla de usuarios:
+   - Usuario / Correo electrónico → etiqueta y contenido a la IZQUIERDA
+   - Rol / Estado / Fecha → centrados
+   - Acciones → ETIQUETA centrada, pero los BOTONES a la DERECHA
+     (justify-content:flex-end los empuja al borde de su columna). */
+.usuarios-table .table-actions{justify-content:flex-end}
 
 /* Editores inline de usuario */
 .usuario-edit-nombre{width:100%;max-width:200px;height:32px;padding:0 8px;font-size:.8125rem;color:var(--ink,#1d2a44);background:rgba(240,247,255,.5);border:1px solid var(--line-strong,#bcd2ec);border-radius:var(--r-sm,8px);outline:none;transition:border-color var(--t-fast,.2s),box-shadow var(--t-fast,.2s)}
