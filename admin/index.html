@@ -773,8 +773,13 @@
                     <button type="button" id="restore-backup-btn" class="btn btn-secondary"><i class="ph ph-upload-simple" aria-hidden="true"></i> Importar / Restaurar</button>
                   </div>
                   <div class="backup-history" id="backup-history-section">
-                    <h4><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i> Respaldos automáticos (antes de restaurar)</h4>
+                    <h4><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i> Historial</h4>
+                    <div class="backup-subtabs">
+                      <button type="button" class="backup-subtab active" data-histtab="respaldos"><i class="ph ph-shield-check" aria-hidden="true"></i> Respaldos automáticos</button>
+                      <button type="button" class="backup-subtab" data-histtab="importaciones"><i class="ph ph-list-checks" aria-hidden="true"></i> Productos importados / descartados</button>
+                    </div>
                     <div id="backups-history-list" class="backups-history-list"></div>
+                    <div id="import-log-list" class="backups-history-list" hidden></div>
                   </div>
                 </article>
               </div>
@@ -1127,18 +1132,23 @@
       <div class="confirm-icon confirm-icon--blue"><i class="ph ph-upload-simple" aria-hidden="true"></i></div>
       <span class="confirm-eyebrow">Backup</span>
       <h3 id="restore-backup-title">Importar / Restaurar</h3>
-      <p class="backup-modal-hint">Elige un archivo de backup. Antes de modificar cualquier producto se generará un <strong>respaldo de seguridad automático</strong>.</p>
+      <p class="backup-modal-hint">Elige un archivo de backup. El sistema <strong>descarta automáticamente los que ya existen</strong>, <strong>crea los nuevos</strong> y te deja <strong>revisar los parecidos</strong> uno a uno. Tu catálogo actual nunca se sobrescribe en esta ventana.</p>
       <label class="backup-file-drop" for="restore-file-input">
         <i class="ph ph-file-arrow-up" aria-hidden="true"></i>
         <span id="restore-file-label">Haz clic para elegir un archivo .json</span>
         <input type="file" id="restore-file-input" accept="application/json,.json" hidden>
       </label>
+      <div class="backup-analysis" id="restore-analysis" hidden>
+        <span class="analysis-chip is-discard"><i class="ph ph-x-circle" aria-hidden="true"></i> <b id="analysis-descartados">0</b> ya existen → descartados</span>
+        <span class="analysis-chip is-create"><i class="ph ph-plus-circle" aria-hidden="true"></i> <b id="analysis-creados">0</b> nuevos → creados</span>
+        <span class="analysis-chip is-review"><i class="ph ph-magnifying-glass" aria-hidden="true"></i> <b id="analysis-revision">0</b> parecidos → revisar</span>
+      </div>
       <div class="backup-product-list" id="restore-backup-list"></div>
       <div class="backup-modal-status" id="restore-status" hidden></div>
       <div class="backup-result" id="restore-result" hidden></div>
       <div class="confirm-button-group confirm-button-group--full">
         <button type="button" id="restore-cancel-btn" class="btn btn-secondary">Cerrar</button>
-        <button type="button" id="restore-run-btn" class="btn btn-primary" disabled><i class="ph ph-database" aria-hidden="true"></i> Restaurar seleccionados</button>
+        <button type="button" id="restore-run-btn" class="btn btn-primary" disabled><i class="ph ph-database" aria-hidden="true"></i> Importar</button>
       </div>
     </div>
   </div>
@@ -1160,6 +1170,30 @@
       <div class="backup-modal-status" id="template-status" hidden></div>
       <div class="confirm-button-group confirm-button-group--full">
         <button type="button" id="template-cancel-btn" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE REVISIÓN: comparación lado a lado (importar vs existente) -->
+  <div id="compare-import-modal" class="confirm-backdrop" role="dialog" aria-labelledby="compare-import-title" hidden>
+    <div class="confirm-overlay" data-close-backup="compare-import-modal"></div>
+    <div class="confirm-card confirm-card--wide compare-card">
+      <span class="confirm-eyebrow">Revisión de producto parecido</span>
+      <h3 id="compare-import-title">Verificación lado a lado</h3>
+      <p class="backup-modal-hint">A la izquierda lo que vas a importar (editable). A la derecha el parecido que ya existe en tu base de datos (<strong>solo lectura</strong>). Decide: descartarlo, ajustar parámetros o guardarlo tal cual.</p>
+      <div class="compare-panes">
+        <section class="compare-pane">
+          <header class="compare-pane-head is-editable"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Quiero importar <span id="compare-import-id" class="compare-pane-id"></span></header>
+          <div class="compare-pane-body" id="compare-editable"></div>
+        </section>
+        <section class="compare-pane">
+          <header class="compare-pane-head is-readonly"><i class="ph ph-eye" aria-hidden="true"></i> Ya existe: <span id="compare-existing-id" class="compare-pane-id"></span></header>
+          <div class="compare-pane-body compare-readonly" id="compare-existing"></div>
+        </section>
+      </div>
+      <div class="confirm-button-group confirm-button-group--full">
+        <button type="button" id="compare-discard-btn" class="btn btn-danger-ghost"><i class="ph ph-x-circle" aria-hidden="true"></i> Descartar (no importar)</button>
+        <button type="button" id="compare-save-btn" class="btn btn-primary"><i class="ph ph-check" aria-hidden="true"></i> Guardar e importar</button>
       </div>
     </div>
   </div>
