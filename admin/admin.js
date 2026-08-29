@@ -3025,10 +3025,9 @@ async function submitProductForm() {
       throw new Error("Revisa los campos marcados para continuar.");
     }
 
-    // CAPA ANTI-DUPLICADOS (dura): bloquear clones exactos del catálogo actual.
-    // Se compara contra TODOS los productos (excepto el propio en edición) por
-    // nombre + marca + categoría + colores + capacidades + imágenes. Solo se
-    // permite crear si los datos difieren del existente.
+    // CAPA ANTI-DUPLICADOS (dura): el nombre de un producto NO puede repetirse.
+    // Comparación contra la BD (excepto el propio producto en edición). Para
+    // agregar otra versión del mismo producto existe el sistema de variantes.
     const borradorDup = captureFormToObject();
     const candidatoDup = {
       title: borradorDup.title,
@@ -3042,10 +3041,12 @@ async function submitProductForm() {
       isEditing ? String(editingProductId) : null,
       await fetchCatalogoLigero()
     );
-    if (duplicado && duplicado.matched >= 5) {
-      setFieldError("product-title", `Este producto ya existe (${duplicado.id}): mismas características. No se permiten duplicados.`);
+    if (duplicado) {
+      setFieldError("product-title", isEditing
+        ? `Ese nombre ya lo usa ${duplicado.id}. Los productos no pueden repetir nombre.`
+        : `Este producto ya existe (${duplicado.id}): "${duplicado.title}". No puede repetirse el nombre; para otra versión (otro color o capacidad), edítalo y agrégale una variante.`);
       document.getElementById("product-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      throw new Error(`Producto duplicado: ya existe "${duplicado.title}" (${duplicado.id}) con las mismas características. Edítalo directamente desde la lista, o cambia sus datos (colores, capacidades o imágenes) para crear una versión distinta.`);
+      throw new Error(`Nombre duplicado: "${duplicado.title}" ya existe como ${duplicado.id}. Los productos no pueden repetir nombre; para agregar otra versión del mismo producto, edítalo y agrégale una variante.`);
     }
 
     // Subida múltiple. Las URLs ya guardadas se conservan y los archivos nuevos
@@ -6712,8 +6713,14 @@ function pushImportLog({ archivo, items = [] }) {
 
 function appendImportItems(items) {
   const log = getImportLog();
-  const entry = log.find((e) => e.id === currentImportLogId) || log[0];
-  if (!entry) return;
+  let entry = log.find((e) => e.id === currentImportLogId) || log[0];
+  // Si no hay entrada previa (p. ej., todo fue descartado sin pasar por
+  // "Importar"), se crea una para no perder el registro.
+  if (!entry) {
+    entry = { id: `imp-${Date.now()}`, createdAt: new Date().toISOString(), archivo: "", items: [] };
+    log.unshift(entry);
+    currentImportLogId = entry.id;
+  }
   entry.items = [...(entry.items || []), ...items];
   localStorage.setItem(IMPORT_LOG_KEY, JSON.stringify(log.slice(0, IMPORT_LOG_MAX)));
   renderImportLog();
@@ -7163,9 +7170,11 @@ async function validarDuplicadoProductoEnVivo() {
     // el título sigue siendo el mismo.
     if (String(getFormValue("product-title") || "").trim().toLowerCase() !== title.toLowerCase()) return;
     const dup = buscarDuplicadoEnLista(candidatoDup, editingProductId, catalogo);
-    if (dup && dup.matched >= 5) {
+    if (dup) {
       productoDuplicadoBloqueado = true;
-      setFieldError("product-title", `Este producto ya existe (${dup.id}): mismas características. No se permiten duplicados.`);
+      setFieldError("product-title", editingProductId
+        ? `Ese nombre ya lo usa ${dup.id}. Los productos no pueden repetir nombre.`
+        : `Este producto ya existe (${dup.id}): "${dup.title}". No puede repetirse el nombre; para otra versión (otro color o capacidad), edítalo y agrégale una variante.`);
       if (saveBtn) saveBtn.disabled = true;
     } else if (productoDuplicadoBloqueado) {
       liberarBloqueoDuplicado();
