@@ -6224,10 +6224,12 @@ async function renderRestoreBackupList(products) {
 
   listEl.innerHTML = products.map((p) => {
     const exists = existingIds.has(String(p.id));
+    const dup = findBackupDuplicate(p);
     return `
     <label class="backup-product-item">
       <input type="checkbox" class="restore-check" value="${escapeHTML(String(p.id))}" checked>
       <span class="backup-item-title">${escapeHTML(p.title || "(sin título)")}</span>
+      ${backupDupBadge(dup)}
       <span class="backup-item-dest ${exists ? "is-update" : "is-create"}">${exists ? "Actualizará" : "Creará nuevo"}</span>
       <span class="backup-item-id">${escapeHTML(String(p.id))}</span>
     </label>`;
@@ -6404,6 +6406,62 @@ async function openTemplateImportModal() {
   openBackupModalById("template-import-modal");
 }
 
+/* ---------- Detección de duplicados al importar ----------
+   Compara cada producto del backup contra el catálogo actual por nombre Y por
+   características: marca, categoría, variantes de color (nombre+hex),
+   capacidades/precios e imágenes. "identical" = coinciden todas las facetas;
+   "similar" = coinciden 3 o más. No solo el nombre: hasta el color cuenta. */
+function normalizeCatalogText(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function backupFacets(row) {
+  const colors = Array.isArray(row?.variants?.colors) ? row.variants.colors : [];
+  const storage = Array.isArray(row?.variants?.storage) ? row.variants.storage : [];
+  const images = Array.isArray(row?.images) ? row.images : [];
+  return {
+    title: normalizeCatalogText(row?.title),
+    brand: normalizeCatalogText(row?.brand),
+    category: normalizeCatalogText(row?.category),
+    colorsKey: JSON.stringify(colors.map((c) => `${normalizeCatalogText(c?.name)}|${normalizeCatalogText(c?.hex || c?.value)}`).sort()),
+    storageKey: JSON.stringify(storage.map((s) => `${normalizeCatalogText(s?.name)}|${Number(s?.price) || 0}`).sort()),
+    imagesKey: JSON.stringify(images.map((u) => String(u || "").split("?")[0]).sort())
+  };
+}
+
+function findBackupDuplicate(fileRow) {
+  const f = backupFacets(fileRow);
+  if (!f.title) return null;
+  let best = null;
+  for (const cand of (Array.isArray(products) ? products : [])) {
+    if (normalizeCatalogText(cand?.title) !== f.title) continue;
+    const c = backupFacets(cand);
+    const matched = [
+      !!f.brand && f.brand === c.brand,
+      !!f.category && f.category === c.category,
+      f.colorsKey !== "[]" && f.colorsKey === c.colorsKey,
+      f.storageKey !== "[]" && f.storageKey === c.storageKey,
+      f.imagesKey !== "[]" && f.imagesKey === c.imagesKey
+    ].filter(Boolean).length;
+    if (!best || matched > best.matched) best = { matched, id: cand.id, title: cand.title };
+  }
+  if (!best) return null;
+  if (best.matched >= 5) return { level: "identical", ...best };
+  if (best.matched >= 3) return { level: "similar", ...best };
+  return null;
+}
+
+function backupDupBadge(dup) {
+  if (!dup) return "";
+  const label = dup.level === "identical"
+    ? `Ya existe (${escapeHTML(String(dup.id))})`
+    : `Se parece a ${escapeHTML(String(dup.id))}`;
+  const hint = dup.level === "identical"
+    ? "Este producto ya está en el catálogo con las mismas características"
+    : "Hay un producto muy parecido en el catálogo";
+  return `<span class="backup-item-dup ${dup.level}" title="${hint}"><i class="ph ph-warning" aria-hidden="true"></i> ${label}</span>`;
+}
+
 async function onTemplateFileChosen(event) {
   const file = event.target.files?.[0];
   backupTemplatePayload = null;
@@ -6414,19 +6472,33 @@ async function onTemplateFileChosen(event) {
     document.getElementById("template-file-label").innerHTML =
       `<i class="ph ph-check-circle" aria-hidden="true"></i> ${escapeHTML(file.name)} — ${backupTemplatePayload.count} producto(s)`;
     const listEl = document.getElementById("template-import-list");
-    listEl.innerHTML = backupTemplatePayload.products.map((p) => `
+    listEl.innerHTML = backupTemplatePayload.products.map((p) => {
+      const dup = findBackupDuplicate(p);
+      return `
       <button type="button" class="backup-product-item backup-product-item--btn" data-template-id="${escapeHTML(String(p.id))}">
         <i class="ph ph-arrow-bend-down-right" aria-hidden="true"></i>
         <span class="backup-item-title">${escapeHTML(p.title || "(sin título)")}</span>
         <span class="backup-item-meta">${escapeHTML(p.brand || "")}</span>
+        ${backupDupBadge(dup)}
         <span class="backup-item-id">${escapeHTML(String(p.id))}</span>
-      </button>
-    `).join("") || `<div class="backup-list-empty">El archivo no contiene productos.</div>`;
+      </button>`;
+    }).join("") || `<div class="backup-list-empty">El archivo no contiene productos.</div>`;
 
     listEl.querySelectorAll("[data-template-id]").forEach((btnEl) => {
       btnEl.addEventListener("click", () => {
         const row = backupTemplatePayload.products.find((p) => String(p.id) === btnEl.dataset.templateId);
-        if (row) loadProductAsTemplate(row);
+        if (!row) return;
+        const dup = findBackupDuplicate(row);
+        if (dup?.level === "identical") {
+          showConfirm(
+            "Ups, este producto ya existe",
+            `<strong>${escapeHTML(row.title || String(row.id))}</strong> ya está en tu catálogo como <strong>${escapeHTML(String(dup.id))}</strong> con las mismas características (marca, categoría, variantes de color y capacidades/imágenes).<br>Si continúas se creará una <strong>copia</strong>; revisa que no estés duplicando el producto.`,
+            () => loadProductAsTemplate(row),
+            { tone: "danger", okLabel: "Cargar como plantilla" }
+          );
+          return;
+        }
+        loadProductAsTemplate(row);
       });
     });
   } catch (err) {
