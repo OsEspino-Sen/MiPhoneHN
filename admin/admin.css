@@ -246,6 +246,7 @@ h3 {
 }
 
 .btn-close-drawer {
+  margin-left: auto;
   width: 40px;
   height: 40px;
   display: inline-flex;
@@ -2561,54 +2562,6 @@ body #products-table-body .data-grid-row::before {
   background: var(--success)
 }
 
-.drawer-mode-chip {
-  flex-shrink: 0;
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  /* Base premium: negro sólido (Nuevo / Edición). */
-  background: var(--ink);
-  color: #fff;
-  font-family: var(--font-mono);
-  font-size: .6875rem;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  white-space: nowrap
-}
-
-/* Variante activa: se tiñe del color (--chip-bg) con contraste automático por JS. */
-.drawer-mode-chip.is-variant {
-  background: var(--chip-bg, var(--ink));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18)
-}
-
-.drawer-mode-swatch {
-  display: none;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--swatch, #cccccc);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18);
-  flex: none
-}
-
-.drawer-mode-chip.is-variant .drawer-mode-swatch {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35)
-}
-
-.drawer-mode-chip-text {
-  font-weight: 700;
-  letter-spacing: .02em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px
-}
-
 .drawer-form {
   flex: 1;
   display: flex;
@@ -3411,10 +3364,6 @@ body #products-table-body .data-grid-row::before {
 
   .drawer-header {
     padding: 16px 18px
-  }
-
-  .drawer-mode-chip {
-    display: none
   }
 
   .drawer-body {
@@ -4532,8 +4481,7 @@ body #products-table-body .data-grid-row::before {
   margin-top: 0;
 }
 
-/* Chip del encabezado (identificador del modo): estilos definidos junto a la
-   cabecera del drawer (.drawer-mode-chip). Aquí solo la barra de variantes. */
+/* Barra de variantes: estilos propios (el encabezado ya no lleva chip). */
 
 .variant-bar-tab {
   position: relative;

@@ -599,16 +599,12 @@ const fsColorsCopy = document.getElementById("fs-colors-copy");
 const duplicateVariantBtn = document.getElementById("duplicate-variant-btn");
 const saveProductBtn = document.getElementById("save-product-btn");
 const variantColorWarning = document.getElementById("variant-color-warning");
-/* Chip del encabezado: identifica el modo de edición (principal/variante) por color */
-const drawerModeSwatch = document.getElementById("drawer-mode-swatch");
-const drawerModeChipText = document.getElementById("drawer-mode-chip-text");
 const fileDropzone = document.getElementById("file-dropzone");
 const productImageFileInput = document.getElementById("product-image-file");
 const productImageUrlsInput = document.getElementById("product-image");
 const productImagesPreview = document.getElementById("product-images-preview");
 const productImagesCount = document.getElementById("product-images-count");
 // Drawer de producto: elementos del rediseño
-const drawerModeChip = document.getElementById("drawer-mode-chip");
 const drawerModeCopy = document.getElementById("drawer-mode-copy");
 const drawerUpdateNotice = document.getElementById("drawer-update-notice");
 const drawerDangerZone = document.getElementById("drawer-danger-zone");
@@ -750,7 +746,6 @@ function init() {
     renderVariantBar();
     updateVariantColorWarning();
     updateVariantScopeHints();
-    updateDrawerModeChip();
   });
   variantColorPicker?.addEventListener("input", () => { updateVariantHexInput(variantColorPicker.value); });
   variantColorHexInput?.addEventListener("input", () => {
@@ -1574,11 +1569,10 @@ function openProductModal(productId) {
     fillProductForm(product);
   }
 
-  // Estados visuales del rediseño: chip de modo (premium), aviso y zona de riesgo.
+  // Estados visuales del rediseño: aviso y zona de riesgo.
   deleteProductBtn.hidden = !isEditing;
   if (drawerDangerZone) drawerDangerZone.hidden = !isEditing;
   if (drawerUpdateNotice) drawerUpdateNotice.hidden = !isEditing;
-  updateDrawerModeChip();
   if (drawerModeCopy) {
     drawerModeCopy.textContent = isEditing
       ? "Los cambios reemplazarán la información publicada"
@@ -2056,13 +2050,12 @@ function renderVariantColorMode(draft) {
   // una variante no tiene sentido (eliminar borra todo el grupo).
   if (drawerDangerZone) drawerDangerZone.hidden = isVariant || !editingProductId;
 
-  // Identificador premium del modo de edición: el chip se tiñe del color de la
-  // variante activa, o del color representativo del producto principal.
-  updateDrawerModeChip();
-
+  // Identificador del modo de edición en el subtítulo del encabezado.
   if (drawerModeCopy) {
     if (isVariant) {
-      drawerModeCopy.innerHTML = `Estás editando la variante${draft?.colorName ? ` <strong>"${escapeHTML(draft.colorName)}"</strong>` : ""}. Todo lo que agregues aquí pertenece SOLO a esta variante.`;
+      drawerModeCopy.textContent = draft?.colorName
+        ? `Estás editando la variante "${draft.colorName}"`
+        : "Estás editando la variante";
     } else {
       drawerModeCopy.textContent = editingProductId
         ? "Los cambios reemplazarán la información publicada"
@@ -2075,49 +2068,6 @@ function renderVariantColorMode(draft) {
   updateVariantColorWarning();
 }
 
-// Aplica el color identificador del chip del encabezado (con contraste
-// automático). Variante activa → su color; producto principal → su primer color.
-function updateDrawerModeChip() {
-  if (!drawerModeChip) return;
-  const isVariant = activeVariantIndex > 0;
-  let hex = null;
-  let label = "";
-
-  if (isVariant) {
-    const vd = variantDrafts[activeVariantIndex];
-    hex = normalizeHexColor(vd?.hex || "#cccccc");
-    label = vd?.colorName || "Variante";
-  }
-  // Producto principal: el chip refleja la ACCIÓN (Editando / Creando) y no un
-  // color; las variantes sí muestran su nombre para identificar cuál se edita.
-
-  if (hex && label) {
-    drawerModeChip.classList.add("is-variant");
-    drawerModeChip.style.setProperty("--chip-bg", hex);
-    if (drawerModeChipText) drawerModeChipText.textContent = label;
-    if (drawerModeSwatch) {
-      drawerModeSwatch.style.setProperty("--swatch", hex);
-      drawerModeSwatch.style.display = "inline-block";
-    }
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    drawerModeChip.style.color = brightness > 160 ? "#0e101c" : "#ffffff";
-  } else {
-    drawerModeChip.classList.remove("is-variant");
-    drawerModeChip.classList.add("is-editing");
-    drawerModeChip.style.removeProperty("--chip-bg");
-    drawerModeChip.style.removeProperty("color");
-    // Modo edición: se comprueba TAMBIÉN el id oculto del formulario (llenado
-    // por fillProductForm) para que el chip diga "Editando" en cualquier ruta
-    // de edición, aunque editingProductId aún no esté asignado.
-    const isEditing = !!editingProductId || !!document.getElementById("product-id")?.value;
-    if (drawerModeChipText) drawerModeChipText.textContent = isEditing ? "Editando" : "Creando";
-    if (drawerModeSwatch) drawerModeSwatch.style.display = "none";
-  }
-}
-
 function updateVariantHexInput(hex, updateDraft = true) {
   const value = normalizeHexColor(hex);
   variantColorPicker.value = value.toLowerCase();
@@ -2125,7 +2075,6 @@ function updateVariantHexInput(hex, updateDraft = true) {
   if (updateDraft) {
     const d = variantDrafts[activeVariantIndex];
     if (d) { d.hex = value.toUpperCase(); renderVariantBar(); }
-    if (activeVariantIndex > 0) updateDrawerModeChip();
   }
 }
 
@@ -2739,13 +2688,8 @@ function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
     if (/^#[0-9a-f]{6}$/i.test(hexInput.value.trim())) syncCalculatedValues(hexInput.value);
   });
   hexInput?.addEventListener("blur", () => syncCalculatedValues(hexInput.value));
-  const nameInput = row.querySelector(".color-name");
-  nameInput?.addEventListener("input", updateDrawerModeChip);
-  picker?.addEventListener("change", updateDrawerModeChip);
-  hexInput?.addEventListener("change", updateDrawerModeChip);
   row.querySelector(".remove-row-btn")?.addEventListener("click", () => {
     row.remove();
-    updateDrawerModeChip();
   });
   colorsList.appendChild(row);
 }
