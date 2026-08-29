@@ -540,6 +540,12 @@ let previewObjectUrls = [];
 let variantDrafts = [];
 let activeVariantIndex = 0;
 let variantPreviewObjectUrls = [];
+/* Evita que la validación en vivo re-habilite el botón de guardar mientras el
+   envío (subida de imágenes/escritura en Supabase) está en curso. */
+let isSubmittingProduct = false;
+/* Mantiene el aviso de color en tono "error" tras un guardado rechazado hasta
+   que el administrador edite el color de la variante. */
+let variantErrorLocked = false;
 /* Detección de cambios sin guardar del Drawer de producto. */
 let formSnapshot = null;
 let formIsDirty = false;
@@ -590,6 +596,9 @@ const variantColorPicker = document.getElementById("variant-color-picker");
 const variantColorHexInput = document.getElementById("variant-color-hex");
 const fsColorsTitle = document.getElementById("fs-colors-title");
 const fsColorsCopy = document.getElementById("fs-colors-copy");
+const duplicateVariantBtn = document.getElementById("duplicate-variant-btn");
+const saveProductBtn = document.getElementById("save-product-btn");
+const variantColorWarning = document.getElementById("variant-color-warning");
 /* Chip del encabezado: identifica el modo de edición (principal/variante) por color */
 const drawerModeSwatch = document.getElementById("drawer-mode-swatch");
 const drawerModeChipText = document.getElementById("drawer-mode-chip-text");
@@ -720,20 +729,28 @@ function init() {
   addStorageBtn?.addEventListener("click", () => addStorageRow());
   /* Variantes de producto */
   addVariantBarBtn?.addEventListener("click", () => {
-    const draft = snapshotFormToDraft(addVariantBarBtn);
+    const draft = snapshotFormToDraft();
     const next = cloneDraft(draft);
     next.isVariant = true;
     next.colorName = "";
-    next.hex = "#cccccc";
+    next.hex = "#CCCCCC";
     variantDrafts.push(next);
     activeVariantIndex = variantDrafts.length - 1;
     applyDraftToForm(next);
     renderVariantBar();
     variantBarTabs?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   });
+  duplicateVariantBtn?.addEventListener("click", () => {
+    duplicateVariant();
+  });
   variantColorNameInput?.addEventListener("input", () => {
     const draft = variantDrafts[activeVariantIndex];
-    if (draft) { draft.colorName = variantColorNameInput.value.trim(); renderVariantBar(); }
+    if (draft) draft.colorName = variantColorNameInput.value.trim();
+    variantErrorLocked = false;
+    renderVariantBar();
+    updateVariantColorWarning();
+    updateVariantScopeHints();
+    updateDrawerModeChip();
   });
   variantColorPicker?.addEventListener("input", () => { updateVariantHexInput(variantColorPicker.value); });
   variantColorHexInput?.addEventListener("input", () => {
@@ -1596,6 +1613,7 @@ function forceCloseProductModal() {
   clearVariantPreviewObjectUrls();
   variantDrafts = [];
   activeVariantIndex = 0;
+  variantErrorLocked = false;
   formIsDirty = false;
   clearFieldErrors();
   clearPreviewObjectUrls();
@@ -1605,36 +1623,16 @@ function forceCloseProductModal() {
 
 function computeFormSnapshot() {
   if (!productForm) return "";
-  const parts = [];
-
-  ["product-title", "product-brand", "product-category", "product-condition",
-   "product-battery-health", "product-image", "product-description"]
-    .forEach((id) => {
-      parts.push(document.getElementById(id)?.value ?? "");
-    });
-
-  parts.push([...(includesList?.querySelectorAll(".include-input") || [])].map((i) => i.value).join("¦"));
-  parts.push([...(specsList?.querySelectorAll(".spec-input") || [])].map((i) => i.value).join("¦"));
-  parts.push([...(colorsList?.querySelectorAll(".color-row") || [])].map((row) => [
-    row.querySelector(".color-name")?.value,
-    row.querySelector(".color-hex")?.value,
-    row.querySelector(".color-rgb")?.value,
-    row.querySelector(".color-hsl")?.value,
-    row.querySelector(".color-oklch")?.value
-  ].join("·")).join("¦"));
-  parts.push([...(storageList?.querySelectorAll(".dynamic-row") || [])].map((row) => [
-    row.querySelector(".storage-name")?.value,
-    row.querySelector(".storage-old-price")?.value,
-    row.querySelector(".storage-price")?.value,
-    row.querySelector(".storage-stock")?.value
-  ].join("·")).join("¦"));
-
-  parts.push(existingImageUrls.join("¦"));
-  parts.push(String(pendingImageFiles.length));
-
-  // Variantes: incluir los drafts completos para detectar cambios sin guardar.
+  // El snapshot se basa EXCLUSIVAMENTE en los drafts de variantes: cada draft
+  // ya contiene TODA la ficha (campos, listas, galería, pendientes y modo) y
+  // se sincroniza con el formulario activo aquí abajo. Incluir además los
+  // inputs crudos del formulario hacía que el mero hecho de CAMBIAR DE
+  // PESTAÑA (principal ↔ variante) alterara el snapshot —la variante muestra
+  // legítimamente su propia condición/descripción/etc.— y disparara el aviso
+  // de "cambios sin guardar" sin que el administrador haya editado nada.
   syncActiveVariantFromForm();
-  parts.push(variantDrafts.map((draft) => JSON.stringify({
+  return variantDrafts.map((draft) => JSON.stringify({
+    isVariant: draft.isVariant,
     colorName: draft.colorName,
     hex: draft.hex,
     title: draft.title,
@@ -1648,10 +1646,10 @@ function computeFormSnapshot() {
     storage: draft.storage,
     galleryUrls: draft.galleryUrls,
     pendingCount: (draft.pendingFiles || []).length,
+    pendingImagesFirst: !!draft.pendingImagesFirst,
+    uploadedCount: (draft.uploadedUrls || []).length,
     colors: draft.colors
-  })).join("¦"));
-
-  return parts.join("?");
+  })).join("¦");
 }
 
 function captureFormBaseline() {
@@ -1757,7 +1755,11 @@ function fillProductForm(product) {
     ? product.variants.colors
     : [{ name: "", value: "#cccccc" }];
   const baseColors = allColors.filter((color) => !color.overrides || !Object.keys(color.overrides).length);
-  (baseColors.length ? baseColors : [{ name: "", value: "#cccccc" }]).forEach((color) => addColorRow(color));
+  // Solo {name, value}: rgb/hsl/oklch se RECALCULAN siempre (addColorRow). Si se
+  // aceptaran los strings guardados, el snapshot de "cambios sin guardar"
+  // diferiría del recalculado al re-renderizar (falso positivo de dirty).
+  (baseColors.length ? baseColors : [{ name: "", value: "#cccccc" }])
+    .forEach((color) => addColorRow({ name: color.name, value: color.value || color.hex || "#cccccc" }));
 
   storageList.innerHTML = "";
   const storageVars = product.variants?.storage?.length
@@ -1990,6 +1992,11 @@ function syncActiveVariantFromForm() {
 function applyDraftToForm(draft) {
   if (!draft) return;
   activeVariantIndex = variantDrafts.indexOf(draft) >= 0 ? variantDrafts.indexOf(draft) : 0;
+  const isVariant = activeVariantIndex > 0;
+
+  // Regla de negocio: TODAS las variantes comparten el MISMO nombre de producto.
+  // El nombre nunca diferencia una variante de otra; solo el color lo hace.
+  if (isVariant && variantDrafts[0]?.title) draft.title = variantDrafts[0].title;
 
   setFormValue("product-title", draft.title);
   setFormValue("product-brand", draft.brand);
@@ -2009,8 +2016,12 @@ function applyDraftToForm(draft) {
   specsList.innerHTML = "";
   ((draft.specs || []).length ? draft.specs : [""]).forEach((item) => addSpecRow(item));
   storageList.innerHTML = "";
-  const storage = (draft.storage && draft.storage.length) ? draft.storage : [{ name: "128GB", price: 0, oldPrice: 0, stock: null }];
+  const storage = (draft.storage && draft.storage.length) ? draft.storage : [{ name: "128GB", price: 0, oldPrice: 0, stock: "" }];
   storage.forEach((item) => addStorageRow(item.name, item.price, item.oldPrice, item.stock));
+
+  // NOTA: el listado de colores del producto principal NO se reconstruye aquí.
+  // El DOM conserva sus filas (solo se ocultan/muestran) y así se preservan los
+  // valores avanzados RGB/HSL/OKLCH que el administrador haya editado a mano.
 
   renderVariantColorMode(draft);
   syncActiveVariantFromForm();
@@ -2026,7 +2037,20 @@ function renderVariantColorMode(draft) {
   if (isVariant) {
     variantColorNameInput.value = draft.colorName || "";
     updateVariantHexInput(draft.hex || "#cccccc", false);
+  } else {
+    // El editor de color de variante está oculto en modo principal, pero el
+    // snapshot de "cambios sin guardar" sí lee estos inputs: si se quedan con
+    // los valores de la última variante visitada, el draft principal muta y
+    // dispara el aviso aunque el usuario no haya cambiado nada.
+    variantColorNameInput.value = "";
+    updateVariantHexInput("#CCCCCC", false);
   }
+
+  // El nombre del producto es COMPARTIDO entre todas las variantes: en modo
+  // variante es de solo lectura (el nombre nunca distingue variantes; solo el
+  // color lo hace, y cada variante tiene UN SOLO color).
+  const titleInput = document.getElementById("product-title");
+  if (titleInput) titleInput.readOnly = isVariant;
 
   // Zona de riesgo (eliminar producto): SOLO en el producto principal. Desde
   // una variante no tiene sentido (eliminar borra todo el grupo).
@@ -2037,12 +2061,18 @@ function renderVariantColorMode(draft) {
   updateDrawerModeChip();
 
   if (drawerModeCopy) {
-    drawerModeCopy.textContent = isVariant
-      ? `Estás editando la variante${draft?.colorName ? ` "${draft.colorName}"` : ""}`
-      : (editingProductId
+    if (isVariant) {
+      drawerModeCopy.innerHTML = `Estás editando la variante${draft?.colorName ? ` <strong>"${escapeHTML(draft.colorName)}"</strong>` : ""}. Todo lo que agregues aquí pertenece SOLO a esta variante.`;
+    } else {
+      drawerModeCopy.textContent = editingProductId
         ? "Los cambios reemplazarán la información publicada"
-        : "Completa las secciones y guarda para publicar");
+        : "Completa las secciones y guarda para publicar";
+    }
   }
+
+  // Mensajes de ayuda y validación según el alcance de la sección activa.
+  updateVariantScopeHints();
+  updateVariantColorWarning();
 }
 
 // Aplica el color identificador del chip del encabezado (con contraste
@@ -2057,15 +2087,9 @@ function updateDrawerModeChip() {
     const vd = variantDrafts[activeVariantIndex];
     hex = normalizeHexColor(vd?.hex || "#cccccc");
     label = vd?.colorName || "Variante";
-  } else {
-    const mainColors = (typeof getListColors === "function" ? getListColors() : null)
-      || variantDrafts[0]?.colors || [];
-    const first = mainColors.find((c) => c && c.name) || mainColors[0];
-    if (first?.name) {
-      hex = normalizeHexColor(first.value || first.hex || "#cccccc");
-      label = first.name;
-    }
   }
+  // Producto principal: el chip refleja la ACCIÓN (Editando / Creando) y no un
+  // color; las variantes sí muestran su nombre para identificar cuál se edita.
 
   if (hex && label) {
     drawerModeChip.classList.add("is-variant");
@@ -2085,7 +2109,11 @@ function updateDrawerModeChip() {
     drawerModeChip.classList.add("is-editing");
     drawerModeChip.style.removeProperty("--chip-bg");
     drawerModeChip.style.removeProperty("color");
-    if (drawerModeChipText) drawerModeChipText.textContent = editingProductId ? "Edición" : "Nuevo";
+    // Modo edición: se comprueba TAMBIÉN el id oculto del formulario (llenado
+    // por fillProductForm) para que el chip diga "Editando" en cualquier ruta
+    // de edición, aunque editingProductId aún no esté asignado.
+    const isEditing = !!editingProductId || !!document.getElementById("product-id")?.value;
+    if (drawerModeChipText) drawerModeChipText.textContent = isEditing ? "Editando" : "Creando";
     if (drawerModeSwatch) drawerModeSwatch.style.display = "none";
   }
 }
@@ -2099,6 +2127,348 @@ function updateVariantHexInput(hex, updateDraft = true) {
     if (d) { d.hex = value.toUpperCase(); renderVariantBar(); }
     if (activeVariantIndex > 0) updateDrawerModeChip();
   }
+}
+
+/* ==========================================================================
+   VARIANTES — regla de negocio: 1 variante = 1 solo color.
+   1 producto → muchas variantes; el nombre del producto es COMPARTIDO.
+   "Duplicar variante" copia TODA la información; el color debe ser ÚNICO
+   dentro del mismo producto (si no, el botón de guardar queda bloqueado).
+   ========================================================================== */
+
+// Nombre legible del color de la variante activa (para los mensajes de ayuda).
+function getActiveVariantColorLabel() {
+  const draft = variantDrafts[activeVariantIndex];
+  if (!draft) return "";
+  return (draft.colorName || "").trim();
+}
+
+// Detecta si `draft` tiene un color repetido dentro del mismo producto.
+// Función PURA (recibe el array de drafts) para poder probarse sin DOM.
+// Devuelve null o { kind: "variant"|"base", colorName, reason: "name"|"hex", hex? }.
+// El duplicado se detecta por NOMBRE (insensible a mayúsculas) Y también por
+// CÓDIGO DE COLOR: dos variantes con nombres distintos pero el mismo hex
+// (p. ej. "Blanco" y "Silver" con #EBEBEB) representan el mismo color en la
+// tienda y deben bloquear el guardado igual que un nombre repetido.
+function variantColorConflictIn(drafts, draft) {
+  const name = (draft?.colorName || "").trim();
+  if (!name) return null;
+  const key = name.toLowerCase();
+  // fallback "" → hex inválido/ausente se ignora en la comparación por código.
+  const hex = normalizeHexColor(draft?.hex || "", "");
+
+  // 1) Contra las demás variantes del mismo producto.
+  for (let i = 1; i < drafts.length; i++) {
+    const other = drafts[i];
+    if (other === draft) continue;
+    const otherName = (other?.colorName || "").trim();
+    if (otherName && otherName.toLowerCase() === key) {
+      return { kind: "variant", colorName: otherName, reason: "name" };
+    }
+    const otherHex = normalizeHexColor(other?.hex || "", "");
+    if (otherName && hex && otherHex === hex) {
+      return { kind: "variant", colorName: otherName, reason: "hex", hex };
+    }
+  }
+
+  // 2) Contra los colores base del producto principal (también selectables en
+  //    la tienda). Evita que una variante "calque" un color ya existente.
+  const baseColors = drafts[0]?.colors || [];
+  for (const base of baseColors) {
+    const baseName = String(base?.name || "").trim();
+    if (baseName && baseName.toLowerCase() === key) {
+      return { kind: "base", colorName: baseName, reason: "name" };
+    }
+    const baseHex = normalizeHexColor(base?.value || base?.hex || "", "");
+    if (baseName && hex && baseHex === hex) {
+      return { kind: "base", colorName: baseName, reason: "hex", hex };
+    }
+  }
+  return null;
+}
+
+// Detecta colores repetidos en TODO el grupo: variantes entre sí y variantes
+// contra colores base, por nombre Y por código de color (hex). Función PURA.
+function allVariantColorConflictsIn(drafts) {
+  const byName = new Map();
+  const byHex = new Map();
+  for (let i = 1; i < drafts.length; i++) {
+    const d = drafts[i];
+    const name = (d?.colorName || "").trim();
+    if (!name) continue;
+    const nameEntry = byName.get(name.toLowerCase()) || { colorName: name, count: 0, reason: "name" };
+    nameEntry.count += 1;
+    nameEntry.colorName = name;
+    byName.set(name.toLowerCase(), nameEntry);
+
+    const hex = normalizeHexColor(d?.hex || "", "");
+    if (hex) {
+      const hexEntry = byHex.get(hex) || { colorName: name, hex, count: 0, reason: "hex" };
+      hexEntry.count += 1;
+      hexEntry.colorName = name;
+      byHex.set(hex, hexEntry);
+    }
+  }
+
+  const duplicateVariants = [...byName.values()].filter((entry) => entry.count > 1);
+  // Mismo código de color con nombres distintos: también es duplicado (solo se
+  // agrega si el grupo NO quedó ya cubierto por el conflicto de nombre).
+  for (const entry of byHex.values()) {
+    if (entry.count <= 1) continue;
+    const covered = duplicateVariants.some((e) => e.colorName.toLowerCase() === entry.colorName.toLowerCase());
+    if (!covered) duplicateVariants.push(entry);
+  }
+
+  const baseColors = drafts[0]?.colors || [];
+  const baseNames = new Set(
+    baseColors
+      .map((c) => String(c?.name || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const baseHexToName = new Map();
+  for (const c of baseColors) {
+    const baseName = String(c?.name || "").trim();
+    const baseHex = normalizeHexColor(c?.value || c?.hex || "", "");
+    if (baseName && baseHex) baseHexToName.set(baseHex, baseName);
+  }
+
+  const baseDuplicates = [];
+  for (const [nameKey, entry] of byName) {
+    if (baseNames.has(nameKey)) baseDuplicates.push({ colorName: entry.colorName, reason: "name" });
+  }
+  for (const [hex, entry] of byHex) {
+    if (baseHexToName.has(hex)) baseDuplicates.push({ colorName: baseHexToName.get(hex), hex, reason: "hex" });
+  }
+
+  return {
+    duplicateVariants,
+    baseDuplicates,
+    any: duplicateVariants.length > 0 || baseDuplicates.length > 0
+  };
+}
+
+// Acceso al estado global actual (wrappers de las funciones puras).
+function findVariantColorConflict(draft) {
+  return variantColorConflictIn(variantDrafts, draft);
+}
+
+function findAllVariantConflicts() {
+  return allVariantColorConflictsIn(variantDrafts);
+}
+
+// Crea una copia EDITABLE y completa de la variante activa para servir de base
+// a otra variante del MISMO producto. El nombre del producto permanece exacta-
+// mente igual y se copia TODA la ficha (imágenes, descripción, especificaciones,
+// capacidades, precios y stock). Intencionalmente CONSERVA el color de la
+// original: así el botón Guardar queda bloqueado con el aviso "este color ya
+// existe como variante" hasta que el administrador elija un color nuevo.
+function duplicateVariant() {
+  if (activeVariantIndex <= 0) return;
+  syncActiveVariantFromForm();
+  const source = variantDrafts[activeVariantIndex];
+  if (!source) return;
+  const next = cloneDraft(source);
+  next.isVariant = true;
+  // El color de la copia iguala al de la original → conflicto de color
+  // detectable de inmediato que bloquea el guardado hasta cambiarlo.
+  variantDrafts.push(next);
+  activeVariantIndex = variantDrafts.length - 1;
+  applyDraftToForm(next);
+  renderVariantBar();
+  variantColorNameInput?.focus();
+  variantColorNameInput?.select();
+  if (variantBarTabs) variantBarTabs.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// Validación visible bajo el selector de color + bloqueo del botón de guardar.
+// - El botón GUARDAR queda deshabilitado mientras exista una variante con el
+//   mismo color dentro del mismo producto (crítico tras "Duplicar variante").
+// - Una variante SIEMPRE debe tener un único color definido para guardarse.
+// - El parámetro de tono permite marcar el aviso como "error" cuando un
+//   intento previo de guardado fue rechazado por el conflicto.
+function updateVariantColorWarning(tone = variantErrorLocked ? "error" : "warning") {
+  const draft = variantDrafts[activeVariantIndex];
+  const conflicts = findAllVariantConflicts();
+  const ownName = (draft?.colorName || "").trim();
+
+  let title = "";
+  let text = "";
+  if (activeVariantIndex > 0) {
+    if (ownName) {
+      const conflict = findVariantColorConflict(draft);
+      if (conflict?.kind === "base") {
+        if (conflict.reason === "hex") {
+          title = "Color ya usado por el producto principal";
+          text = `El color <strong>${escapeHTML(conflict.hex)}</strong> ya existe en el producto principal como <strong>${escapeHTML(conflict.colorName)}</strong>. Aunque el nombre sea distinto, cada color debe ser único: elige otro color para guardar esta variante.`;
+        } else {
+          title = "Color duplicado del producto principal";
+          text = `Este color ya existe como color del <strong>producto principal</strong>. Elimina <strong>${escapeHTML(conflict.colorName)}</strong> de "Colores disponibles" o elige otro color para guardar esta variante.`;
+        }
+      } else if (conflict) {
+        title = variantErrorLocked ? "No se pudo guardar esta variante" : "Este color ya existe como variante";
+        if (conflict.reason === "hex") {
+          text = `La variante <strong>${escapeHTML(conflict.colorName)}</strong> ya usa el color <strong>${escapeHTML(conflict.hex)}</strong>. Aunque tenga otro nombre, el color debe ser único: elige otro color para guardar esta variante.`;
+        } else {
+          text = `Ya existe una variante <strong>${escapeHTML(conflict.colorName)}</strong>. Selecciona otro color para guardar esta variante.`;
+        }
+      }
+    } else {
+      title = "Falta el color de esta variante";
+      text = `Cada variante tiene <strong>un solo color</strong>. Escribe el nombre del color para guardar esta variante.`;
+    }
+  } else if (conflicts.any) {
+    title = "Conflictos de color por resolver";
+    text = `Hay variantes con el <strong>mismo nombre o el mismo código de color</strong>: cada color debe ser único. Cambia el duplicado para poder guardar.`;
+  }
+
+  renderFormNote(variantColorWarning, {
+    tone,
+    icon: "ph-warning",
+    title,
+    html: text
+  });
+
+  const blocked = conflicts.any || (activeVariantIndex > 0 && !ownName);
+  if (!isSubmittingProduct && saveProductBtn) {
+    saveProductBtn.disabled = blocked;
+    saveProductBtn.title = blocked ? "Cambia el color de la variante para habilitar el guardado" : "";
+  }
+}
+
+/* Componente reutilizable de mensajes .form-note.
+   Misma estructura, alineación y jerarquía para todos los avisos del editor:
+   icono en badge + título opcional + texto. Solo cambia el contenido y el tono
+   (base / variant / warning / error). Nunca se superpone con otros elementos:
+   es un bloque en flujo con grid de dos columnas y texto que dobla de línea. */
+function renderFormNote(element, options = {}) {
+  if (!element) return;
+  const { tone = "base", icon = "ph-info", title = "", html = "" } = options;
+  element.className = `form-note form-note--${tone}`;
+  element.innerHTML = `
+    <i class="ph ${escapeHTML(icon)} form-note-icon" aria-hidden="true"></i>
+    <span class="form-note-body">
+      ${title ? `<strong class="form-note-title">${escapeHTML(title)}</strong>` : ""}
+      ${html ? `<span class="form-note-text">${html}</span>` : ""}
+    </span>
+  `;
+  element.hidden = !html && !title;
+}
+
+// Mensajes de ayuda bajo cada sección: el administrador entiende constantemente
+// que "todo lo que agregue aquí pertenece SOLO a la variante que está editando"
+// (o al producto principal), y que cada variante representa un único color.
+function updateVariantScopeHints() {
+  const isVariant = activeVariantIndex > 0;
+  const colorLabel = getActiveVariantColorLabel() || "esta variante";
+  const color = `<strong>${escapeHTML(colorLabel)}</strong>`;
+
+  const setHint = (id, title, html) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    renderFormNote(el, {
+      tone: isVariant ? "variant" : "base",
+      icon: "ph-info",
+      title,
+      html
+    });
+  };
+
+  setHint(
+    "hint-product-title",
+    isVariant ? "Nombre compartido del producto" : null,
+    isVariant
+      ? `El nombre pertenece al <strong>producto principal</strong> y es el mismo para todas sus variantes. Solo el color distingue una variante de otra.`
+      : null
+  );
+
+  setHint(
+    "hint-fs-gallery",
+    isVariant ? "Imágenes de esta variante" : "Imágenes del producto principal",
+    isVariant
+      ? `Esta información pertenece únicamente a la variante ${color}. Si agregas imágenes aquí, se mostrarán cuando el usuario seleccione esta variante.`
+      : `Información del <strong>producto principal</strong>. Las variantes tienen sus propias imágenes; si una variante no define las suyas, verá estas de base.`
+  );
+
+  setHint(
+    "hint-fs-description",
+    isVariant ? "Descripción de esta variante" : "Descripción del producto principal",
+    isVariant
+      ? `Esta descripción pertenece únicamente a la variante ${color}. Al seleccionar otra variante, se mostrará la descripción correspondiente a esa variante.`
+      : `Descripción del <strong>producto principal</strong>. Si una variante define la suya, se mostrará la descripción de la variante.`
+  );
+
+  setHint(
+    "hint-fs-includes",
+    isVariant ? "Qué incluye en esta variante" : "Qué incluye · producto principal",
+    isVariant
+      ? `Esta información se guardará únicamente en la variante ${color}. Estos elementos solo se muestran cuando el cliente elige esta variante.`
+      : `Elementos del <strong>producto principal</strong>. Se comparten con las variantes que no definan los suyos.`
+  );
+
+  setHint(
+    "hint-fs-specs",
+    isVariant ? "Especificaciones de esta variante" : "Especificaciones del producto principal",
+    isVariant
+      ? `Estas especificaciones pertenecen a esta variante. Si alguna especificación cambia para otro color, agrégala dentro de su propia variante.`
+      : `Especificaciones del <strong>producto principal</strong>. Se comparten con las variantes que no definan las suyas.`
+  );
+
+  setHint(
+    "hint-fs-storage",
+    isVariant ? "Capacidades de esta variante" : "Capacidades del producto principal",
+    isVariant
+      ? `Estas capacidades pertenecen a la variante ${color}. Puedes agregar varias capacidades, pero todas pertenecerán a esta variante.`
+      : `Precios, capacidades y stock del <strong>producto principal</strong>. Cada variante puede tener los suyos.`
+  );
+
+  if (fsColorsTitle) {
+    fsColorsTitle.textContent = isVariant ? "Color único de la variante" : "Colores disponibles";
+  }
+  if (fsColorsCopy) {
+    fsColorsCopy.textContent = isVariant
+      ? `Esta variante representa SOLO el color ${colorLabel}. Si necesitas otro color, crea una nueva variante.`
+      : `En la tienda, cada color se muestra como una variante. Usa "Agregar variante" si necesitas un color con su propia ficha.`;
+  }
+
+  setHint(
+    "hint-fs-colors",
+    isVariant ? "Color único de esta variante" : "Colores disponibles",
+    isVariant
+      ? `Cada variante representa <strong>un solo color</strong>: este. Si necesitas otro color, crea una nueva variante con su propia información.`
+      : `Cada variante representa <strong>un solo color</strong>. Para agregar un color nuevo con su propia información (imágenes, precios, stock), crea una variante.`
+  );
+}
+
+// Validación previa al guardado (capa de seguridad además del botón bloqueado).
+function validateVariantsDrafts() {
+  const conflicts = allVariantColorConflictsIn(variantDrafts);
+  if (conflicts.any) {
+    const baseDup = conflicts.baseDuplicates[0];
+    if (baseDup) {
+      return {
+        message: baseDup.reason === "hex"
+          ? `El color "${baseDup.hex}" ya existe en el producto principal ("${baseDup.colorName}") y en una variante. Aunque los nombres sean distintos, el color debe ser único: quita el duplicado del producto principal o cambia el color de la variante.`
+          : `El color "${baseDup.colorName}" ya existe en el producto principal y en una variante. Quita el duplicado del producto principal o cambia el color de la variante.`,
+        targetId: "variant-color-name"
+      };
+    }
+    const first = conflicts.duplicateVariants[0];
+    return {
+      message: first?.reason === "hex"
+        ? `No puedes guardar: la variante "${first?.colorName || ""}" ya usa el color ${first?.hex || ""}. Aunque los nombres sean distintos, cada color debe ser único. Selecciona otro color para guardar esta variante.`
+        : `No puedes guardar: ya existe una variante con el color "${first?.colorName || ""}". Selecciona otro color para guardar esta variante.`,
+      targetId: "variant-color-name"
+    };
+  }
+  for (let i = 1; i < variantDrafts.length; i++) {
+    if (!(variantDrafts[i]?.colorName || "").trim()) {
+      return {
+        message: `La variante ${i} necesita un nombre de color antes de guardar (cada variante representa un solo color).`,
+        targetId: "variant-color-name"
+      };
+    }
+  }
+  return null;
 }
 
 function renderVariantBar() {
@@ -2127,6 +2497,8 @@ function renderVariantBar() {
     btn.addEventListener("click", () => removeVariant(Number(btn.dataset.variantRemove)));
   });
   if (variantBar) variantBar.hidden = false;
+  // "Duplicar variante" solo tiene sentido dentro de una variante (índice > 0).
+  if (duplicateVariantBtn) duplicateVariantBtn.disabled = activeVariantIndex <= 0;
 }
 
 function switchVariant(index) {
@@ -2187,20 +2559,38 @@ function loadVariantsFromProduct(product) {
     const over = color?.overrides && typeof color.overrides === "object" ? color.overrides : null;
     if (!over) return;
     const draft = cloneDraft(base);
-    draft.colorName = color.name || "";
-    draft.hex = color.hex || color.value || "#cccccc";
-    draft.title = String(over.title ?? base.title ?? "");
+    // Normalizar CADA campo a la forma exacta que produce el formulario:
+    // si el draft crudo de la DB difiere (hex minúscula, números en stock o
+    // batería), la primera sincronización lo mutaría y dispararía el aviso
+    // de "cambios sin guardar" aunque el usuario no haya tocado nada.
+    draft.colorName = String(color.name || "").trim();
+    draft.hex = normalizeHexColor(color.hex || color.value || "#cccccc");
+    // Regla de negocio: el nombre SIEMPRE es el del producto principal (solo
+    // el color diferencia variantes). Datos antiguos podían traer over.title
+    // distinto: si no se normaliza aquí, applyDraftToForm lo sobreescribe al
+    // entrar a la variante y dispara un falso "cambios sin guardar".
+    draft.title = String(base.title || over.title || "");
     draft.brand = String(over.brand ?? base.brand ?? "");
-    draft.category = String(over.category ?? base.category ?? "");
-    draft.condition = String(over.condition ?? base.condition ?? "");
-    draft.batteryHealth = over.batteryHealth ?? base.batteryHealth ?? "";
+    draft.category = String(over.category ?? base.category ?? "") || "iphones";
+    draft.condition = String(over.condition ?? base.condition ?? "") || "nuevo";
+    draft.batteryHealth = String(over.batteryHealth ?? base.batteryHealth ?? "");
     draft.description = String(over.description ?? base.description ?? "");
     draft.galleryUrls = Array.isArray(over.images) ? over.images.map(String) : (over.image ? [String(over.image)] : [...(base.galleryUrls || [])]);
     draft.pendingFiles = [];
-    draft.includes = Array.isArray(over.includes) ? over.includes.map(String) : ["..."];
-    draft.specs = Array.isArray(over.specs) ? over.specs.map(String) : [...(base.specs || ["..."])];
-    draft.storage = Array.isArray(over.storage)
-      ? over.storage.map((s) => ({ name: String(s?.name || ""), price: Number(s?.price) || 0, oldPrice: Number(s?.oldPrice) || 0, stock: s?.stock ?? "" }))
+    // Listas: el formulario SIEMPRE renderiza al menos una fila. Un array
+    // vacío guardado en overrides (p. ej. includes: [] tras limpiar filas, o
+    // storage: [] por filas sin nombre filtradas al guardar) se re-renderiza
+    // como una fila por defecto y mutaría el draft → falso "cambios sin
+    // guardar" al entrar a la variante sin tocar nada. Se canónica aquí.
+    const rawIncludes = Array.isArray(over.includes) ? over.includes.map(String) : null;
+    draft.includes = rawIncludes ? (rawIncludes.length ? rawIncludes : [""]) : ["..."];
+    const rawSpecs = Array.isArray(over.specs) ? over.specs.map(String) : null;
+    draft.specs = rawSpecs ? (rawSpecs.length ? rawSpecs : [""]) : [...(base.specs || ["..."])];
+    const rawStorage = Array.isArray(over.storage)
+      ? over.storage.map((s) => ({ name: String(s?.name || ""), price: Number(s?.price) || 0, oldPrice: Number(s?.oldPrice) || 0, stock: String(s?.stock ?? "") }))
+      : null;
+    draft.storage = rawStorage
+      ? (rawStorage.length ? rawStorage : [{ name: "128GB", price: 0, oldPrice: 0, stock: "" }])
       : [...(base.storage || [])];
     draft.isVariant = true;
     variantDrafts.push(draft);
@@ -2215,16 +2605,24 @@ function loadVariantsFromProduct(product) {
 function collectVariantsForSave() {
   syncActiveVariantFromForm();
   const colors = [];
-  (variantDrafts[0]?.colors || []).forEach((c) => {
-    const calculated = getColorRepresentations(c.value || c.hex || "#cccccc");
-    colors.push({ name: c.name, value: calculated.hex, hex: calculated.hex, rgb: calculated.rgb, hsl: calculated.hsl, oklch: calculated.oklch });
-  });
+  // Colores base del producto principal: solo filas con nombre (una fila vacía
+  // no aporta nada y ensuciaría variants.colors).
+  (variantDrafts[0]?.colors || [])
+    .filter((c) => String(c?.name || "").trim())
+    .forEach((c) => {
+      const calculated = getColorRepresentations(c.value || c.hex || "#cccccc");
+      colors.push({ name: c.name, value: calculated.hex, hex: calculated.hex, rgb: calculated.rgb, hsl: calculated.hsl, oklch: calculated.oklch });
+    });
   variantDrafts.slice(1).forEach((draft) => {
     if (!draft.colorName) return;
     const calculated = getColorRepresentations(draft.hex || "#cccccc");
     const images = uniqueImageUrls([...(draft.galleryUrls || []), ...(draft.uploadedUrls || [])]);
     const overrides = {};
-    if (draft.title) overrides.title = draft.title;
+    // El nombre SIEMPRE es el del producto principal: ninguna variante puede
+    // guardarse con un nombre distinto (solo el color diferencia variantes).
+    const sharedTitle = variantDrafts[0]?.title;
+    if (sharedTitle) overrides.title = sharedTitle;
+    else if (draft.title) overrides.title = draft.title;
     if (draft.brand) overrides.brand = draft.brand;
     if (draft.category) overrides.category = draft.category;
     if (draft.condition) { overrides.condition = draft.condition; overrides.badge = draft.condition === "nuevo" ? "Nuevo" : "Seminuevo"; }
@@ -2617,6 +3015,7 @@ async function submitProductForm() {
   const submitBtn = productForm.querySelector("button[type='submit']");
 
   try {
+    isSubmittingProduct = true;
     if (submitBtn) {
       submitBtn.disabled = true;
       setButtonLabel(submitBtn, "Procesando...", "spinner-gap");
@@ -2625,6 +3024,17 @@ async function submitProductForm() {
     // Guardar variantes: primero persistir los campos del draft activo, luego
     // subir todas las imágenes pendientes (producto + variantes).
     syncActiveVariantFromForm();
+
+    // Regla de negocio: cada variante tiene UN solo color y ningún color se
+    // repite dentro del mismo producto (capa de seguridad del botón bloqueado).
+    const variantCheck = validateVariantsDrafts();
+    if (variantCheck) {
+      variantErrorLocked = true;
+      if (variantCheck.targetId) setFieldError(variantCheck.targetId, variantCheck.message);
+      updateVariantColorWarning("error");
+      throw new Error(variantCheck.message);
+    }
+
     await uploadAllVariantsImages(submitBtn);
     // Asegurar que el formulario muestre el PRODUCTO PRINCIPAL para leer sus datos base.
     applyDraftToForm(variantDrafts[0]);
@@ -2762,8 +3172,12 @@ async function submitProductForm() {
     formError.hidden = false;
     formError.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } finally {
+    isSubmittingProduct = false;
+    // Re-validar en vivo: si quedó algún conflicto de color pendiente, el botón
+    // permanece bloqueado hasta que el administrador lo resuelva.
+    updateVariantColorWarning();
     if (submitBtn) {
-      submitBtn.disabled = false;
+      submitBtn.disabled = saveProductBtn?.disabled || false;
       setButtonLabel(submitBtn, isEditing ? "Actualizar producto" : "Guardar producto", "check");
     }
   }
@@ -2914,7 +3328,22 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
 
-        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        // Los formatos con transparencia (PNG/GIF/WebP) deben conservar el
+        // canal alfa: JPEG lo descarta y el fondo se vería negro.
+        const tipo = (file.type || "").toLowerCase();
+        const tieneAlpha = tipo === "image/png" || tipo === "image/gif" || tipo === "image/webp";
+
+        let dataUrl;
+        if (tieneAlpha) {
+          // WebP conserva transparencia y comprime bien; si el navegador no
+          // puede codificar WebP, toDataURL cae a PNG (sin pérdida).
+          dataUrl = canvas.toDataURL("image/webp", quality);
+          if (!dataUrl.startsWith("data:image/webp")) {
+            dataUrl = canvas.toDataURL("image/png");
+          }
+        } else {
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        }
         resolve(dataUrl);
       };
       img.onerror = () => reject(new Error("No se pudo decodificar el formato de imagen."));
@@ -3696,7 +4125,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   const SETTINGS_COLLECTION = 'configuracion';
   const IMG_COLLECTION = 'imagenes';
   const TEXT_DOCS = ['empresa', 'inicio', 'pie-de-pagina', 'preguntas-frecuentes', 'whatsapp'];
-  const IMG_KEYS = ['logo', 'hero-fondo', 'nosotros'];
+  const IMG_KEYS = ['logo', 'hero-fondo', 'nosotros', 'mantenimiento'];
   const FIELD_PREFIX = { empresa: 'cmp', inicio: 'home', 'pie-de-pagina': 'ftr', whatsapp: 'wa' };
 
   const DEFAULTS = {
@@ -3745,7 +4174,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       ]
     },
     whatsapp: {
-      phone: '50488238432',
+      phone: '50488878066',
       title: 'NUEVO PEDIDO — MI PHONE HN',
       labels: {
         cliente: 'Cliente',
@@ -3834,6 +4263,11 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   }
 
   // ---- Tabs ----
+  const desplazarTabAlFrente = (tab) => {
+    // Mantiene la pestaña activa visible cuando la barra desborda (scroll
+    // horizontal) sin mover el scroll vertical de la página.
+    tab?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  };
   document.querySelectorAll('.settings-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
@@ -3841,12 +4275,14 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       tab.classList.add('active');
       const content = document.getElementById(`settings-${tab.dataset.tab}-tab`);
       if (content) content.classList.add('active');
+      desplazarTabAlFrente(tab);
     });
   });
   // Al inicializar: garantiza que el contenido de la pestaña activa esté visible.
   const initActiveTab = document.querySelector('.settings-tab.active');
   const initActiveContent = initActiveTab ? document.getElementById(`settings-${initActiveTab.dataset.tab}-tab`) : null;
   if (initActiveContent) initActiveContent.classList.add('active');
+  if (initActiveTab) desplazarTabAlFrente(initActiveTab);
 
   // ---- Botones por documento ----
   function docButtons(docId) {
@@ -5355,4 +5791,225 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   }
 })();
 
+/* ==========================================================================
+   MODO MANTENIMIENTO — Sección del panel admin
+   ==========================================================================
+   - Lee y escribe el flag en la tabla 'configuracion' con la clave según
+     el ENTORNO:
+       VITE_APP_ENV=local      → 'mantenimiento-local'      (no toca producción)
+       VITE_APP_ENV=production → 'mantenimiento-produccion'
+     (sin la variable se asume PRODUCCIÓN por seguridad)
+   - La escritura está protegida por RLS en servidor: solo usuarios
+     autenticados y activos pueden modificar la configuración. Los
+     visitantes públicos (anon) solo pueden LEER.
+   - Confirmación de activar/desactivar con llave de acceso (pedirLlave),
+     mismo patrón que las acciones sensibles existentes.
+   - Vista previa: renderiza la página de mantenimiento en un iframe
+     SIN modificar el estado real.
+   ========================================================================== */
+import { buildMantenimientoHTML } from '../client/mantenimiento-template.js';
+import mntArtworkPreview from './mantenimiento/artwork.svg?url';
 
+(() => {
+  const APP_ENV = String(import.meta.env.VITE_APP_ENV || 'production').toLowerCase();
+  const ES_LOCAL = APP_ENV === 'local';
+  const FLAG_KEY = ES_LOCAL ? 'mantenimiento-local' : 'mantenimiento-produccion';
+
+  const tabBtn = document.querySelector('.settings-tab[data-tab="mantenimiento"]');
+  const metaEl = document.getElementById('mantenimiento-meta');
+  const badge = document.getElementById('mantenimiento-estado-badge');
+  const bannerActivo = document.getElementById('mantenimiento-banner-activo');
+  const btnActivar = document.getElementById('mantenimiento-activar-btn');
+  const btnDesactivar = document.getElementById('mantenimiento-desactivar-btn');
+  const btnPreview = document.getElementById('mantenimiento-preview-btn');
+  const btnPreviewClose = document.getElementById('mantenimiento-preview-close-btn');
+  const previewWrap = document.getElementById('mantenimiento-preview-wrap');
+  const previewFrame = document.getElementById('mantenimiento-preview-frame');
+  const statusEl = document.getElementById('status-mantenimiento');
+  if (!tabBtn || !badge) return;
+
+  let estadoActual = { activo: false };
+  let estadoCargado = false;
+
+  function setStatus(type, msg) {
+    if (!statusEl) return;
+    statusEl.dataset.type = type;
+    statusEl.textContent = msg;
+  }
+
+  // ---- Cargar estado al abrir la pestaña (el gestor genérico de pestañas la muestra) ----
+  tabBtn.addEventListener('click', () => cargarEstado(true));
+
+  // ---- Render del estado ----
+  function renderEstado(estado) {
+    estadoActual = estado;
+    const activo = Boolean(estado.activo);
+
+    if (badge) {
+      badge.classList.toggle('mnt-estado--on', activo);
+      badge.classList.toggle('mnt-estado--off', !activo);
+      badge.textContent = activo ? 'En mantenimiento' : 'Tienda operativa';
+    }
+    if (bannerActivo) bannerActivo.hidden = !activo;
+    if (btnActivar) btnActivar.disabled = activo;
+    if (btnDesactivar) btnDesactivar.disabled = !activo;
+    if (metaEl) {
+      metaEl.textContent = activo
+        ? 'La tienda pública está mostrando la página de mantenimiento.'
+        : 'La tienda pública está en línea y accesible para los visitantes.';
+    }
+  }
+
+  async function cargarEstado(forzar = false) {
+    if (estadoCargado && !forzar) return;
+    try {
+      const snap = await getDoc(doc(db, 'configuracion', FLAG_KEY));
+      const data = snap.exists() ? (snap.data() || {}) : {};
+      renderEstado({ activo: Boolean(data.activo), mensaje: data.mensaje || '', actualizadoEn: data.updatedAt || data.actualizadoEn, actualizadoPor: data.actualizadoPor });
+      estadoCargado = true;
+      setStatus('success', 'Estado sincronizado');
+    } catch (err) {
+      console.warn('[mantenimiento] No se pudo leer el estado:', err);
+      setStatus('error', 'No se pudo leer el estado: ' + err.message);
+    }
+  }
+
+  // ---- Artwork de la página de mantenimiento ----
+  // Resuelve la imagen desde Imágenes (docs 'imagenes', id 'mantenimiento'),
+  // con fallback a la variable de entorno y al asset por defecto.
+  async function resolverArtwork() {
+    try {
+      const snap = await getDoc(doc(db, 'imagenes', 'mantenimiento'));
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        const url = data.url || data.data || '';
+        if (url) return url;
+      }
+    } catch (err) {
+      console.warn('[mantenimiento] No se pudo leer la imagen de mantenimiento:', err);
+    }
+    return import.meta.env.VITE_MANTENIMIENTO_ARTWORK_URL || mntArtworkPreview;
+  }
+
+  // ---- Número de WhatsApp del negocio (única fuente de verdad) ----
+  async function resolverWhatsapp() {
+    try {
+      const snap = await getDoc(doc(db, 'configuracion', 'whatsapp'));
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        return String(data.phone || '');
+      }
+    } catch (err) {
+      console.warn('[mantenimiento] No se pudo leer el WhatsApp del negocio:', err);
+    }
+    return '';
+  }
+
+  // ---- Activar / Desactivar (con confirmación por llave) ----
+  async function cambiarEstado(activo) {
+    const accion = activo ? 'Activar mantenimiento' : 'Desactivar mantenimiento';
+    const detalle = activo
+      ? 'Los visitantes de la tienda pública dejarán de ver los productos y verán la página de mantenimiento.'
+      : 'Los visitantes volverán a ver la tienda normal de inmediato.';
+    const ok = await pedirLlave(accion, detalle + ' Confirma con tu llave de acceso para continuar.');
+    if (!ok) return;
+
+    setStatus('loading', activo ? 'Activando mantenimiento…' : 'Desactivando mantenimiento…');
+    try {
+      await setDoc(doc(db, 'configuracion', FLAG_KEY), {
+        activo,
+        actualizadoEn: new Date().toISOString(),
+        actualizadoPor: (auth.currentUser && auth.currentUser.email) || 'desconocido'
+      });
+      renderEstado({ activo });
+      setStatus('success', activo ? 'Mantenimiento ACTIVADO' : 'Mantenimiento DESACTIVADO');
+    } catch (err) {
+      console.error('[mantenimiento] Error al guardar:', err);
+      setStatus('error', 'No se pudo guardar: ' + err.message);
+    }
+  }
+
+  if (btnActivar) btnActivar.addEventListener('click', () => cambiarEstado(true));
+  if (btnDesactivar) btnDesactivar.addEventListener('click', () => cambiarEstado(false));
+
+  // ---- Vista previa (NO modifica el estado real) ----
+  async function abrirPreview() {
+    if (!previewFrame || !previewWrap) return;
+    previewFrame.srcdoc = buildMantenimientoHTML({
+      artworkUrl: await resolverArtwork(),
+      whatsapp: await resolverWhatsapp(),
+      ...(estadoActual.mensaje ? { mensaje: estadoActual.mensaje } : {})
+    });
+    previewWrap.hidden = false;
+  }
+
+  if (btnPreview) btnPreview.addEventListener('click', abrirPreview);
+  if (btnPreviewClose) btnPreviewClose.addEventListener('click', () => {
+    if (previewWrap) previewWrap.hidden = true;
+    if (previewFrame) previewFrame.srcdoc = '';
+  });
+
+  // ---- Realtime: el badge del sidebar y el estado se actualizan solos ----
+  try {
+    onSnapshot(
+      query(collection(db, 'configuracion'), where('key', '==', FLAG_KEY)),
+      () => { cargarEstado(true); }
+    );
+  } catch (err) {
+    console.warn('[mantenimiento] Realtime no disponible:', err);
+  }
+})();
+
+
+
+
+
+/* ==========================================================================
+   VARIANTES — Sticky limitado de la barra de variantes
+   ==========================================================================
+   - El scroll REAL ocurre en #drawer-body (overflow-y: auto).
+   - Las pestañas (#variant-bar-tabs) son position: sticky; top: 0 → quedan
+     pegadas justo debajo del .drawer-header (elemento fijo fuera del scroll).
+   - "Agregar variante" (.variant-bar) nunca es sticky: se desplaza.
+   - Límite natural de la sección de variantes: el final de #fs-colors
+     (zona de color de la variante). Al rebasarlo se añade is-unpinned
+     (position: static) para que el sticky se suelte y el resto del
+     formulario siga normal. Al volver hacia arriba se re-fija sin saltos.
+   La clase is-pinned solo añade sombra/borde estético mientras está fija.
+   ========================================================================== */
+(() => {
+  const drawerBody = document.getElementById("drawer-body");
+  const tabs = document.getElementById("variant-bar-tabs");
+  const fsColors = document.getElementById("fs-colors");
+  if (!drawerBody || !tabs || !fsColors) return;
+
+  // Desplazamientos en coordenadas del CONTENIDO (scrollTop), no del viewport.
+  let tabsTop = 0; // posición natural de las pestañas dentro del body (px)
+  let tabH = 0;    // altura de la barra de pestañas (px)
+  let zoneEnd = 0; // final de la sección de variantes (px, coordenada de scroll)
+
+  function refreshBoundary() {
+    const bodyTop = drawerBody.getBoundingClientRect().top;
+    tabsTop = tabs.getBoundingClientRect().top - bodyTop + drawerBody.scrollTop;
+    tabH = tabs.getBoundingClientRect().height;
+    zoneEnd = fsColors.getBoundingClientRect().bottom - bodyTop + drawerBody.scrollTop;
+    applySticky();
+  }
+
+  function applySticky() {
+    const st = drawerBody.scrollTop;
+    // Se libera cuando la barra llegaría al fondo de la zona de variantes.
+    const released = st >= zoneEnd - tabH;
+    const pinned = !released && st >= Math.max(tabsTop - 4, 0);
+    tabs.classList.toggle("is-unpinned", released);
+    tabs.classList.toggle("is-pinned", pinned);
+  }
+
+  drawerBody.addEventListener("scroll", applySticky, { passive: true });
+  window.addEventListener("resize", refreshBoundary, { passive: true });
+  if (typeof ResizeObserver !== "undefined") {
+    // Se recalcula al abrir el drawer y al crecer el contenido (galería, etc.).
+    new ResizeObserver(refreshBoundary).observe(drawerBody);
+  }
+  refreshBoundary();
+})();
