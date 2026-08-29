@@ -356,26 +356,57 @@ textarea:focus {
   padding-left: 40px
 }
 
+/* ==========================================================================
+   AVISO DE PRODUCTO DUPLICADO — banner prominente dentro del drawer
+   ========================================================================== */
+.duplicate-warning{
+  display:flex;align-items:flex-start;gap:14px;padding:16px 18px;
+  border:1px solid var(--danger-line);border-radius:var(--r-lg);
+  background:linear-gradient(135deg,var(--danger-bg) 0%,#fff 130%);
+  box-shadow:0 6px 18px rgba(190,30,45,.12);
+  animation:dupSlide .35s cubic-bezier(.16,1,.3,1)
+}
+.duplicate-warning-icon{
+  width:46px;height:46px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:13px;background:var(--danger);color:#fff;font-size:1.4rem;
+  box-shadow:0 4px 12px rgba(190,30,45,.35)
+}
+.duplicate-warning-copy{min-width:0}
+.duplicate-warning-copy strong{display:block;font-size:.9375rem;font-weight:900;color:var(--danger);letter-spacing:-.01em;margin-bottom:3px}
+.duplicate-warning-copy p{margin:0 0 6px;font-size:.8125rem;font-weight:600;color:var(--ink);line-height:1.5}
+.duplicate-warning-hint{display:inline-flex;align-items:flex-start;gap:6px;font-size:.75rem;color:var(--ink-3);line-height:1.45}
+.duplicate-warning-hint i{flex-shrink:0;color:var(--warning);margin-top:1px}
+@keyframes dupSlide{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+
+/* Botón de guardado bloqueado por duplicado */
+.btn-save-product.is-blocked{
+  background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger);
+  opacity:.85;cursor:not-allowed
+}
+.btn-save-product.is-blocked:hover{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger);transform:none;box-shadow:none}
+
 .form-error {
   display: flex;
-  gap: 10px;
+  gap: 11px;
   align-items: flex-start;
-  padding: 11px 14px;
+  padding: 13px 16px;
   border-radius: var(--r-md);
   background: var(--danger-bg);
   border: 1px solid var(--danger-line);
+  border-left: 4px solid var(--danger);
+  box-shadow: 0 3px 10px rgba(190, 30, 45, .08);
   color: var(--danger);
   font-size: .8125rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.5
 }
 
 .form-error::before {
   content: '!';
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 7px;
   background: var(--danger);
   color: #fff;
   display: inline-flex;
@@ -2795,8 +2826,9 @@ body #products-table-body .data-grid-row::before {
   gap: 7px;
   color: var(--danger);
   font-size: .75rem;
-  font-weight: 600;
-  line-height: 1.5
+  font-weight: 700;
+  line-height: 1.5;
+  animation: dupSlide .3s cubic-bezier(.16, 1, .3, 1)
 }
 
 .field-error-msg::before {
@@ -5670,3 +5702,4 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 /* Rol editor: la restauracion es tarea de administracion */
 body[data-rol="editor"] #restore-backup-btn,
 body[data-rol="editor"] #backup-history-section{display:none}
+
