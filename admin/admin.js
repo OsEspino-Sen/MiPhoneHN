@@ -6191,6 +6191,12 @@ let importReviewQueue = [];     // [{row, matchId}] pendientes de revisión
 let importCurrentIndex = 0;
 let importSummary = null;       // {archivo, descartados, creados, revisados}
 let currentImportLogId = null;
+/* Modo del modal de comparación: "import" (importación inteligente, guarda en
+   Supabase) o "template" (revisión manual desde Crear producto, carga el
+   formulario sin escribir nada). */
+let compareMode = "import";
+let templateCompareRow = null;
+let templateCompareMatchId = null;
 const IMPORT_LOG_KEY = "miphone_import_log";
 const IMPORT_LOG_MAX = 30;
 
@@ -6361,14 +6367,48 @@ function finishImportIfDone() {
 
 /* ---------- REVISIÓN LADO A LADO ---------- */
 function openCompareForm(index) {
+  compareMode = "import";
+  templateCompareRow = null;
+  templateCompareMatchId = null;
   importCurrentIndex = index;
   const item = importReviewQueue[index];
   if (!item) return;
   document.getElementById("compare-import-id").textContent = `(${String(item.row.id)})`;
   document.getElementById("compare-existing-id").textContent = `${String(item.matchId)} — solo lectura`;
+  setCompareButtons("import");
   buildCompareEditable(item.row);
   buildCompareReadonly(item.matchId);
   openBackupModalById("compare-import-modal");
+}
+
+/* Misma vista lado a lado, pero desde Crear producto → Importar: sirve para
+   verificar manualmente si un producto marcado como "Ya existe" es realmente
+   el mismo o es otro. Nada se escribe: al confirmar solo carga la plantilla. */
+function openTemplateCompare(row, matchId) {
+  compareMode = "template";
+  templateCompareRow = row;
+  templateCompareMatchId = matchId;
+  document.getElementById("compare-import-id").textContent = `(${String(row.id)})`;
+  document.getElementById("compare-existing-id").textContent = `${String(matchId)} — solo lectura`;
+  setCompareButtons("template");
+  buildCompareEditable(row);
+  buildCompareReadonly(matchId);
+  openBackupModalById("compare-import-modal");
+}
+
+function setCompareButtons(mode) {
+  const saveBtn = document.getElementById("compare-save-btn");
+  const discardBtn = document.getElementById("compare-discard-btn");
+  if (saveBtn) {
+    saveBtn.innerHTML = mode === "template"
+      ? `<i class="ph ph-file-arrow-down" aria-hidden="true"></i> Cargar en el formulario`
+      : `<i class="ph ph-check" aria-hidden="true"></i> Guardar e importar`;
+  }
+  if (discardBtn) {
+    discardBtn.innerHTML = mode === "template"
+      ? `<i class="ph ph-x-circle" aria-hidden="true"></i> No es el mismo, descartar`
+      : `<i class="ph ph-x-circle" aria-hidden="true"></i> Descartar (no importar)`;
+  }
 }
 
 function buildCompareEditable(row) {
@@ -6425,8 +6465,9 @@ function buildCompareReadonly(matchId) {
 }
 
 function collectCompareRow() {
-  const item = importReviewQueue[importCurrentIndex];
-  const row = camelToSnakeRow({ ...item.row });
+  const base = compareMode === "template" ? templateCompareRow : importReviewQueue[importCurrentIndex]?.row;
+  if (!base) return null;
+  const row = camelToSnakeRow({ ...base });
   const val = (id) => document.getElementById(id)?.value ?? "";
   const lines = (id) => val(id).split("\n").map((l) => l.trim()).filter(Boolean);
   row.title = val("cmp-title").trim();
@@ -6467,6 +6508,14 @@ function collectCompareRow() {
 }
 
 async function saveCompareImport() {
+  // Modo plantilla (Crear producto): no escribe en Supabase; volca los valores
+  // verificados en el formulario para crear el producto nuevo ahí.
+  if (compareMode === "template") {
+    const row = collectCompareRow();
+    closeBackupModalById("compare-import-modal");
+    if (row) loadProductAsTemplate(row);
+    return;
+  }
   const item = importReviewQueue[importCurrentIndex];
   if (!item) { closeBackupModalById("compare-import-modal"); return; }
   const row = collectCompareRow();
@@ -6494,6 +6543,12 @@ async function saveCompareImport() {
 }
 
 function discardCompareImport() {
+  // Modo plantilla: descartar solo cierra la revisión, no hay nada que borrar.
+  if (compareMode === "template") {
+    closeBackupModalById("compare-import-modal");
+    showAlert("Producto descartado: no se cargó ninguna plantilla.", "info");
+    return;
+  }
   const item = importReviewQueue[importCurrentIndex];
   if (!item) { closeBackupModalById("compare-import-modal"); return; }
   showConfirm(
@@ -6881,13 +6936,10 @@ async function onTemplateFileChosen(event) {
         const row = backupTemplatePayload.products.find((p) => String(p.id) === btnEl.dataset.templateId);
         if (!row) return;
         const dup = findBackupDuplicate(row);
-        if (dup?.level === "identical") {
-          showConfirm(
-            "Ups, este producto ya existe",
-            `<strong>${escapeHTML(row.title || String(row.id))}</strong> ya está en tu catálogo como <strong>${escapeHTML(String(dup.id))}</strong> con las mismas características (marca, categoría, variantes de color y capacidades/imágenes).<br>Si continúas se creará una <strong>copia</strong>; revisa que no estés duplicando el producto.`,
-            () => loadProductAsTemplate(row),
-            { tone: "danger", okLabel: "Cargar como plantilla" }
-          );
+        if (dup) {
+          // Existe o es parecido: abrir la revisión lado a lado para verificar
+          // manualmente con cuál coincide antes de decidir qué hacer.
+          openTemplateCompare(row, dup.id);
           return;
         }
         loadProductAsTemplate(row);
