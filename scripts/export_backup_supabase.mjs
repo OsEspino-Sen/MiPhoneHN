@@ -164,7 +164,7 @@ const outDir = path.resolve(process.cwd(), "backup", "supabase", timestamp);
 fs.mkdirSync(outDir, { recursive: true });
 
 console.log("=== BACKUP READ-ONLY SUPABASE + INVENTARIO CLOUDINARY ===");
-console.log(`Modo       : ${SERVICE_KEY ? "service role key (lectura completa, ignora mantenimiento)" : "read-only (anon key, políticas de lectura pública)"}`);
+console.log(`Modo       : ${report.mode}`);
 console.log(`Destino repo : ${outDir}`);
 console.log(`Destino ext. : ${EXTERNAL_BACKUP_DIR}\\${timestamp}`);
 console.log("");

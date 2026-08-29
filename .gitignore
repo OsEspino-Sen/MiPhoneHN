@@ -7,8 +7,9 @@ dist/
 .vercel
 .env*
 
-# Respaldos locales de datos (contienen informacion de la BD)
-backup/
 # Logs del dev server
 dev_test_*.log
+
+# Respaldos locales de datos (contienen informacion de la BD)
+backup/
 dev.log
