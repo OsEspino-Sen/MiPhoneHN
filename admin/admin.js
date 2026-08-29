@@ -6025,6 +6025,28 @@ function readBackupFile(file) {
   });
 }
 
+/* Convierte una fila en formato camelCase (el que usa el editor en memoria) al
+   formato de columnas de la tabla (snake_case). Necesario porque los snapshots
+   tomados desde el editor (p. ej. previos a eliminar) viajan en camelCase y un
+   upsert directo fallaría: "Could not find the 'batteryHealth' column". */
+const BACKUP_CAMEL_TO_SNAKE = {
+  oldPrice: "old_price",
+  batteryHealth: "battery_health",
+  createdAt: "created_at",
+  updatedAt: "updated_at"
+};
+
+function camelToSnakeRow(row) {
+  if (!row || typeof row !== "object") return row;
+  const out = { ...row };
+  for (const [camel, snake] of Object.entries(BACKUP_CAMEL_TO_SNAKE)) {
+    if (!(camel in out)) continue;
+    if (!(snake in out) || out[snake] === null || out[snake] === undefined) out[snake] = out[camel];
+    delete out[camel];
+  }
+  return out;
+}
+
 /* Mapea una fila cruda (snake_case) al formato camelCase que consume fillProductForm. */
 function snakeToCamelRow(row) {
   if (!row || typeof row !== "object") return row;
@@ -6225,7 +6247,9 @@ function updateRestoreRunState() {
    producto: el estado queda recuperable desde Configuración → Backup. */
 function storeProductSnapshot(product, motivo = "previo_eliminacion") {
   try {
-    const envelope = buildBackupEnvelope([product]);
+    // Normalizar a formato de tabla (snake_case): el producto viene del editor
+    // en camelCase y debe poder restaurarse con upsert sin transformaciones.
+    const envelope = buildBackupEnvelope([camelToSnakeRow(product)]);
     const history = getBackupHistory();
     history.unshift({
       id: `bkp-${Date.now()}`,
@@ -6265,6 +6289,7 @@ async function createAutoSafetyBackup(productsToWrite) {
     history.unshift({
       id: `bkp-${Date.now()}`,
       createdAt: new Date().toISOString(),
+      motivo: "previo_restauracion",
       productIds: currentRows.map((r) => String(r.id)),
       titles: currentRows.map((r) => r.title || r.id),
       data: envelope
@@ -6281,7 +6306,7 @@ async function runRestoreBackup(productsOverride = null) {
     setBackupStatus("restore-status", "Solo un administrador puede restaurar productos.", "error");
     return;
   }
-  const products = productsOverride || getSelectedRestoreProducts();
+  const products = (productsOverride || getSelectedRestoreProducts()).map(camelToSnakeRow);
   if (products.length === 0) {
     setBackupStatus("restore-status", "Selecciona al menos un producto.", "error");
     return;
@@ -6349,26 +6374,49 @@ function getBackupHistory() {
   }
 }
 
+/* Tipos de respaldo automático del historial: qué contiene cada uno y qué
+   hace al restaurarlo, explicado en lenguaje claro para el operador. */
+const BACKUP_HISTORY_TIPOS = {
+  previo_eliminacion: {
+    etiqueta: "Previa a eliminación",
+    clase: "is-eliminacion",
+    titulo: "El producto fue ELIMINADO después de guardar este respaldo",
+    detalle: (n) => `Guarda ${n === 1 ? "el producto" : "los productos"} tal como estaba${n === 1 ? "" : "n"} ANTES de eliminarlo${n === 1 ? "" : "s"}. Al restaurar, el producto se <strong>vuelve a crear</strong> con toda su información (variantes, imágenes y precios incluidos).`
+  },
+  previo_restauracion: {
+    etiqueta: "Antes de restaurar",
+    clase: "is-restauracion",
+    titulo: "Copia del estado previo a una restauración",
+    detalle: (n) => `Guarda ${n === 1 ? "el producto" : "los productos"} tal como estaba${n === 1 ? "" : "n"} ANTES de que una restauración lo${n === 1 ? "" : "s"} sobrescribiera. Al restaurar, se <strong>revierte</strong> a ese estado anterior.`
+  }
+};
+
 function renderBackupHistory() {
   const listEl = document.getElementById("backups-history-list");
   if (!listEl) return;
   const history = getBackupHistory();
   if (history.length === 0) {
-    listEl.innerHTML = `<p class="backup-history-empty">Todavía no hay respaldos automáticos. Se crean automáticamente antes de cada restauración.</p>`;
+    listEl.innerHTML = `<p class="backup-history-empty">Todavía no hay respaldos automáticos. Se crean antes de cada restauración y antes de eliminar un producto.</p>`;
     return;
   }
   listEl.innerHTML = history.map((entry) => {
     const fecha = new Date(entry.createdAt);
     const stamp = `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`;
     const titles = (entry.titles || entry.productIds || []).map(escapeHTML).join(", ");
-    const motivoLabel = entry.motivo === "previo_eliminacion"
-      ? `<em class="backup-history-motivo">Previa a eliminación</em>`
-      : "";
+    const n = Number(entry.productIds?.length || 0);
+    const tipo = BACKUP_HISTORY_TIPOS[entry.motivo];
+    const badge = tipo
+      ? `<span class="backup-history-tipo ${tipo.clase}" title="${tipo.titulo}">${tipo.etiqueta}</span>`
+      : `<span class="backup-history-tipo is-generico" title="Copia automática de seguridad guardada en este navegador">Copia de seguridad</span>`;
+    const accion = tipo
+      ? tipo.detalle(n)
+      : `Guarda ${n === 1 ? "el producto" : "los productos"} tal como estaba${n === 1 ? "" : "n"} en el momento del respaldo.`;
     return `
     <div class="backup-history-item">
       <div class="backup-history-info">
-        <strong>${escapeHTML(stamp)}</strong>
-        <span>${motivoLabel}${escapeHTML(String(entry.productIds?.length || 0))} producto(s): ${titles}</span>
+        <div class="backup-history-line">${badge}<strong>${escapeHTML(stamp)}</strong></div>
+        <span>${escapeHTML(String(n))} producto(s): ${titles}</span>
+        <span class="backup-history-efecto">${accion} Si el producto ya existe se <strong>sobrescribe</strong>; si no existe, se <strong>vuelve a crear</strong>. No afecta a otros productos.</span>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" data-restore-history="${escapeHTML(entry.id)}">
         <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restaurar
@@ -6380,9 +6428,15 @@ function renderBackupHistory() {
     btn.addEventListener("click", () => {
       const entry = getBackupHistory().find((e) => e.id === btn.dataset.restoreHistory);
       if (!entry) return;
+      const n = Number(entry.productIds?.length || 0);
+      const tipo = BACKUP_HISTORY_TIPOS[entry.motivo];
+      const queGuarda = tipo
+        ? `<strong>${tipo.etiqueta}:</strong> ${tipo.detalle(n)}`
+        : `Contiene ${n} producto(s) tal como estaban en el momento del respaldo.`;
+      const queHara = `Al confirmar, ${n === 1 ? "ese producto" : "esos productos"} se escribirán en Supabase con el estado de este respaldo (los que existan se sobrescriben; los que no, se crean). Se generará otro respaldo de seguridad antes de escribir.`;
       showConfirm(
-        "Restaurar respaldo automático",
-        `Se restablecerán ${entry.productIds?.length || 0} producto(s) al estado guardado el ${new Date(entry.createdAt).toLocaleString()}. Se generará otro respaldo de seguridad antes de escribir.`,
+        "¿Qué vas a restaurar?",
+        `${queGuarda}<br><br>${queHara}`,
         () => runRestoreBackup(entry.data?.products || [])
       );
     });
