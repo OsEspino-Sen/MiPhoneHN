@@ -6396,16 +6396,19 @@ function finishImportIfDone() {
 /* ---------- REVISIÓN LADO A LADO ---------- */
 function openCompareForm(index) {
   compareMode = "import";
-  templateCompareRow = null;
-  templateCompareMatchId = null;
   importCurrentIndex = index;
   const item = importReviewQueue[index];
   if (!item) return;
+  templateCompareRow = item.row;
+  templateCompareMatchId = item.matchId;
   document.getElementById("compare-import-id").textContent = `(${String(item.row.id)})`;
   document.getElementById("compare-existing-id").textContent = `${String(item.matchId)} — solo lectura`;
   setCompareButtons("import");
-  buildCompareEditable(item.row);
-  buildCompareReadonly(item.matchId);
+  document.getElementById("compare-editable").innerHTML = buildCompareFormPane(item.row);
+  const existing = getExistingProductForCompare(item.matchId);
+  document.getElementById("compare-existing").innerHTML = existing
+    ? buildCompareFormPane(existing)
+    : `<div class="backup-list-empty">No se encontró el producto existente.</div>`;
   openBackupModalById("compare-import-modal");
 }
 
@@ -6419,8 +6422,11 @@ function openTemplateCompare(row, matchId) {
   document.getElementById("compare-import-id").textContent = `(${String(row.id)})`;
   document.getElementById("compare-existing-id").textContent = `${String(matchId)} — solo lectura`;
   setCompareButtons("template");
-  buildCompareEditable(row);
-  buildCompareReadonly(matchId);
+  document.getElementById("compare-editable").innerHTML = buildCompareFormPane(row);
+  const existing = getExistingProductForCompare(matchId);
+  document.getElementById("compare-existing").innerHTML = existing
+    ? buildCompareFormPane(existing)
+    : `<div class="backup-list-empty">No se encontró el producto existente.</div>`;
   openBackupModalById("compare-import-modal");
 }
 
@@ -6437,8 +6443,11 @@ function openDiscardedCompare(index) {
   document.getElementById("compare-import-id").textContent = `(${String(d.row.id)})`;
   document.getElementById("compare-existing-id").textContent = `${String(d.matchId)} — solo lectura`;
   setCompareButtons("discarded");
-  buildCompareEditable(d.row);
-  buildCompareReadonly(d.matchId);
+  document.getElementById("compare-editable").innerHTML = buildCompareFormPane(d.row);
+  const existing = getExistingProductForCompare(d.matchId);
+  document.getElementById("compare-existing").innerHTML = existing
+    ? buildCompareFormPane(existing)
+    : `<div class="backup-list-empty">No se encontró el producto existente.</div>`;
   openBackupModalById("compare-import-modal");
 }
 
@@ -6447,15 +6456,15 @@ function setCompareButtons(mode) {
   const discardBtn = document.getElementById("compare-discard-btn");
   const labels = {
     import: {
-      save: `<i class="ph ph-check" aria-hidden="true"></i> Guardar e importar`,
-      discard: `<i class="ph ph-x-circle" aria-hidden="true"></i> Descartar (no importar)`
+      save: `<i class="ph ph-arrow-bend-down-right" aria-hidden="true"></i> Es otro, enviar al formulario de creación`,
+      discard: `<i class="ph ph-x-circle" aria-hidden="true"></i> Es el mismo, descartar (no importar)`
     },
     template: {
-      save: `<i class="ph ph-file-arrow-down" aria-hidden="true"></i> Es otro, cargar en el formulario`,
+      save: `<i class="ph ph-arrow-bend-down-right" aria-hidden="true"></i> Es otro, cargar en el formulario`,
       discard: `<i class="ph ph-x-circle" aria-hidden="true"></i> Es el mismo, descartar`
     },
     discarded: {
-      save: `<i class="ph ph-plus-circle" aria-hidden="true"></i> Es otro, crear como producto nuevo`,
+      save: `<i class="ph ph-arrow-bend-down-right" aria-hidden="true"></i> Es otro, ir al formulario de creación`,
       discard: `<i class="ph ph-x-circle" aria-hidden="true"></i> Es el mismo, descartar`
     }
   };
@@ -6464,163 +6473,118 @@ function setCompareButtons(mode) {
   if (discardBtn) discardBtn.innerHTML = l.discard;
 }
 
-function buildCompareEditable(row) {
+/* Réplica de solo lectura del formulario de creación/edición de productos:
+   mismas secciones (Producto, Galería, Descripción, Incluye, Especificaciones,
+   Colores, Capacidades) con los datos cargados, sin inputs ni botones de
+   agregar. Se usa para AMBOS paneles de la comparación. */
+function cmpValue(value, vacio = "—") {
+  const s = String(value ?? "").trim();
+  return s
+    ? `<div class="cmp-value">${escapeHTML(s)}</div>`
+    : `<div class="cmp-value cmp-value--empty">${escapeHTML(vacio)}</div>`;
+}
+
+function cmpSection(icon, iconClass, titulo, subtitulo, chip, body) {
+  return `
+  <section class="form-section cmp-section">
+    <header class="fs-head">
+      <span class="fs-icon ${iconClass}"><i class="ph-duotone ${icon}" aria-hidden="true"></i></span>
+      <div class="fs-copy"><h4>${escapeHTML(titulo)}</h4><p>${escapeHTML(subtitulo)}</p></div>
+      ${chip ? `<span class="fs-chip">${escapeHTML(chip)}</span>` : ""}
+    </header>
+    <div class="fs-body cmp-body">${body}</div>
+  </section>`;
+}
+
+function buildCompareFormPane(row) {
   const colors = Array.isArray(row?.variants?.colors) ? row.variants.colors : [];
   const storage = Array.isArray(row?.variants?.storage) ? row.variants.storage : [];
   const images = Array.isArray(row?.images) ? row.images : [];
   const includes = Array.isArray(row?.includes) ? row.includes : [];
   const specs = Array.isArray(row?.specs) ? row.specs : [];
   const battery = row.battery_health ?? row.batteryHealth;
-  document.getElementById("compare-editable").innerHTML = `
-    <div class="cmp-grid">
-      <label class="cmp-field"><span>Nombre del producto</span><input type="text" id="cmp-title" value="${escapeHTML(row.title || "")}"></label>
-      <label class="cmp-field"><span>Marca</span><input type="text" id="cmp-brand" value="${escapeHTML(row.brand || "")}"></label>
-      <label class="cmp-field"><span>Categoría</span><input type="text" id="cmp-category" value="${escapeHTML(row.category || "")}"></label>
-      <label class="cmp-field"><span>Condición</span>
-        <select id="cmp-condition">
-          <option value="nuevo" ${row.condition === "nuevo" ? "selected" : ""}>Nuevo</option>
-          <option value="seminuevo" ${row.condition === "seminuevo" ? "selected" : ""}>Seminuevo</option>
-        </select>
-      </label>
-      <label class="cmp-field"><span>Salud de batería (%)</span><input type="number" id="cmp-battery" min="0" max="100" value="${battery ?? ""}"></label>
-    </div>
-    <label class="cmp-field"><span>Descripción</span><textarea id="cmp-description" rows="4">${escapeHTML(row.description || "")}</textarea></label>
-    <div class="cmp-grid2">
-      <label class="cmp-field"><span>Incluye (uno por línea)</span><textarea id="cmp-includes" rows="3">${escapeHTML(includes.join("\n"))}</textarea></label>
-      <label class="cmp-field"><span>Especificaciones (una por línea)</span><textarea id="cmp-specs" rows="3">${escapeHTML(specs.join("\n"))}</textarea></label>
-      <label class="cmp-field"><span>Colores (Nombre | #HEX)</span><textarea id="cmp-colors" rows="3">${escapeHTML(colors.map((c) => `${c.name || ""} | ${cmpSafeHex(c.hex || c.value)}`).join("\n"))}</textarea></label>
-      <label class="cmp-field"><span>Capacidades (Nombre | precio | precioNormal | stock)</span><textarea id="cmp-storage" rows="3">${escapeHTML(storage.map((s) => `${s.name || ""} | ${Number(s.price) || 0} | ${Number(s.oldPrice ?? s.old_price) || 0} | ${s.stock ?? ""}`).join("\n"))}</textarea></label>
-      <label class="cmp-field cmp-field--full"><span>Imágenes (una URL por línea)</span><textarea id="cmp-images" rows="3">${escapeHTML(images.join("\n"))}</textarea></label>
-    </div>`;
+  const cond = row.condition === "seminuevo" ? "Seminuevo" : (row.condition ? "Nuevo" : "");
+  let html = "";
+
+  html += cmpSection("ph-package", "fs-icon--ink", "Producto", "Datos principales del producto.", "Obligatorio", `
+    <label class="variant-field"><span>Nombre del producto</span>${cmpValue(row.title, "(sin título)")}</label>
+    <div class="cmp-grid-fields">
+      <label class="variant-field"><span>Marca</span>${cmpValue(row.brand)}</label>
+      <label class="variant-field"><span>Categoría</span>${cmpValue(row.category)}</label>
+      <label class="variant-field"><span>Condición</span>${cmpValue(cond)}</label>
+      <label class="variant-field"><span>Salud de batería (%)</span>${cmpValue(battery ?? "")}</label>
+    </div>`);
+
+  html += cmpSection("ph-images", "fs-icon--violet", "Galería", "Imágenes del producto.", "Obligatorio",
+    images.length
+      ? `<div class="cmp-thumbs">${images.map((u) => `<img src="${escapeHTML(u)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`).join("")}</div>`
+      : cmpValue("", "Sin imágenes"));
+
+  html += cmpSection("ph-text-align-left", "fs-icon--blue", "Descripción", "Detalle del producto.", "Opcional",
+    cmpValue(row.description, "Sin descripción"));
+
+  html += cmpSection("ph-list-checks", "fs-icon--green", "Incluye", "Elementos incluidos.", "Opcional",
+    includes.length
+      ? `<ul class="cmp-list">${includes.map((i) => `<li>${escapeHTML(String(i))}</li>`).join("")}</ul>`
+      : cmpValue("", "Sin elementos"));
+
+  html += cmpSection("ph-cpu", "fs-icon--amber", "Especificaciones", "Ficha técnica.", "Opcional",
+    specs.length
+      ? `<ul class="cmp-list">${specs.map((s) => `<li>${escapeHTML(String(s))}</li>`).join("")}</ul>`
+      : cmpValue("", "Sin especificaciones"));
+
+  html += cmpSection("ph-palette", "fs-icon--pink", "Colores", "Variantes de color del producto.", colors.length ? `${colors.length} color(es)` : "Opcional",
+    colors.length
+      ? colors.map((c) => `
+          <div class="cmp-color-item">
+            <span class="cmp-color-swatch" style="--swatch:${cmpSafeHex(c.hex || c.value)}" aria-hidden="true"></span>
+            <strong>${escapeHTML(c.name || "(sin nombre)")}</strong>
+            <span class="cmp-color-hex">${escapeHTML(String(c.hex || c.value || "").toUpperCase())}</span>
+            ${c.overrides && Object.keys(c.overrides).length ? `<span class="fs-chip fs-chip--req">Variante con datos propios</span>` : ""}
+          </div>`).join("")
+      : cmpValue("", "Sin colores"));
+
+  html += cmpSection("ph-hard-drives", "fs-icon--ink", "Capacidades y precios", "Almacenamiento, precios e inventario.", storage.length ? `${storage.length} capacidad(es)` : "Obligatorio",
+    storage.length
+      ? storage.map((s) => `
+          <div class="cmp-storage-item">
+            <div class="cmp-kv"><span>Capacidad</span><strong>${escapeHTML(s.name || "")}</strong></div>
+            <div class="cmp-kv"><span>Precio oferta</span>${formatCurrency(Number(s.price) || 0)}</div>
+            <div class="cmp-kv"><span>Precio normal</span>${formatCurrency(Number(s.oldPrice ?? s.old_price) || 0)}</div>
+            <div class="cmp-kv"><span>Stock</span>${s.stock ?? "—"}</div>
+          </div>`).join("")
+      : cmpValue("", "Sin capacidades"));
+
+  return html;
 }
 
-function buildCompareReadonly(matchId) {
-  const existing = (Array.isArray(products) ? products : []).find((p) => String(p.id) === String(matchId));
-  const el = document.getElementById("compare-existing");
-  if (!el) return;
-  if (!existing) { el.innerHTML = `<div class="backup-list-empty">No se encontró el producto existente.</div>`; return; }
-  const colors = Array.isArray(existing.variants?.colors) ? existing.variants.colors : [];
-  const storage = Array.isArray(existing.variants?.storage) ? existing.variants.storage : [];
-  const images = Array.isArray(existing.images) ? existing.images : [];
-  const includes = Array.isArray(existing.includes) ? existing.includes : [];
-  const specs = Array.isArray(existing.specs) ? existing.specs : [];
-  el.innerHTML = `
-    ${images[0] ? `<img class="cmp-hero" src="${escapeHTML(images[0])}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ""}
-    <h4 class="cmp-ro-title">${escapeHTML(existing.title || "")}</h4>
-    <p class="cmp-ro-meta">${escapeHTML(existing.brand || "")} · ${escapeHTML(existing.category || "")} · ${existing.condition === "seminuevo" ? "Seminuevo" : "Nuevo"}${existing.batteryHealth != null ? ` · batería ${escapeHTML(String(existing.batteryHealth))}%` : ""}</p>
-    ${existing.description ? `<p class="cmp-ro-desc">${escapeHTML(existing.description)}</p>` : ""}
-    ${includes.length ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Incluye</span><ul>${includes.map((i) => `<li>${escapeHTML(String(i))}</li>`).join("")}</ul></div>` : ""}
-    ${specs.length ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Especificaciones</span><ul>${specs.map((s) => `<li>${escapeHTML(String(s))}</li>`).join("")}</ul></div>` : ""}
-    ${colors.length ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Colores (${colors.length})</span><div class="cmp-ro-colors">${colors.map((c) => `<span class="cmp-ro-color"><i style="--swatch:${cmpSafeHex(c.hex || c.value)}" aria-hidden="true"></i>${escapeHTML(c.name || "")}</span>`).join("")}</div></div>` : ""}
-    ${storage.length ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Capacidades</span><table class="cmp-ro-storage"><thead><tr><th>Capacidad</th><th>Precio</th><th>Normal</th><th>Stock</th></tr></thead><tbody>${storage.map((s) => `<tr><td>${escapeHTML(s.name || "")}</td><td>${formatCurrency(Number(s.price) || 0)}</td><td>${formatCurrency(Number(s.oldPrice ?? s.old_price) || 0)}</td><td>${s.stock ?? "—"}</td></tr>`).join("")}</tbody></table></div>` : ""}
-    ${images.length > 1 ? `<div class="cmp-ro-block"><span class="cmp-ro-label">Imágenes (${images.length})</span><div class="cmp-ro-imgs">${images.slice(0, 6).map((u) => `<img src="${escapeHTML(u)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`).join("")}</div></div>` : ""}
-  `;
+function getExistingProductForCompare(matchId) {
+  return (Array.isArray(products) ? products : []).find((p) => String(p.id) === String(matchId)) || null;
 }
 
 function collectCompareRow() {
-  const base = compareMode === "template" ? templateCompareRow : importReviewQueue[importCurrentIndex]?.row;
-  if (!base) return null;
-  const row = camelToSnakeRow({ ...base });
-  const val = (id) => document.getElementById(id)?.value ?? "";
-  const lines = (id) => val(id).split("\n").map((l) => l.trim()).filter(Boolean);
-  row.title = val("cmp-title").trim();
-  row.brand = val("cmp-brand").trim();
-  row.category = val("cmp-category").trim() || row.category;
-  row.condition = val("cmp-condition") || "nuevo";
-  row.badge = row.condition === "nuevo" ? "Nuevo" : "Seminuevo";
-  const battery = val("cmp-battery").trim();
-  row.battery_health = battery === "" ? null : Math.min(100, Math.max(0, Math.round(Number(battery) || 0)));
-  row.description = val("cmp-description").trim();
-  row.includes = lines("cmp-includes");
-  row.specs = lines("cmp-specs");
-  row.images = lines("cmp-images");
-  row.image = row.images[0] || row.image || "";
-  const defaultColor = getColorRepresentations("#cccccc");
-  const colors = lines("cmp-colors").map((line) => {
-    const [name, hex] = line.split("|").map((s) => s.trim());
-    if (!name) return null;
-    const calculated = getColorRepresentations(hex || "#cccccc");
-    return { name, value: calculated.hex, hex: calculated.hex, rgb: calculated.rgb, hsl: calculated.hsl, oklch: calculated.oklch };
-  }).filter(Boolean);
-  const storage = lines("cmp-storage").map((line) => {
-    const parts = line.split("|").map((s) => s.trim());
-    if (!parts[0]) return null;
-    return {
-      name: parts[0],
-      price: Number(parts[1]) || 0,
-      oldPrice: Number(parts[2]) || 0,
-      stock: parts[3] === undefined || parts[3] === "" ? null : Math.max(0, Math.floor(Number(parts[3]) || 0))
-    };
-  }).filter(Boolean);
-  row.variants = {
-    ...(row.variants && typeof row.variants === "object" ? row.variants : {}),
-    colors: colors.length ? colors : [{ name: "Estándar", value: defaultColor.hex, ...defaultColor }],
-    storage
-  };
-  return row;
+  // Ambos paneles son de solo lectura: la fila base viaja intacta (solo
+  // normalizada). La edición real ocurre en el formulario de creación.
+  const base = templateCompareRow || importReviewQueue[importCurrentIndex]?.row;
+  return base ? camelToSnakeRow({ ...base }) : null;
 }
 
-async function saveCompareImport() {
-  // Modo plantilla (Crear producto): no escribe en Supabase; volca los valores
-  // verificados en el formulario para crear el producto nuevo ahí.
-  if (compareMode === "template") {
-    const row = collectCompareRow();
-    closeBackupModalById("compare-import-modal");
-    if (row) loadProductAsTemplate(row);
-    return;
-  }
-  // Modo descartado: el usuario verificó y concluye que ES OTRO producto →
-  // se crea como nuevo con ID secuencial. Jamás sobrescribe el existente.
-  if (compareMode === "discarded") {
-    const base = templateCompareRow;
-    if (!base) { closeBackupModalById("compare-import-modal"); return; }
-    const row = collectCompareRow();
-    const btn = document.getElementById("compare-save-btn");
-    setButtonBusy(btn, true, "Creando…");
-    try {
-      const nuevoId = await obtenerSiguienteId("productos", "contador_productos", "producto-");
-      row.id = nuevoId;
-      const { error } = await supabase.from("productos").upsert(row);
-      if (error) throw error;
-      appendImportItems([{ id: row.id, title: row.title || row.id, accion: "importado", detalle: `verificado lado a lado contra ${templateCompareMatchId}: es otro producto; creado como nuevo` }]);
-      const idx = importAnalysis?.discarded?.findIndex((d) => String(d.row.id) === String(base.id));
-      if (idx >= 0) importAnalysis.discarded.splice(idx, 1);
-      if (importSummary) { importSummary.creados += 1; importSummary.descartados = Math.max(0, importSummary.descartados - 1); importSummary.revisados += 1; }
-      renderAnalysisChips(importAnalysis);
-      closeBackupModalById("compare-import-modal");
-      showAlert(`Producto creado como ${row.id} (el existente ${templateCompareMatchId} quedó intacto).`, "success");
-      finishImportIfDone();
-    } catch (err) {
-      showAlert(`Error al crear: ${err.message || err}`, "error");
-    } finally {
-      setButtonBusy(btn, false);
-    }
-    return;
-  }
-  const item = importReviewQueue[importCurrentIndex];
-  if (!item) { closeBackupModalById("compare-import-modal"); return; }
+function saveCompareImport() {
+  // Cualquiera de los dos caminos ("Es otro") lleva al FORMULARIO DE CREACIÓN
+  // con los datos precargados: allí vive la lógica que impide duplicados
+  // (validación de colores repetidos por producto) y el guardado final.
   const row = collectCompareRow();
-  const btn = document.getElementById("compare-save-btn");
-  setButtonBusy(btn, true, "Guardando…");
-  try {
-    // Nunca sobrescribir: si el ID apareció mientras tanto, no escribir nada.
-    const { data: exists } = await supabase.from("productos").select("id").eq("id", String(row.id)).maybeSingle();
-    if (exists) {
-      showAlert(`El ID ${escapeHTML(String(row.id))} ya existe ahora en el catálogo; no se escribió nada para evitar pisarlo.`, "error");
-      return;
-    }
-    const { error } = await supabase.from("productos").upsert(row);
-    if (error) throw error;
-    appendImportItems([{ id: row.id, title: row.title || row.id, accion: "importado", detalle: `revisado lado a lado contra ${item.matchId}; guardado con los valores verificados` }]);
-    if (importSummary) importSummary.revisados += 1;
-    importReviewQueue.splice(importCurrentIndex, 1);
-    closeBackupModalById("compare-import-modal");
-    finishImportIfDone();
-  } catch (err) {
-    showAlert(`Error al guardar: ${err.message || err}`, "error");
-  } finally {
-    setButtonBusy(btn, false);
+  closeBackupModalById("compare-import-modal");
+  if (!row) return;
+  if (compareMode === "discarded") {
+    appendImportItems([{ id: row.id, title: row.title || row.id, accion: "revision", detalle: `verificado lado a lado contra ${templateCompareMatchId}: es otro producto; enviado al formulario de creación` }]);
+    const idx = importAnalysis?.discarded?.findIndex((d) => String(d.row.id) === String(row.id));
+    if (idx >= 0) importAnalysis.discarded.splice(idx, 1);
+    if (importSummary) { importSummary.descartados = Math.max(0, importSummary.descartados - 1); importSummary.revisados += 1; }
+    renderAnalysisChips(importAnalysis);
+    renderImportResultsList();
   }
+  loadProductAsTemplate(row);
 }
 
 function discardCompareImport() {
