@@ -813,6 +813,14 @@
 
       <form id="product-form" class="drawer-form" novalidate>
         <div class="drawer-body" id="drawer-body">
+          <div class="duplicate-warning" id="duplicate-warning" hidden>
+            <span class="duplicate-warning-icon"><i class="ph ph-warning-octagon" aria-hidden="true"></i></span>
+            <div class="duplicate-warning-copy">
+              <strong>Este producto ya existe en tu catálogo</strong>
+              <p id="duplicate-warning-text"></p>
+              <span class="duplicate-warning-hint"><i class="ph ph-lightbulb" aria-hidden="true"></i> Para agregar otra versión (otro color o capacidad), cancela, abre el producto existente y agrégale una variante.</span>
+            </div>
+          </div>
           <input type="hidden" id="product-id">
 
           <!-- Aviso de edición -->

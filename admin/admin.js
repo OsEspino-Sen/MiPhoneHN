@@ -1616,6 +1616,11 @@ function forceCloseProductModal() {
   formIsDirty = false;
   clearFieldErrors();
   clearPreviewObjectUrls();
+  // Limpiar el aviso de duplicado para la próxima apertura del drawer.
+  productoDuplicadoBloqueado = false;
+  ocultarBannerDuplicado();
+  const dupSaveBtn = document.getElementById("save-product-btn");
+  if (dupSaveBtn) dupSaveBtn.classList.remove("is-blocked");
   // Hook: el subsistema de backup reacciona al cerrar el drawer
   // (p. ej., reanudar la revisión de importación que quedó detrás).
   if (typeof alCerrarDrawerDesdeRevision === "function") {
@@ -3042,11 +3047,17 @@ async function submitProductForm() {
       await fetchCatalogoLigero()
     );
     if (duplicado) {
+      productoDuplicadoBloqueado = true;
       setFieldError("product-title", isEditing
         ? `Ese nombre ya lo usa ${duplicado.id}. Los productos no pueden repetir nombre.`
-        : `Este producto ya existe (${duplicado.id}): "${duplicado.title}". No puede repetirse el nombre; para otra versión (otro color o capacidad), edítalo y agrégale una variante.`);
+        : `Este producto ya existe (${duplicado.id}). No puede repetirse el nombre.`);
+      mostrarBannerDuplicado(isEditing
+        ? `El nombre "${title}" ya pertenece a ${duplicado.id}. No se guardaron cambios: los productos no pueden repetir nombre en el catálogo.`
+        : `"${duplicado.title}" ya está publicado como ${duplicado.id}. No se puede guardar un producto con el mismo nombre.`);
       document.getElementById("product-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      throw new Error(`Nombre duplicado: "${duplicado.title}" ya existe como ${duplicado.id}. Los productos no pueden repetir nombre; para agregar otra versión del mismo producto, edítalo y agrégale una variante.`);
+      throw new Error(isEditing
+        ? `Nombre duplicado: "${title}" ya existe como ${duplicado.id}. No se guardaron cambios.`
+        : `Nombre duplicado: "${duplicado.title}" ya existe como ${duplicado.id}. Para agregar otra versión del mismo producto, edítalo y agrégale una variante.`);
     }
 
     // Subida múltiple. Las URLs ya guardadas se conservan y los archivos nuevos
@@ -3160,8 +3171,16 @@ async function submitProductForm() {
     // permanece bloqueado hasta que el administrador lo resuelva.
     updateVariantColorWarning();
     if (submitBtn) {
-      submitBtn.disabled = saveProductBtn?.disabled || false;
-      setButtonLabel(submitBtn, isEditing ? "Actualizar producto" : "Guardar producto", "check");
+      if (productoDuplicadoBloqueado) {
+        // Bloqueo activo: el botón refleja que no se puede guardar.
+        submitBtn.disabled = true;
+        submitBtn.classList.add("is-blocked");
+        setButtonLabel(submitBtn, "Producto duplicado", "prohibit");
+      } else {
+        submitBtn.classList.remove("is-blocked");
+        submitBtn.disabled = saveProductBtn?.disabled || false;
+        setButtonLabel(submitBtn, isEditing ? "Actualizar producto" : "Guardar producto", "check");
+      }
     }
   }
 }
@@ -7134,6 +7153,25 @@ function loadProductAsTemplate(rawRow, opciones = {}) {
 }
 
 /* ---------- CAPA ANTI-DUPLICADOS EN VIVO (dentro del drawer) ---------- */
+function mostrarBannerDuplicado(mensaje) {
+  const banner = document.getElementById("duplicate-warning");
+  const texto = document.getElementById("duplicate-warning-text");
+  if (texto) texto.textContent = mensaje;
+  if (banner) {
+    banner.hidden = false;
+    banner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+function ocultarBannerDuplicado() {
+  const banner = document.getElementById("duplicate-warning");
+  if (banner) banner.hidden = true;
+}
+
+function etiquetaBotonGuardado() {
+  return editingProductId ? "Actualizar producto" : "Guardar producto";
+}
+
 function clearFieldErrorById(targetId) {
   const slot = productForm?.querySelector(`[data-error-for="${targetId}"]`);
   if (slot) { slot.hidden = true; slot.textContent = ""; }
@@ -7143,8 +7181,13 @@ function clearFieldErrorById(targetId) {
 function liberarBloqueoDuplicado() {
   productoDuplicadoBloqueado = false;
   clearFieldErrorById("product-title");
+  ocultarBannerDuplicado();
   const saveBtn = document.getElementById("save-product-btn");
-  if (saveBtn) saveBtn.disabled = false;
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.classList.remove("is-blocked");
+    setButtonLabel(saveBtn, etiquetaBotonGuardado(), "check");
+  }
   // Restaurar el estado de otros bloqueos (p. ej., conflicto de color repetido).
   try { updateVariantColorWarning(); } catch { /* no bloquea */ }
 }
@@ -7174,8 +7217,15 @@ async function validarDuplicadoProductoEnVivo() {
       productoDuplicadoBloqueado = true;
       setFieldError("product-title", editingProductId
         ? `Ese nombre ya lo usa ${dup.id}. Los productos no pueden repetir nombre.`
-        : `Este producto ya existe (${dup.id}): "${dup.title}". No puede repetirse el nombre; para otra versión (otro color o capacidad), edítalo y agrégale una variante.`);
-      if (saveBtn) saveBtn.disabled = true;
+        : `Este producto ya existe (${dup.id}). No puede repetirse el nombre.`);
+      mostrarBannerDuplicado(editingProductId
+        ? `El nombre "${title}" ya pertenece a ${dup.id}. Los productos no pueden repetir nombre en el catálogo.`
+        : `"${dup.title}" ya está publicado como ${dup.id}. No se puede guardar un producto con el mismo nombre.`);
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.classList.add("is-blocked");
+        setButtonLabel(saveBtn, "Producto duplicado", "prohibit");
+      }
     } else if (productoDuplicadoBloqueado) {
       liberarBloqueoDuplicado();
     }
