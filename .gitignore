@@ -11,3 +11,4 @@ dist/
 backup/
 # Logs del dev server
 dev_test_*.log
+dev.log
