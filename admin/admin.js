@@ -1593,6 +1593,9 @@ function openProductModal(productId) {
 
   // Punto de partida para detectar cambios sin guardar.
   captureFormBaseline();
+  // En edición, el botón "Actualizar producto" arranca deshabilitado hasta que
+  // existan cambios reales (se habilita/deshabilita según el formulario).
+  try { updateVariantColorWarning(); } catch { /* no bloquea */ }
 }
 
 /* Cierre con protección de cambios sin guardar */
@@ -2300,8 +2303,19 @@ function updateVariantColorWarning(tone = variantErrorLocked ? "error" : "warnin
 
   const blocked = conflicts.any || (activeVariantIndex > 0 && !ownName);
   if (!isSubmittingProduct && saveProductBtn) {
-    saveProductBtn.disabled = blocked;
-    saveProductBtn.title = blocked ? "Cambia el color de la variante para habilitar el guardado" : "";
+    // Estado combinado del botón de guardado (autoridad única):
+    //  - bloqueado por producto duplicado (capa anti-duplicados del backup)
+    //  - bloqueado por conflicto de color de variante
+    //  - en edición: deshabilitado hasta que existan cambios reales
+    const bloqueoEdicion = Boolean(editingProductId) && !isProductFormDirty();
+    saveProductBtn.disabled = productoDuplicadoBloqueado || blocked || bloqueoEdicion;
+    saveProductBtn.title = productoDuplicadoBloqueado
+      ? "Producto duplicado: no se puede guardar"
+      : blocked
+        ? "Cambia el color de la variante para habilitar el guardado"
+        : bloqueoEdicion
+          ? "Haz cambios en el formulario para habilitar el botón de guardado"
+          : "";
   }
 }
 
@@ -5542,13 +5556,13 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       const yo = esYo(u);
       return `
         <tr data-id="${esc(u.id)}">
-          <td>
+          <td class="ta-left">
             <div class="usuario-cell">
               <span class="usuario-avatar">${esc((nombre.trim()[0] || '?').toUpperCase())}</span>
               <div class="usuario-cell-info"><strong>${esc(nombre)}</strong>${yo ? '<em class="usuario-yo">(tú)</em>' : ''}</div>
             </div>
           </td>
-          <td>${esc(u.correo) || '—'}</td>
+          <td class="ta-left">${esc(u.correo) || '—'}</td>
           <td><span class="rol-pill ${rl.clase}"><i class="ph ${rl.icon}" aria-hidden="true"></i>${esc(rl.texto)}</span></td>
           <td><span class="estado-pill ${activo ? 'is-active' : 'is-inactive'}">${activo ? 'Activo' : 'Bloqueado'}</span></td>
           <td>${fmtFecha(u.fechaCreacion)}</td>
@@ -6976,19 +6990,44 @@ function renderBackupHistory() {
   }).join("");
 
   listEl.querySelectorAll("[data-restore-history]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const entry = getBackupHistory().find((e) => e.id === btn.dataset.restoreHistory);
       if (!entry) return;
-      const n = Number(entry.productIds?.length || 0);
+      const products = entry.data?.products || [];
+      const n = products.length;
       const tipo = BACKUP_HISTORY_TIPOS[entry.motivo];
       const queGuarda = tipo
         ? `<strong>${tipo.etiqueta}:</strong> ${tipo.detalle(n)}`
         : `Contiene ${n} producto(s) tal como estaban en el momento del respaldo.`;
-      const queHara = `Al confirmar, ${n === 1 ? "ese producto" : "esos productos"} se escribirán en Supabase con el estado de este respaldo (los que existan se sobrescriben; los que no, se crean). Se generará otro respaldo de seguridad antes de escribir.`;
+
+      // Verificar contra la BD qué se ACTUALIZARÁ (ya existe) y qué se CREARÁ.
+      let existentes = [], nuevos = [];
+      try {
+        const ids = products.map((p) => String(p.id)).filter(Boolean);
+        const existingIds = new Set();
+        for (let i = 0; i < ids.length; i += 100) {
+          const { data } = await supabase.from("productos").select("id").in("id", ids.slice(i, i + 100));
+          (data || []).forEach((r) => existingIds.add(String(r.id)));
+        }
+        existentes = products.filter((p) => existingIds.has(String(p.id)));
+        nuevos = products.filter((p) => !existingIds.has(String(p.id)));
+      } catch {
+        nuevos = products; // sin verificación, asumir restauración completa
+      }
+
+      const nombre = (p) => `<strong>${escapeHTML(p.title || String(p.id))}</strong> <span class="backup-item-id">${escapeHTML(String(p.id))}</span>`;
+      const partes = [];
+      if (existentes.length) {
+        partes.push(`🔁 Se <strong>ACTUALIZARÁ${existentes.length > 1 ? "N" : ""}</strong> porque ya existe${existentes.length > 1 ? "N" : ""} en tu catálogo (volverá al estado de este respaldo):<br>${existentes.map(nombre).join("<br>")}`);
+      }
+      if (nuevos.length) {
+        partes.push(`📦 Se <strong>RESTAURARÁ${nuevos.length > 1 ? "N" : ""}</strong> creando${nuevos.length > 1 ? "los" : "lo"} de nuevo (no existe${nuevos.length > 1 ? "N" : ""} actualmente en la base de datos):<br>${nuevos.map(nombre).join("<br>")}`);
+      }
+      const queHara = partes.length ? partes.join("<br><br>") : "No hay productos que restaurar.";
       showConfirm(
         "¿Qué vas a restaurar?",
-        `${queGuarda}<br><br>${queHara}`,
-        () => runRestoreBackup(entry.data?.products || [])
+        `${queGuarda}<br><br>${queHara}<br><br>Se generará otro respaldo de seguridad antes de escribir. Ningún otro producto se modifica.`,
+        () => runRestoreBackup(products)
       );
     });
   });
@@ -7229,6 +7268,8 @@ async function validarDuplicadoProductoEnVivo() {
     } else if (productoDuplicadoBloqueado) {
       liberarBloqueoDuplicado();
     }
+    // Aplicar el estado combinado del botón (duplicado + color + cambios en edición).
+    try { updateVariantColorWarning(); } catch { /* no bloquea */ }
   } catch (err) {
     console.warn("[backup] validación anti-duplicados en vivo:", err);
   }
@@ -7302,7 +7343,11 @@ function initBackupSystem() {
   if (drawerBodyDup) {
     const programarValidacionDup = () => {
       clearTimeout(dupLiveTimer);
-      dupLiveTimer = setTimeout(() => validarDuplicadoProductoEnVivo(), 350);
+      dupLiveTimer = setTimeout(() => {
+        validarDuplicadoProductoEnVivo();
+        // Reaplicar el estado combinado del botón (incluye "sin cambios" en edición).
+        try { updateVariantColorWarning(); } catch { /* no bloquea */ }
+      }, 350);
     };
     drawerBodyDup.addEventListener("input", (event) => {
       if (event.target.closest("#fs-main, #fs-description, #includes-list, #specs-list, #fs-colors, #fs-storage")) programarValidacionDup();
