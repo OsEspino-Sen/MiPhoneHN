@@ -5613,7 +5613,7 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 .backup-history-efecto{display:block;max-width:none;white-space:normal !important;line-height:1.45}
 .backup-history-efecto strong{color:var(--ink-2)}
 
-.confirm-card--wide.backup-card{width:min(680px,94vw);max-height:88vh;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;text-align:left;align-items:stretch}
+.confirm-card--wide.backup-card{width:min(680px,94vw);max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;text-align:left;align-items:stretch}
 /* Modal responsive: el contenido fijo arriba, la LISTA es lo único que hace
    scroll, y los botones quedan siempre visibles abajo sin desplazar la tarjeta. */
 .backup-card .backup-modal-hint,.backup-card .backup-file-drop,.backup-card .backup-analysis,
@@ -5652,7 +5652,7 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 .analysis-chip.is-review{background:var(--warning-bg);border-color:var(--warning-line);color:var(--warning)}
 
 /* Comparación lado a lado (importar vs existente) */
-.confirm-card--wide.compare-card{width:min(1040px,96vw);max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+.confirm-card--wide.compare-card{width:min(1040px,96vw);max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden}
 .compare-card .backup-modal-hint{font-size:.75rem;margin:4px 0 10px}
 .compare-card .backup-modal-hint,.compare-card .confirm-button-group--full{flex-shrink:0}
 .compare-card .compare-panes{flex:1 1 auto;min-height:0}/* La ventana de importación queda ATRÁS (blur) mientras el drawer de creación
