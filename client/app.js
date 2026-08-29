@@ -1,10 +1,12 @@
-/* ========================================================================== 
+/* ==========================================================================
    MI PHONE HN — LÓGICA DE APLICACIÓN
    Los productos se cargan desde Supabase en tiempo real
    ========================================================================== */
 
+import { iniciarMantenimientoCliente } from "./mantenimiento-cliente.js";
+
 const WHATSAPP_DEFAULTS = {
-  phone: "50488238432",
+  phone: "50488878066",
   title: "NUEVO PEDIDO — MI PHONE HN",
   labels: {
     cliente: "Cliente",
@@ -24,6 +26,44 @@ const WHATSAPP_DEFAULTS = {
 };
 
 let whatsappSettings = { ...WHATSAPP_DEFAULTS, labels: { ...WHATSAPP_DEFAULTS.labels } };
+
+// Única fuente de verdad del número: se normaliza desde la configuración
+// del negocio (configuracion/whatsapp → phone). Maneja el prefijo 504 de
+// Honduras sin duplicarlo: 9 dígitos (0XXXXXXXX) → 504XXXXXXXX,
+// 8 dígitos → 504XXXXXXXX, y mantiene 504XXXXXXXX / 50488XXXX etc.
+function normalizarWhatsAppNumero(numero) {
+  let d = String(numero || "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.startsWith("00")) d = d.slice(2);
+  if (d.startsWith("0")) d = d.slice(1);
+  if (d.length === 8) d = "504" + d;
+  return d;
+}
+
+function enlaceWhatsApp(numero, texto) {
+  const d = normalizarWhatsAppNumero(numero);
+  if (!d) return "";
+  const base = `https://wa.me/${d}`;
+  return texto ? `${base}?text=${encodeURIComponent(texto)}` : base;
+}
+
+// Aplica el número configurado a TODOS los enlaces/CTA de WhatsApp (los
+// href iniciales del HTML quedan vacíos a propósito; aquí se completan).
+function aplicarWhatsAppEnlaces() {
+  const phone = normalizarWhatsAppNumero(whatsappSettings.phone);
+  if (!phone) return;
+  const heroBtn = document.getElementById("hero-wa-btn");
+  if (heroBtn) {
+    heroBtn.setAttribute(
+      "href",
+      enlaceWhatsApp(phone, "Hola Mi Phone HN, me gustaría solicitar información sobre el extrafinanciamiento.")
+    );
+  }
+  const footerWaLink = document.getElementById("footer-wa-link");
+  if (footerWaLink) footerWaLink.setAttribute("href", `https://wa.me/${phone}`);
+  const calcBtn = document.getElementById("calc-whatsapp-btn");
+  if (calcBtn) calcBtn.setAttribute("href", `https://wa.me/${phone}`);
+}
 const FALLBACK_IMAGE =
   "data:image/svg+xml;charset=UTF-8," +
   encodeURIComponent(
@@ -153,6 +193,8 @@ function finishPageLoader() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  iniciarMantenimientoCliente();
+  aplicarWhatsAppEnlaces();
   initTheme();
   updateCartUI();
   setupEventListeners();
@@ -2326,11 +2368,9 @@ function applyCompanySettings(company) {
   if (company.telefono) {
     const footerPhone = document.getElementById("footer-phone");
     if (footerPhone) footerPhone.textContent = company.telefono;
-    const footerWaLink = document.getElementById("footer-wa-link");
-    if (footerWaLink) {
-      const digits = String(company.telefono).replace(/[^0-9]/g, "");
-      if (digits) footerWaLink.href = `https://wa.me/${digits}`;
-    }
+    // El <a id="footer-wa-link"> NO usa company.telefono: su href lo
+    // gestiona aplicarWhatsAppEnlaces() con el número único configurado
+    // en WhatsApp del negocio.
   }
 }
 
@@ -2428,25 +2468,19 @@ function applyFooterSettings(footer) {
 }
 
 function applyWhatsappSettings(whatsapp) {
-  if (!whatsapp) return;
-
+  whatsapp = whatsapp || {};
   whatsappSettings = {
     ...WHATSAPP_DEFAULTS,
     ...whatsapp,
     labels: { ...WHATSAPP_DEFAULTS.labels, ...(whatsapp.labels || {}) }
   };
+  // El número configurado es la única fuente de verdad. Se normaliza aquí
+  // para que toda la app (checkout, cuotas, hero, footer, carrito, producto)
+  // use exactamente el mismo número en cada enlace wa.me.
+  whatsappSettings.phone = normalizarWhatsAppNumero(whatsappSettings.phone);
 
-  const phone = whatsappSettings.phone;
-  const heroBtn = document.getElementById("hero-wa-btn");
-  if (heroBtn) {
-    const text = "Hola Mi Phone HN, me gustaría solicitar información sobre el extrafinanciamiento.";
-    heroBtn.href = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-  }
-
-  const footerWaLink = document.getElementById("footer-wa-link");
-  if (footerWaLink) footerWaLink.href = `https://wa.me/${phone}`;
-
-  calculateFinancing();
+  aplicarWhatsAppEnlaces();
+  if (typeof calculateFinancing === "function") calculateFinancing();
 }
 
 function setBrandLogo(dataUrl) {

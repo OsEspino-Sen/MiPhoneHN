@@ -143,6 +143,7 @@
               <button type="button" class="settings-tab" data-tab="imagenes"><i class="ph ph-image" aria-hidden="true"></i><span>Imágenes</span></button>
               <button type="button" class="settings-tab" data-tab="llaves"><i class="ph ph-key" aria-hidden="true"></i><span>Llaves</span></button>
               <button type="button" class="settings-tab" data-tab="usuarios"><i class="ph ph-users" aria-hidden="true"></i><span>Usuarios</span></button>
+              <button type="button" class="settings-tab" data-tab="mantenimiento"><i class="ph ph-siren" aria-hidden="true"></i><span>Mantenimiento</span></button>
             </div>
 
             <div class="settings-tab-content active" id="settings-empresa-tab">
@@ -390,24 +391,43 @@
             <div class="settings-tab-content" id="settings-imagenes-tab">
               <div class="settings-grid">
 
-<article class="settings-form-card settings-img-card" data-img-doc="nosotros">
+<article class="settings-form-card settings-img-card-duo settings-form-card--wide" data-img-doc="heroPhones">
                   <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-image" aria-hidden="true"></i></div>
-                    <div><h3>Imagen de la sección Nosotros</h3><p>Se muestra en la sección Nosotros del inicio, integrada con el texto. PNG o WebP con fondo transparente.</p></div>
+                    <div class="settings-image-icon"><i class="ph ph-device-mobile" aria-hidden="true"></i></div>
+                    <div><h3>Imágenes del hero (carrusel)</h3><p>De 1 a 5 imágenes o URLs (https://). Se muestran como carrusel automático cada 5 s, en pares: la imagen activa pasa al frente.</p></div>
                   </div>
-                  <div class="settings-image-preview settings-image-preview--wide">
-                    <img src="" alt="Nosotros">
-                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  <div class="settings-phones-empty" id="phones-empty">
+                    <i class="ph ph-device-mobile" aria-hidden="true"></i>
+                    <span>Sin imágenes. Agrega la primera imagen o URL del hero.</span>
+                  </div>
+                  <div class="settings-phones-list" id="phones-list"></div>
+                  <button type="button" class="btn btn-dashed btn-block settings-phones-add" id="phones-add-btn" hidden><i class="ph ph-plus" aria-hidden="true"></i> Agregar imagen o URL</button>
+                  <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
+                  <div class="settings-btn-row">
+                    <button type="button" class="btn btn-primary btn-sm settings-save-btn settings-duo-save" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn settings-duo-cancel" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+<article class="settings-form-card settings-logo-card settings-img-card" data-img-doc="logo" data-img-key="logo">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
+                    <div><h3>Logo de la empresa</h3><p>PNG o WebP con fondo transparente. Se redimensiona automáticamente.</p></div>
+                  </div>
+                  <div class="settings-image-preview settings-image-preview--logo">
+                    <img src="" alt="Logo">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin logo</span></div>
                   </div>
                   <div class="settings-image-actions">
                     <div class="settings-file-wrap">
-                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar imagen</button>
-                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar logo</button>
+                      <input type="file" accept=".png,.webp,.jpg,.jpeg,.gif" class="settings-file-input" hidden>
                       <span class="settings-file-name"></span>
                     </div>
                     <div class="settings-site-url-wrap">
                       <i class="ph ph-link-simple" aria-hidden="true"></i>
-                      <input type="url" class="settings-site-url" data-img-url="about" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
+                      <input type="url" class="settings-site-url" data-img-url="logo" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
                     </div>
                     <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
                     <div class="settings-btn-row">
@@ -448,24 +468,24 @@
                   <div class="settings-upload-status"></div>
                 </article>
 
-<article class="settings-form-card settings-logo-card settings-img-card" data-img-doc="logo" data-img-key="logo">
+<article class="settings-form-card settings-img-card" data-img-doc="nosotros">
                   <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
-                    <div><h3>Logo de la empresa</h3><p>PNG o WebP con fondo transparente. Se redimensiona automáticamente.</p></div>
+                    <div class="settings-image-icon"><i class="ph ph-image" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de la sección Nosotros</h3><p>Se muestra en la sección Nosotros del inicio, integrada con el texto. PNG o WebP con fondo transparente.</p></div>
                   </div>
-                  <div class="settings-image-preview settings-image-preview--logo">
-                    <img src="" alt="Logo">
-                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin logo</span></div>
+                  <div class="settings-image-preview settings-image-preview--wide">
+                    <img src="" alt="Nosotros">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
                   </div>
                   <div class="settings-image-actions">
                     <div class="settings-file-wrap">
-                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar logo</button>
-                      <input type="file" accept=".png,.webp,.jpg,.jpeg,.gif" class="settings-file-input" hidden>
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar imagen</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
                       <span class="settings-file-name"></span>
                     </div>
                     <div class="settings-site-url-wrap">
                       <i class="ph ph-link-simple" aria-hidden="true"></i>
-                      <input type="url" class="settings-site-url" data-img-url="logo" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
+                      <input type="url" class="settings-site-url" data-img-url="about" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
                     </div>
                     <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
                     <div class="settings-btn-row">
@@ -477,13 +497,42 @@
                   <div class="settings-upload-status"></div>
                 </article>
 
-<article class="settings-image-card" data-key="imagen_barra_principal">
+<article class="settings-form-card settings-img-card" data-img-doc="mantenimiento">
                   <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-rows" aria-hidden="true"></i></div>
-                    <div><h3>Imagen de barra</h3><p>Imagen del footer del sidebar.</p></div>
+                    <div class="settings-image-icon"><i class="ph ph-siren" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de la página de mantenimiento</h3><p>Ilustración principal que se muestra cuando la tienda está en mantenimiento. PNG o WebP con fondo transparente.</p></div>
+                  </div>
+                  <div class="settings-image-preview settings-image-preview--wide">
+                    <img src="" alt="Mantenimiento">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
+                  </div>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar imagen</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-site-url-wrap">
+                      <i class="ph ph-link-simple" aria-hidden="true"></i>
+                      <input type="url" class="settings-site-url" placeholder="O usa una URL pública (https://...)" autocomplete="off" spellcheck="false">
+                    </div>
+                    <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                      <button type="button" class="btn btn-danger-ghost btn-sm settings-remove-btn" disabled><i class="ph ph-trash" aria-hidden="true"></i> Eliminar</button>
+                    </div>
+                  </div>
+                  <div class="settings-upload-status"></div>
+                </article>
+
+<article class="settings-image-card" data-key="imagen_login">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph ph-monitor" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de login</h3><p>Fondo de la pantalla de inicio de sesión.</p></div>
                   </div>
                   <div class="settings-image-preview">
-                    <img src="" alt="Barra">
+                    <img src="" alt="Login">
                     <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
                   </div>
                   <div class="settings-image-actions">
@@ -493,33 +542,40 @@
                       <span class="settings-file-name"></span>
                     </div>
                     <div class="settings-url-field">
-                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagen_barra">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagen-login">
                     </div>
                     <div class="settings-btn-row">
                       <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
                       <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
                     </div>
                   </div>
-                  <div class="settings-upload-status" id="status-imagen_barra_principal"></div>
+                  <div class="settings-upload-status" id="status-imagen_login"></div>
                 </article>
 
-<article class="settings-form-card settings-img-card-duo settings-form-card--wide" data-img-doc="heroPhones">
+<article class="settings-image-card" data-key="imagen_banner_panel">
                   <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-device-mobile" aria-hidden="true"></i></div>
-                    <div><h3>Imágenes del hero (carrusel)</h3><p>De 1 a 5 imágenes o URLs (https://). Se muestran como carrusel automático cada 5 s, en pares: la imagen activa pasa al frente.</p></div>
+                    <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
+                    <div><h3>Banner del panel</h3><p>Imagen principal del panel de administración.</p></div>
                   </div>
-                  <div class="settings-phones-empty" id="phones-empty">
-                    <i class="ph ph-device-mobile" aria-hidden="true"></i>
-                    <span>Sin imágenes. Agrega la primera imagen o URL del hero.</span>
+                  <div class="settings-image-preview">
+                    <img src="" alt="Banner">
+                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
                   </div>
-                  <div class="settings-phones-list" id="phones-list"></div>
-                  <button type="button" class="btn btn-dashed btn-block settings-phones-add" id="phones-add-btn" hidden><i class="ph ph-plus" aria-hidden="true"></i> Agregar imagen o URL</button>
-                  <span class="form-hint">Máx 8 MB por imagen. Se optimiza automáticamente.</span>
-                  <div class="settings-btn-row">
-                    <button type="button" class="btn btn-primary btn-sm settings-save-btn settings-duo-save" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
-                    <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn settings-duo-cancel" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                  <div class="settings-image-actions">
+                    <div class="settings-file-wrap">
+                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
+                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
+                      <span class="settings-file-name"></span>
+                    </div>
+                    <div class="settings-url-field">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/banner.jpg">
+                    </div>
+                    <div class="settings-btn-row">
+                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
+                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
+                    </div>
                   </div>
-                  <div class="settings-upload-status"></div>
+                  <div class="settings-upload-status" id="status-imagen_banner_panel"></div>
                 </article>
 
 <article class="settings-image-card" data-key="imagen_sidebar">
@@ -574,13 +630,13 @@
                   <div class="settings-upload-status" id="status-imagen_tarjeta_promocional"></div>
                 </article>
 
-<article class="settings-image-card" data-key="imagen_banner_panel">
+<article class="settings-image-card settings-form-card--wide" data-key="imagen_barra_principal">
                   <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-image-square" aria-hidden="true"></i></div>
-                    <div><h3>Banner del panel</h3><p>Imagen principal del panel de administración.</p></div>
+                    <div class="settings-image-icon"><i class="ph ph-rows" aria-hidden="true"></i></div>
+                    <div><h3>Imagen de barra</h3><p>Imagen del footer del sidebar.</p></div>
                   </div>
                   <div class="settings-image-preview">
-                    <img src="" alt="Banner">
+                    <img src="" alt="Barra">
                     <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
                   </div>
                   <div class="settings-image-actions">
@@ -590,45 +646,19 @@
                       <span class="settings-file-name"></span>
                     </div>
                     <div class="settings-url-field">
-                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/banner.jpg">
+                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagen_barra">
                     </div>
                     <div class="settings-btn-row">
                       <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
                       <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
                     </div>
                   </div>
-                  <div class="settings-upload-status" id="status-imagen_banner_panel"></div>
+                  <div class="settings-upload-status" id="status-imagen_barra_principal"></div>
                 </article>
-
-<article class="settings-image-card" data-key="imagen_login">
-                  <div class="settings-image-header">
-                    <div class="settings-image-icon"><i class="ph ph-monitor" aria-hidden="true"></i></div>
-                    <div><h3>Imagen de login</h3><p>Fondo de la pantalla de inicio de sesión.</p></div>
-                  </div>
-                  <div class="settings-image-preview">
-                    <img src="" alt="Login">
-                    <div class="settings-image-placeholder"><i class="ph ph-image" aria-hidden="true"></i><span>Sin imagen</span></div>
-                  </div>
-                  <div class="settings-image-actions">
-                    <div class="settings-file-wrap">
-                      <button type="button" class="settings-file-btn"><i class="ph ph-upload-simple" aria-hidden="true"></i> Seleccionar archivo</button>
-                      <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" class="settings-file-input" hidden>
-                      <span class="settings-file-name"></span>
-                    </div>
-                    <div class="settings-url-field">
-                      <input type="url" class="settings-url-input" placeholder="https://ejemplo.com/imagen-login">
-                    </div>
-                    <div class="settings-btn-row">
-                      <button type="button" class="btn btn-primary btn-sm settings-save-btn" disabled><i class="ph ph-check" aria-hidden="true"></i> Guardar</button>
-                      <button type="button" class="btn btn-secondary btn-sm settings-cancel-btn" disabled><i class="ph ph-x" aria-hidden="true"></i> Cancelar</button>
-                    </div>
-                  </div>
-                  <div class="settings-upload-status" id="status-imagen_login"></div>
-                </article>
-
               </div>
             </div>
-<div class="settings-tab-content" id="settings-llaves-tab">
+
+            <div class="settings-tab-content" id="settings-llaves-tab">
               <div class="settings-grid settings-grid--single">
                 <article class="settings-form-card">
                   <div class="settings-image-header">
@@ -682,6 +712,51 @@
               </div>
             </div>
 
+            <!-- MODO MANTENIMIENTO (pestaña de Configuración) -->
+            <div class="settings-tab-content" id="settings-mantenimiento-tab">
+              <div class="settings-grid settings-grid--single">
+                <article class="settings-form-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon"><i class="ph-duotone ph-siren" aria-hidden="true"></i></div>
+                    <div>
+                      <h3>Estado del sitio público</h3>
+                      <p id="mantenimiento-meta">Consultando el estado actual…</p>
+                    </div>
+                  </div>
+
+                  <div class="mnt-estado-row">
+                    <span class="mnt-estado-badge mnt-estado--off" id="mantenimiento-estado-badge">Tienda operativa</span>
+                  </div>
+
+                  <div class="mnt-banner-activo" id="mantenimiento-banner-activo" hidden>
+                    <i class="ph-duotone ph-siren" aria-hidden="true"></i>
+                    <div>
+                      <strong>El sitio público está en mantenimiento.</strong>
+                      <span>Los visitantes de la tienda están viendo la página de mantenimiento (HTTP 503) en este momento.</span>
+                    </div>
+                  </div>
+
+                  <p class="mnt-ayuda">Al activar el mantenimiento, <strong>todas</strong> las rutas públicas de la tienda (<code>/</code>, <code>tienda.html</code>, <code>soporte.html</code> y cualquier otra) mostrarán la página de mantenimiento con código HTTP 503. El panel administrativo no se ve afectado.</p>
+
+                  <div class="mnt-acciones-row">
+                    <button type="button" class="btn btn-primary" id="mantenimiento-activar-btn"><i class="ph ph-siren" aria-hidden="true"></i> Activar mantenimiento</button>
+                    <button type="button" class="btn btn-secondary" id="mantenimiento-desactivar-btn" disabled><i class="ph ph-check-circle" aria-hidden="true"></i> Desactivar mantenimiento</button>
+                    <button type="button" class="btn btn-secondary" id="mantenimiento-preview-btn"><i class="ph ph-eye" aria-hidden="true"></i> Vista previa</button>
+                  </div>
+
+                  <div class="settings-upload-status" id="status-mantenimiento"></div>
+
+                  <div class="mnt-preview-wrap" id="mantenimiento-preview-wrap" hidden>
+                    <div class="mnt-preview-bar">
+                      <span><i class="ph ph-monitor" aria-hidden="true"></i> Vista previa — no modifica el estado real</span>
+                      <button type="button" class="btn btn-secondary btn-sm" id="mantenimiento-preview-close-btn"><i class="ph ph-x" aria-hidden="true"></i> Cerrar</button>
+                    </div>
+                    <iframe id="mantenimiento-preview-frame" title="Vista previa de la página de mantenimiento"></iframe>
+                  </div>
+                </article>
+              </div>
+            </div>
+
           </section>
         </div>
       </main>
@@ -700,7 +775,7 @@
           <h2 id="modal-title">Producto</h2>
           <p class="drawer-subtitle"><i></i> <span id="drawer-mode-copy">Los cambios se sincronizan con la tienda al guardar</span></p>
         </div>
-        <span class="drawer-mode-chip" id="drawer-mode-chip"><i class="drawer-mode-swatch" aria-hidden="true"></i><span class="drawer-mode-chip-text">Nuevo</span></span>
+        <span class="drawer-mode-chip" id="drawer-mode-chip"><i class="drawer-mode-swatch" aria-hidden="true"></i><span class="drawer-mode-chip-text">Creando</span></span>
         <button type="button" id="modal-close-btn" class="btn-close-drawer" aria-label="Cerrar"><i class="ph ph-x" aria-hidden="true"></i></button>
       </header>
 
@@ -720,10 +795,16 @@
           <!-- BARRA DE VARIANTES: pestañas fijas (sticky) + botón agregar -->
           <div class="variant-bar-tabs" id="variant-bar-tabs" role="tablist" aria-label="Producto y variantes"></div>
           <div class="variant-bar" id="variant-bar">
-            <button type="button" id="add-variant-bar-btn" class="variant-bar-add" title="Crea una variante con una copia completa de este formulario; edítala de forma independiente">
-              <i class="ph ph-plus" aria-hidden="true"></i>
-              <span>Agregar variante</span>
-            </button>
+            <div class="variant-actions">
+              <button type="button" id="add-variant-bar-btn" class="variant-bar-add" title="Crea una variante con una copia completa de este formulario; edítala de forma independiente">
+                <i class="ph ph-plus" aria-hidden="true"></i>
+                <span>Agregar variante</span>
+              </button>
+              <button type="button" id="duplicate-variant-btn" class="variant-bar-add is-duplicate" title="Crea una copia editable de esta variante para otro color del mismo producto" disabled>
+                <i class="ph ph-copy" aria-hidden="true"></i>
+                <span>Duplicar variante</span>
+              </button>
+            </div>
           </div>
 
           <!-- 01 · Información principal -->
@@ -742,6 +823,7 @@
                   <label for="product-title">Nombre del producto <span class="req">*</span></label>
                   <input type="text" id="product-title" required placeholder="Samsung Galaxy S25 Ultra 512 GB" autocomplete="off">
                   <span class="form-hint">Escribe el nombre comercial que verá el cliente.</span>
+                  <p class="form-note" id="hint-product-title" hidden></p>
                   <span class="field-error-msg" data-error-for="product-title" hidden></span>
                 </div>
                 <div class="form-group">
@@ -806,6 +888,7 @@
                 <textarea id="product-image" rows="3" placeholder="https://ejemplo.com/imagen-frontal.jpg&#10;https://ejemplo.com/imagen-trasera.jpg"></textarea>
                 <span class="form-hint">Pega una URL por línea si prefieres enlazar imágenes ya alojadas.</span>
               </div>
+              <p class="form-note" id="hint-fs-gallery" hidden></p>
               <span class="field-error-msg" data-error-for="fs-gallery" hidden></span>
             </div>
           </section>
@@ -825,6 +908,7 @@
                 <textarea id="product-description" rows="4" placeholder="Equipo 100% original con garantía de 12 meses. Incluye todos sus accesorios y caja sellada…"></textarea>
                 <span class="form-hint">Este texto aparece en la página del producto. Sé claro y directo.</span>
               </div>
+              <p class="form-note" id="hint-fs-description" hidden></p>
             </div>
           </section>
 
@@ -841,6 +925,7 @@
             <div class="fs-body">
               <div id="includes-list" class="dynamic-stack"></div>
               <button type="button" id="add-include-btn" class="btn btn-dashed btn-block"><i class="ph ph-plus" aria-hidden="true"></i> Agregar elemento incluido</button>
+              <p class="form-note" id="hint-fs-includes" hidden></p>
             </div>
           </section>
 
@@ -857,6 +942,7 @@
             <div class="fs-body">
               <div id="specs-list" class="dynamic-stack"></div>
               <button type="button" id="add-spec-btn" class="btn btn-dashed btn-block"><i class="ph ph-plus" aria-hidden="true"></i> Agregar especificación</button>
+              <p class="form-note" id="hint-fs-specs" hidden></p>
             </div>
           </section>
 
@@ -889,7 +975,12 @@
                     </div>
                   </div>
                 </div>
+                <span class="field-error-msg" data-error-for="variant-color-name" hidden></span>
               </div>
+              <!-- Aviso de color duplicado: visible en modo variante (bajo el
+                   selector) y en el producto principal (conflictos del grupo). -->
+              <p class="form-note form-note--warning" id="variant-color-warning" role="alert" hidden></p>
+              <p class="form-note" id="hint-fs-colors" hidden></p>
             </div>
           </section>
 
@@ -906,6 +997,7 @@
             <div class="fs-body">
               <div id="storage-list" class="dynamic-stack"></div>
               <button type="button" id="add-storage-btn" class="btn btn-dashed btn-block"><i class="ph ph-plus" aria-hidden="true"></i> Agregar capacidad</button>
+              <p class="form-note" id="hint-fs-storage" hidden></p>
               <span class="field-error-msg" data-error-for="fs-storage" hidden></span>
             </div>
           </section>
@@ -937,7 +1029,7 @@
           <span class="drawer-footer-hint"><i class="ph ph-info" aria-hidden="true"></i> Los campos con <em>*</em> son obligatorios</span>
           <div class="drawer-actions-right">
             <button type="button" id="cancel-form-btn" class="btn btn-secondary">Cancelar</button>
-            <button type="submit" class="btn btn-primary btn-save-product"><i class="ph ph-check" aria-hidden="true"></i> Guardar producto</button>
+            <button type="submit" id="save-product-btn" class="btn btn-primary btn-save-product"><i class="ph ph-check" aria-hidden="true"></i> Guardar producto</button>
           </div>
         </footer>
       </form>

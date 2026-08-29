@@ -2620,6 +2620,13 @@ body #products-table-body .data-grid-row::before {
   flex: 1;
   overflow-y: auto;
   padding: 28px;
+  /* El padding-top del contenedor de scroll es la causa real del hueco bajo
+     el header cuando la barra de variantes queda sticky: un elemento
+     position:sticky no puede sobrepasar el content box (que empieza DESPUÉS
+     del padding) y se pega 28px más abajo. Se elimina aquí y el espaciado
+     superior en reposo lo aporta .variant-bar-tabs (margin-top), que se
+     anula al entrar en sticky (is-pinned/is-unpinned). */
+  padding-top: 0;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -2630,12 +2637,18 @@ body #products-table-body .data-grid-row::before {
 .drawer-notice {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: flex-start;
   gap: 12px;
+  /* Respira del borde inferior del header: con el padding-top del
+     .drawer-body en 0 (necesario para el sticky), el aviso recupera su
+     propio margen superior y se ve como un banner con borde y centrado. */
+  margin-top: 20px;
   padding: 14px 16px;
   background: var(--accent-soft);
   border: 1px solid #C7D2FE;
-  border-radius: var(--r-lg)
+  border-radius: var(--r-lg);
+  text-align: left
 }
 
 .drawer-notice-icon {
@@ -3406,7 +3419,24 @@ body #products-table-body .data-grid-row::before {
 
   .drawer-body {
     padding: 18px 16px;
+    padding-top: 0;
     gap: 16px
+  }
+
+  /* El .drawer-body usa gap 16px en móvil: la unión de la caja de variantes
+     debe usar el mismo margen negativo para que siga siendo UN solo bloque. */
+  .variant-bar {
+    margin-top: -16px
+  }
+
+  /* En reposo la barra recupera el espaciado superior que antes daba el
+     padding-top del contenedor (18px en móvil); al fijarse se anula. */
+  .variant-bar-tabs {
+    margin-top: 18px
+  }
+
+  .drawer-notice {
+    margin-top: 16px
   }
 
   .fs-head {
@@ -4421,32 +4451,85 @@ body #products-table-body .data-grid-row::before {
    VARIANTES DE PRODUCTO — barra superior + editor de color de la variante
    Diseño plano y profesional: botones negros, sin sombras, sin degradados.
    ========================================================================== */
+/* La barra de variantes y "Agregar variante" forman UNA sola caja.
+   Este es el bloque inferior (botón). Queda debajo de .variant-bar-tabs
+   compartiendo bordes; solo tiene el divisor interno (border-top). */
 .variant-bar {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 10px;
-  margin-bottom: 16px;
+  margin: 0;
+  /* Elimina el gap del .drawer-body para que las pestañas y este bloque
+     estén pegados como un único componente. */
+  margin-top: -20px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 11px 11px;
   background: var(--surface-2);
 }
 
-/* Pestañas de producto/variantes: FIJAS durante todo el scroll del formulario.
-   Son hijas directas del contenedor con scroll (.drawer-body) para que el ancla
-   sticky dure toda la página; el botón "Agregar variante" queda fuera y se va. */
+/* Pestañas de producto/variantes.
+   Comportamiento DESEADO:
+   - En reposo forman UNA sola caja con "Agregar variante".
+   - Al hacer scroll SOLO las pestañas se fijan (position: sticky; top: 0)
+     quedando pegadas justo debajo del header del drawer (.drawer-header).
+   - "Agregar variante" NUNCA es sticky: se desplaza con el contenido.
+   - El límite inferior del sticky (final de la sección de variantes) lo
+     controla el JS con las clases is-pinned / is-unpinned. */
 .variant-bar-tabs {
   position: sticky;
   top: 0;
   z-index: 12;
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 9px;
+  /* Un pequeño espacio entre cada pill para que las variantes no se vean
+     tan pegadas entre sí (diseño flat y limpio). */
+  gap: 4px;
+  /* Padding alineado con el bloque "Agregar variante" (10px): el borde del
+     cuadro que encierra las variantes queda al mismo nivel que el del botón. */
+  padding: 10px;
+  /* En reposo conserva la posición original (el offset que antes ponía el
+     padding-top del .drawer-body). Con position:sticky NO puede entrar en el
+     padding del contenedor, así que el respiro se mueve aquí y se anula cuando
+     la barra se fija (is-pinned) o se libera al final de la zona (is-unpinned):
+     así, en sticky queda EXACTAMENTE pegada al .drawer-header, sin hueco. */
+  margin-top: 28px;
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: 0;
+  transition: margin-top 160ms ease;
+  border-radius: 11px 11px 0 0;
   background: var(--surface-2);
   border: 1px solid var(--line);
-  box-shadow: 0 10px 22px -16px rgba(14, 16, 28, .45);
+  border-bottom: 0;
+}
+
+/* Cuando la barra se fija bajo el header queda PLANA ARRIBA: sin borde
+   superior y con esquinas superiores cuadradas, como si saliera del header.
+   Al volver hacia arriba (sin clases) recupera sus esquinas redondeadas. */
+.variant-bar-tabs.is-pinned {
+  margin-top: 0;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 11px 11px;
+  box-shadow: 0 10px 22px -16px rgba(14, 16, 28, .5);
+}
+
+/* Al llegar al límite inferior de la sección de variantes se libera: vuelve
+   al flujo normal (ya no sticky), se anula el margen para seguir unida al
+   bloque "Agregar variante" y sale de la vista con el contenido. */
+.variant-bar-tabs.is-unpinned {
+  margin-top: 0;
+  position: static;
+}
+
+/* Cuando el aviso de actualización ("Estás actualizando un producto
+   publicado") está visible, la barra de variantes no necesita su margen
+   superior de 28px: el aviso ya ocupa ese espacio arriba y así los dos
+   bloques no quedan tan separados. */
+.drawer-body:has(.drawer-notice:not([hidden])) .variant-bar-tabs {
+  margin-top: 0;
 }
 
 /* Chip del encabezado (identificador del modo): estilos definidos junto a la
@@ -4574,6 +4657,45 @@ body #products-table-body .data-grid-row::before {
   font-weight: 400;
 }
 
+/* Acciones de la barra: "Agregar variante" + "Duplicar variante" lado a lado */
+.variant-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.variant-actions .variant-bar-add {
+  width: 100%;
+}
+
+.variant-bar-add.is-duplicate {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--line-strong);
+  text-transform: uppercase;
+}
+
+.variant-bar-add.is-duplicate:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+.variant-bar-add.is-duplicate:active:not(:disabled) {
+  background: #fff;
+}
+
+.variant-bar-add.is-duplicate:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .variant-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Editor del color de la variante dentro de la sección Colores */
 .variant-color-editor {
   margin-top: 14px;
@@ -4590,6 +4712,113 @@ body #products-table-body .data-grid-row::before {
   font-size: .8125rem;
   color: var(--ink-3);
   margin: 0 0 12px;
+}
+
+/* ==========================================================================
+   FORM-NOTE — componente unificado de mensajes de información y validación.
+   Todos los avisos del editor comparten la misma estructura, alineación,
+   tipografía y jerarquía: icono en badge + título opcional + texto explicativo.
+   Solo cambia el contenido y el tono (base / variant / warning / error).
+   Es un bloque en flujo (grid de 2 columnas) alineado al ancho del contenido
+   de su sección; nunca flota ni se superpone con otros elementos.
+   ========================================================================== */
+.form-note {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  max-width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--note-accent);
+  border-radius: var(--r-md);
+  background: var(--note-bg);
+  color: var(--ink-2);
+  font-size: .8125rem;
+  line-height: 1.55;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+.form-note--base {
+  --note-accent: var(--ink-3);
+  --note-bg: var(--surface-2);
+}
+
+.form-note--variant {
+  --note-accent: var(--accent);
+  --note-bg: var(--accent-soft);
+}
+
+.form-note--warning {
+  --note-accent: var(--warning);
+  --note-bg: var(--warning-bg);
+}
+
+.form-note--error {
+  --note-accent: var(--danger);
+  --note-bg: var(--danger-bg);
+}
+
+.form-note-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--note-accent) 12%, transparent);
+  color: var(--note-accent);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.form-note-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.form-note-title {
+  color: var(--note-accent);
+  font-size: .8125rem;
+  font-weight: 750;
+  letter-spacing: -.01em;
+}
+
+.form-note-text {
+  color: var(--ink-2);
+  font-size: .78125rem;
+  line-height: 1.55;
+}
+
+.form-note-text strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* Separación según el contenedor: en .fs-body (gap 16px) la nota ya queda
+   bien espaciada; dentro de un .form-group (gap 7px) se suma un pequeño
+   margen para que respire sin quedar pegada al campo anterior. */
+.form-group > .form-note {
+  margin-top: 7px;
+}
+
+@media (max-width: 640px) {
+  .form-note {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .form-note-icon {
+    width: 24px;
+    height: 24px;
+    font-size: .9375rem;
+  }
 }
 
 .variant-color-row {
@@ -4948,8 +5177,11 @@ body #products-table-body .data-grid-row::before {
 .settings-section .page-header{margin-bottom:24px}
 
 /* --- Barra de pestañas (pills con scroll horizontal) --- */
-.settings-tabs{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding:4px 2px 10px;margin-bottom:24px;border-bottom:1px solid var(--line);scrollbar-width:none}
-.settings-tabs::-webkit-scrollbar{display:none}
+.settings-tabs{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;padding:4px 2px 10px;margin-bottom:24px;border-bottom:1px solid var(--line);scrollbar-width:thin;scrollbar-color:var(--line-strong,rgba(0,0,0,.18)) transparent}
+.settings-tabs::-webkit-scrollbar{height:6px}
+.settings-tabs::-webkit-scrollbar-track{background:transparent}
+.settings-tabs::-webkit-scrollbar-thumb{background:var(--line-strong,rgba(0,0,0,.18));border-radius:999px}
+.settings-tabs::-webkit-scrollbar-thumb:hover{background:var(--ink-3,rgba(0,0,0,.3))}
 .settings-tab{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;padding:9px 16px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink-3);font-size:.875rem;font-weight:600;white-space:nowrap;cursor:pointer;transition:var(--t-fast)}
 .settings-tab:hover{border-color:var(--line-strong);background:var(--surface-2);color:var(--ink)}
 .settings-tab.active{color:var(--accent);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 30%,transparent);font-weight:700}
@@ -5267,4 +5499,102 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 .settings-users-card .settings-image-icon:empty {
   display: none;
 }
+
+/* ==========================================================================
+   MODO MANTENIMIENTO — Pestaña del panel admin
+   ========================================================================== */
+
+.mnt-estado-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 18px 0 4px; }
+
+.mnt-estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: .8125rem;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.mnt-estado-badge::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.mnt-estado--off { background: rgba(52, 199, 89, .12); color: #1d8a41; }
+.mnt-estado--on { background: rgba(255, 59, 48, .12); color: #c5221b; }
+
+.mnt-banner-activo {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 16px 0 4px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(255, 59, 48, .07);
+  border: 1px solid rgba(255, 59, 48, .25);
+}
+
+.mnt-banner-activo > i { font-size: 1.5rem; color: #ff3d30; flex-shrink: 0; }
+
+.mnt-banner-activo div { display: flex; flex-direction: column; gap: 2px; }
+.mnt-banner-activo strong { font-size: .9375rem; color: #c5221b; }
+.mnt-banner-activo span { font-size: .8125rem; color: var(--text-2, #6e6e73); }
+
+.mnt-ayuda { font-size: .875rem; line-height: 1.65; color: var(--text-2, #6e6e73); margin: 14px 0 4px; }
+.mnt-ayuda code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .8125rem;
+  background: rgba(0, 0, 0, .05);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.mnt-acciones-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.mnt-preview-wrap {
+  margin-top: 22px;
+  border: 1px solid var(--line, #e5e5ea);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.mnt-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line, #e5e5ea);
+  font-size: .8125rem;
+  font-weight: 600;
+  color: var(--text-2, #6e6e73);
+}
+
+.mnt-preview-bar > span { display: inline-flex; align-items: center; gap: 8px; }
+
+#mantenimiento-preview-frame {
+  display: block;
+  width: 100%;
+  height: min(640px, 70vh);
+  border: 0;
+  background: #f5f5f7;
+}
+
+@media (max-width: 720px) {
+  .mnt-acciones-row { flex-direction: column; align-items: stretch; }
+  .mnt-acciones-row .btn { justify-content: center; }
+}
+
 
