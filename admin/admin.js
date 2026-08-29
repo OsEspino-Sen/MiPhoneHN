@@ -6608,14 +6608,17 @@ function collectCompareRow() {
 
 function saveCompareImport() {
   // Cualquiera de los dos caminos ("Es otro") lleva al FORMULARIO DE CREACIÓN
-  // con los datos precargados. La ventana de importación queda ATRÁS (blur) y
-  // reaparece al cerrar el drawer: sin ese producto si se creó; se cierra sola
-  // si ya no queda nada por revisar. La edición real ocurre en el formulario,
-  // donde la capa anti-duplicados bloquea clones exactos antes de guardar.
+  // con los datos precargados. Orden de capas al salir de la revisión:
+  //   1. se CIERRA el modal de comparación,
+  //   2. la ventana de importación queda ATRÁS (blur),
+  //   3. el drawer de creación se abre ENCIMA (z-index 90 > 70).
+  // Al cerrarse el drawer, la ventana de importación reaparece nítida y
+  // reanuda la cola (o se cierra sola si ya no queda nada).
   const row = collectCompareRow();
   if (!row) { closeBackupModalById("compare-import-modal"); return; }
   const origen = compareMode === "discarded" ? "discarded" : "revision";
   const ctx = { origen, baseId: String(row.id), matchId: templateCompareMatchId || "", titulo: row.title || row.id };
+  closeBackupModalById("compare-import-modal");
   loadProductAsTemplate(row, {
     alCerrar: () => reanudarRevisionTrasCreacion(ctx)
   });
