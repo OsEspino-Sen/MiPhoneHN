@@ -4,6 +4,7 @@
 
 import { 
   db, 
+  supabase,
   auth, 
   collection, 
   doc, 
@@ -5965,3 +5966,524 @@ import mntArtworkPreview from './mantenimiento/artwork.svg?url';
   }
   refreshBoundary();
 })();
+
+/* ==========================================================================
+   BACKUP DE PRODUCTOS — Exportar / Restaurar / Importar como plantilla
+   --------------------------------------------------------------------------
+   - Exportar: guarda filas crudas de `productos` (snake_case, tal cual Supabase)
+     en un JSON descargable. Cero transformación = cero pérdida de datos.
+   - Restaurar: antes de escribir genera un respaldo de seguridad automático
+     (descarga + historial local en el navegador; NO altera el esquema de la BD)
+     y luego hace `upsert` de las filas crudas. Al final verifica round-trip.
+   - Plantilla (Crear producto): carga un producto del backup en el formulario
+     sin asignar editingProductId → al guardar se crea un producto NUEVO.
+   ========================================================================== */
+
+const BACKUP_TYPE = "product-backup";
+const BACKUP_HISTORY_KEY = "miphone_auto_backups";
+const BACKUP_HISTORY_MAX = 10;
+let backupRestorePayload = null;   // envelope cargado en el modal de restaurar
+let backupTemplatePayload = null;  // envelope cargado en el modal de plantilla
+
+function backupStamp() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+}
+
+function buildBackupEnvelope(rows) {
+  return {
+    app: "MiPhoneHN",
+    type: BACKUP_TYPE,
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    count: Array.isArray(rows) ? rows.length : 0,
+    products: Array.isArray(rows) ? rows : []
+  };
+}
+
+function downloadBackupJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+async function saveBackupToFolder(data, filename) {
+  // File System Access API (Chrome/Edge): permite elegir la carpeta exacta.
+  if (typeof window.showSaveFilePicker === "function") {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: "Backup JSON", accept: { "application/json": [".json"] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+      await writable.close();
+      return true;
+    } catch (err) {
+      if (err && err.name === "AbortError") return false; // usuario canceló
+      console.warn("showSaveFilePicker falló, se usa descarga normal:", err);
+    }
+  }
+  downloadBackupJSON(data, filename);
+  return true;
+}
+
+function readBackupFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) { reject(new Error("No se seleccionó ningún archivo.")); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        if (!parsed || parsed.type !== BACKUP_TYPE || !Array.isArray(parsed.products)) {
+          reject(new Error("El archivo no es un backup válido de productos (type product-backup)."));
+          return;
+        }
+        resolve(parsed);
+      } catch {
+        reject(new Error("El archivo no contiene JSON válido."));
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+/* Mapea una fila cruda (snake_case) al formato camelCase que consume fillProductForm. */
+function snakeToCamelRow(row) {
+  if (!row || typeof row !== "object") return row;
+  return {
+    ...row,
+    oldPrice: row.old_price ?? row.oldPrice ?? 0,
+    batteryHealth: row.battery_health ?? row.batteryHealth ?? null,
+    createdAt: row.created_at ?? row.createdAt,
+    updatedAt: row.updated_at ?? row.updatedAt
+  };
+}
+
+/* Campos comparables en la verificación round-trip (excluye timestamps). */
+function normalizeForCompare(row) {
+  if (!row || typeof row !== "object") return {};
+  const keys = ["id", "title", "brand", "price", "old_price", "category", "condition", "badge",
+    "battery_health", "description", "includes", "specs", "variants", "images", "image"];
+  const out = {};
+  for (const k of keys) out[k] = row[k] === undefined ? null : row[k];
+  return out;
+}
+
+function openBackupModalById(id) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = false;
+}
+function closeBackupModalById(id) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = true;
+}
+
+function setBackupStatus(id, message, type = "info") {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!message) { el.hidden = true; el.innerHTML = ""; return; }
+  el.hidden = false;
+  el.innerHTML = `<i class="ph ${type === "error" ? "ph-warning-circle" : "ph-info-circle"}" aria-hidden="true"></i> <span>${escapeHTML(message)}</span>`;
+  el.classList.toggle("is-error", type === "error");
+}
+
+function setButtonBusy(btn, busy, busyLabel) {
+  if (!btn) return;
+  if (busy) {
+    btn.dataset.originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="ph ph-circle-notch ph-spin" aria-hidden="true"></i> ${escapeHTML(busyLabel)}`;
+  } else {
+    btn.disabled = false;
+    if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+  }
+}
+
+/* ------------------------------------------------------------------
+   EXPORTAR
+   ------------------------------------------------------------------ */
+async function openExportBackupModal() {
+  setBackupStatus("export-status", "");
+  document.getElementById("export-backup-list").innerHTML =
+    `<div class="backup-list-loading"><i class="ph ph-circle-notch ph-spin"></i> Cargando productos…</div>`;
+  openBackupModalById("export-backup-modal");
+
+  let rows = [];
+  try {
+    const { data, error } = await supabase.from("productos").select("id,title,brand,category,condition").order("title", { ascending: true });
+    if (error) throw error;
+    rows = data || [];
+  } catch (err) {
+    document.getElementById("export-backup-list").innerHTML =
+      `<div class="backup-list-empty">No se pudieron cargar los productos: ${escapeHTML(err.message || "")}</div>`;
+    return;
+  }
+
+  if (rows.length === 0) {
+    document.getElementById("export-backup-list").innerHTML =
+      `<div class="backup-list-empty">No hay productos en el catálogo.</div>`;
+    updateExportCount();
+    return;
+  }
+
+  document.getElementById("export-backup-list").innerHTML = rows.map((p) => `
+    <label class="backup-product-item">
+      <input type="checkbox" class="export-check" value="${escapeHTML(String(p.id))}" checked>
+      <span class="backup-item-title">${escapeHTML(p.title || "(sin título)")}</span>
+      <span class="backup-item-meta">${escapeHTML(p.brand || "")}${p.category ? " · " + escapeHTML(p.category) : ""}</span>
+      <span class="backup-item-id">${escapeHTML(String(p.id))}</span>
+    </label>
+  `).join("");
+
+  document.querySelectorAll("#export-backup-list .export-check").forEach((chk) => {
+    chk.addEventListener("change", updateExportCount);
+  });
+  updateExportCount();
+}
+
+function getSelectedExportIds() {
+  return [...document.querySelectorAll("#export-backup-list .export-check:checked")].map((c) => c.value);
+}
+
+function updateExportCount() {
+  const el = document.getElementById("export-count");
+  if (el) el.textContent = `${getSelectedExportIds().length} seleccionados`;
+}
+
+async function runExportBackup() {
+  const ids = getSelectedExportIds();
+  if (ids.length === 0) {
+    setBackupStatus("export-status", "Selecciona al menos un producto.", "error");
+    return;
+  }
+  const btn = document.getElementById("export-run-btn");
+  setButtonBusy(btn, true, "Exportando…");
+  try {
+    const { data, error } = await supabase.from("productos").select("*").in("id", ids);
+    if (error) throw error;
+    const envelope = buildBackupEnvelope(data);
+    const saved = await saveBackupToFolder(envelope, `miphone-productos-${backupStamp()}.json`);
+    if (!saved) {
+      setBackupStatus("export-status", "Exportación cancelada.", "info");
+      return;
+    }
+    setBackupStatus("export-status", `Backup exportado con ${data.length} producto(s).`, "info");
+  } catch (err) {
+    setBackupStatus("export-status", `Error al exportar: ${err.message || err}`, "error");
+  } finally {
+    setButtonBusy(btn, false);
+  }
+}
+
+/* ------------------------------------------------------------------
+   RESTAURAR / IMPORTAR (Configuración → Backup)
+   ------------------------------------------------------------------ */
+async function onRestoreFileChosen(event) {
+  const file = event.target.files?.[0];
+  backupRestorePayload = null;
+  document.getElementById("restore-backup-list").innerHTML = "";
+  document.getElementById("restore-run-btn").disabled = true;
+  const resultEl = document.getElementById("restore-result");
+  resultEl.hidden = true;
+  setBackupStatus("restore-status", "");
+  try {
+    backupRestorePayload = await readBackupFile(file);
+    document.getElementById("restore-file-label").innerHTML =
+      `<i class="ph ph-check-circle" aria-hidden="true"></i> ${escapeHTML(file.name)} — ${backupRestorePayload.count} producto(s)`;
+    await renderRestoreBackupList(backupRestorePayload.products);
+  } catch (err) {
+    setBackupStatus("restore-status", err.message, "error");
+    document.getElementById("restore-file-label").textContent = "Haz clic para elegir un archivo .json";
+  } finally {
+    event.target.value = "";
+  }
+}
+
+async function renderRestoreBackupList(products) {
+  const listEl = document.getElementById("restore-backup-list");
+  if (!products.length) {
+    listEl.innerHTML = `<div class="backup-list-empty">El archivo no contiene productos.</div>`;
+    return;
+  }
+  // Determinar destino por id: actualizará (existe) o creará (no existe).
+  let existingIds = new Set();
+  try {
+    const ids = products.map((p) => String(p.id));
+    const { data } = await supabase.from("productos").select("id").in("id", ids);
+    existingIds = new Set((data || []).map((r) => String(r.id)));
+  } catch { /* sin info de destino, se etiqueta genérico */ }
+
+  listEl.innerHTML = products.map((p) => {
+    const exists = existingIds.has(String(p.id));
+    return `
+    <label class="backup-product-item">
+      <input type="checkbox" class="restore-check" value="${escapeHTML(String(p.id))}" checked>
+      <span class="backup-item-title">${escapeHTML(p.title || "(sin título)")}</span>
+      <span class="backup-item-dest ${exists ? "is-update" : "is-create"}">${exists ? "Actualizará" : "Creará nuevo"}</span>
+      <span class="backup-item-id">${escapeHTML(String(p.id))}</span>
+    </label>`;
+  }).join("");
+
+  document.querySelectorAll("#restore-backup-list .restore-check").forEach((chk) => {
+    chk.addEventListener("change", updateRestoreRunState);
+  });
+  updateRestoreRunState();
+}
+
+function getSelectedRestoreProducts() {
+  const ids = [...document.querySelectorAll("#restore-backup-list .restore-check:checked")].map((c) => c.value);
+  return (backupRestorePayload?.products || []).filter((p) => ids.includes(String(p.id)));
+}
+
+function updateRestoreRunState() {
+  const btn = document.getElementById("restore-run-btn");
+  if (btn) btn.disabled = getSelectedRestoreProducts().length === 0;
+}
+
+async function createAutoSafetyBackup(productsToWrite) {
+  // Snapshot del estado ACTUAL de los productos que se van a modificar.
+  const ids = productsToWrite.map((p) => String(p.id));
+  let currentRows = [];
+  try {
+    const { data } = await supabase.from("productos").select("*").in("id", ids);
+    currentRows = data || [];
+  } catch (err) {
+    console.warn("No se pudo leer el estado actual para el auto-backup:", err);
+  }
+  if (currentRows.length === 0) return;
+
+  const envelope = buildBackupEnvelope(currentRows);
+  // 1) Copia descargada (red de seguridad física).
+  try {
+    downloadBackupJSON(envelope, `auto-respaldo-pre-restauracion-${backupStamp()}.json`);
+  } catch { /* la descarga no debe bloquear la restauración */ }
+  // 2) Historial local en el navegador (recuperable desde la pestaña Backup).
+  try {
+    const history = getBackupHistory();
+    history.unshift({
+      id: `bkp-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      productIds: currentRows.map((r) => String(r.id)),
+      titles: currentRows.map((r) => r.title || r.id),
+      data: envelope
+    });
+    localStorage.setItem(BACKUP_HISTORY_KEY, JSON.stringify(history.slice(0, BACKUP_HISTORY_MAX)));
+    renderBackupHistory();
+  } catch (err) {
+    console.warn("No se pudo guardar el historial local de backups:", err);
+  }
+}
+
+async function runRestoreBackup(productsOverride = null) {
+  if (!esAdmin()) {
+    setBackupStatus("restore-status", "Solo un administrador puede restaurar productos.", "error");
+    return;
+  }
+  const products = productsOverride || getSelectedRestoreProducts();
+  if (products.length === 0) {
+    setBackupStatus("restore-status", "Selecciona al menos un producto.", "error");
+    return;
+  }
+  const btn = document.getElementById("restore-run-btn");
+  setButtonBusy(btn, true, "Restaurando…");
+  const resultEl = document.getElementById("restore-result");
+  resultEl.hidden = true;
+
+  try {
+    // 1. Respaldo de seguridad automático ANTES de modificar nada.
+    setBackupStatus("restore-status", "Generando respaldo de seguridad automático…");
+    await createAutoSafetyBackup(products);
+
+    // 2. Upsert de filas crudas (el id define actualizar vs insertar).
+    setBackupStatus("restore-status", `Restaurando ${products.length} producto(s)…`);
+    for (const row of products) {
+      const { error } = await supabase.from("productos").upsert(row);
+      if (error) throw new Error(`Fallo al restaurar "${row.title || row.id}": ${error.message}`);
+    }
+
+    // 3. Verificación round-trip: releer y comparar contra el origen.
+    setBackupStatus("restore-status", "Verificando integridad…");
+    const results = [];
+    for (const row of products) {
+      let written = null;
+      try {
+        const { data } = await supabase.from("productos").select("*").eq("id", String(row.id)).maybeSingle();
+        written = data;
+      } catch { /* se reporta como diferencia */ }
+      const ok = !!written && JSON.stringify(normalizeForCompare(written)) === JSON.stringify(normalizeForCompare(row));
+      results.push({ id: row.id, title: row.title || row.id, ok });
+    }
+
+    const okCount = results.filter((r) => r.ok).length;
+    resultEl.hidden = false;
+    resultEl.innerHTML = `
+      <h4><i class="ph ${okCount === results.length ? "ph-check-circle" : "ph-warning"}" aria-hidden="true"></i>
+        Resultado: ${okCount}/${results.length} verificado(s)</h4>
+      <ul>${results.map((r) => `<li class="${r.ok ? "is-ok" : "is-diff"}">
+        <i class="ph ${r.ok ? "ph-check" : "ph-x"}" aria-hidden="true"></i>
+        ${escapeHTML(r.title)} ${r.ok ? "— idéntico al backup" : "— con diferencias"}</li>`).join("")}</ul>`;
+    setBackupStatus("restore-status", okCount === results.length
+      ? "Restauración completada y verificada."
+      : "Restauración completada con diferencias. Revisa el detalle.", okCount === results.length ? "info" : "error");
+    showAlert(`Backup restaurado: ${okCount}/${results.length} producto(s) verificado(s).`, okCount === results.length ? "success" : "error");
+  } catch (err) {
+    setBackupStatus("restore-status", err.message || String(err), "error");
+    showAlert(`Error al restaurar: ${err.message || err}`, "error");
+  } finally {
+    setButtonBusy(btn, false);
+    updateRestoreRunState();
+  }
+}
+
+/* ------------------------------------------------------------------
+   HISTORIAL LOCAL de respaldos automáticos (localStorage, sin tocar la BD)
+   ------------------------------------------------------------------ */
+function getBackupHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(BACKUP_HISTORY_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderBackupHistory() {
+  const listEl = document.getElementById("backups-history-list");
+  if (!listEl) return;
+  const history = getBackupHistory();
+  if (history.length === 0) {
+    listEl.innerHTML = `<p class="backup-history-empty">Todavía no hay respaldos automáticos. Se crean automáticamente antes de cada restauración.</p>`;
+    return;
+  }
+  listEl.innerHTML = history.map((entry) => {
+    const fecha = new Date(entry.createdAt);
+    const stamp = `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`;
+    const titles = (entry.titles || entry.productIds || []).map(escapeHTML).join(", ");
+    return `
+    <div class="backup-history-item">
+      <div class="backup-history-info">
+        <strong>${escapeHTML(stamp)}</strong>
+        <span>${escapeHTML(String(entry.productIds?.length || 0))} producto(s): ${titles}</span>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" data-restore-history="${escapeHTML(entry.id)}">
+        <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restaurar
+      </button>
+    </div>`;
+  }).join("");
+
+  listEl.querySelectorAll("[data-restore-history]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const entry = getBackupHistory().find((e) => e.id === btn.dataset.restoreHistory);
+      if (!entry) return;
+      showConfirm(
+        "Restaurar respaldo automático",
+        `Se restablecerán ${entry.productIds?.length || 0} producto(s) al estado guardado el ${new Date(entry.createdAt).toLocaleString()}. Se generará otro respaldo de seguridad antes de escribir.`,
+        () => runRestoreBackup(entry.data?.products || [])
+      );
+    });
+  });
+}
+
+/* ------------------------------------------------------------------
+   IMPORTAR COMO PLANTILLA (Crear producto)
+   ------------------------------------------------------------------ */
+async function openTemplateImportModal() {
+  backupTemplatePayload = null;
+  document.getElementById("template-import-list").innerHTML = "";
+  document.getElementById("template-file-label").textContent = "Haz clic para elegir un archivo .json";
+  setBackupStatus("template-status", "");
+  openBackupModalById("template-import-modal");
+}
+
+async function onTemplateFileChosen(event) {
+  const file = event.target.files?.[0];
+  backupTemplatePayload = null;
+  document.getElementById("template-import-list").innerHTML = "";
+  setBackupStatus("template-status", "");
+  try {
+    backupTemplatePayload = await readBackupFile(file);
+    document.getElementById("template-file-label").innerHTML =
+      `<i class="ph ph-check-circle" aria-hidden="true"></i> ${escapeHTML(file.name)} — ${backupTemplatePayload.count} producto(s)`;
+    const listEl = document.getElementById("template-import-list");
+    listEl.innerHTML = backupTemplatePayload.products.map((p) => `
+      <button type="button" class="backup-product-item backup-product-item--btn" data-template-id="${escapeHTML(String(p.id))}">
+        <i class="ph ph-arrow-bend-down-right" aria-hidden="true"></i>
+        <span class="backup-item-title">${escapeHTML(p.title || "(sin título)")}</span>
+        <span class="backup-item-meta">${escapeHTML(p.brand || "")}</span>
+        <span class="backup-item-id">${escapeHTML(String(p.id))}</span>
+      </button>
+    `).join("") || `<div class="backup-list-empty">El archivo no contiene productos.</div>`;
+
+    listEl.querySelectorAll("[data-template-id]").forEach((btnEl) => {
+      btnEl.addEventListener("click", () => {
+        const row = backupTemplatePayload.products.find((p) => String(p.id) === btnEl.dataset.templateId);
+        if (row) loadProductAsTemplate(row);
+      });
+    });
+  } catch (err) {
+    setBackupStatus("template-status", err.message, "error");
+    document.getElementById("template-file-label").textContent = "Haz clic para elegir un archivo .json";
+  } finally {
+    event.target.value = "";
+  }
+}
+
+function loadProductAsTemplate(rawRow) {
+  closeBackupModalById("template-import-modal");
+  // Abrir el drawer en modo "Nuevo" (editingProductId = null) y volcar la plantilla.
+  openProductModal(null);
+  fillProductForm(snakeToCamelRow(rawRow));
+  showAlert(`Plantilla "${escapeHTML(rawRow.title || rawRow.id)}" cargada. Revisa los datos y guarda para crear un producto nuevo.`, "success");
+}
+
+/* ------------------------------------------------------------------
+   WIRING del subsistema de backup
+   (Este script es type=module → defer → DOM ya está parseado.)
+   ------------------------------------------------------------------ */
+function initBackupSystem() {
+  document.getElementById("export-backup-btn")?.addEventListener("click", openExportBackupModal);
+  document.getElementById("restore-backup-btn")?.addEventListener("click", async () => {
+    backupRestorePayload = null;
+    document.getElementById("restore-backup-list").innerHTML = "";
+    document.getElementById("restore-run-btn").disabled = true;
+    document.getElementById("restore-result").hidden = true;
+    document.getElementById("restore-file-label").textContent = "Haz clic para elegir un archivo .json";
+    setBackupStatus("restore-status", "");
+    renderBackupHistory();
+    openBackupModalById("restore-backup-modal");
+  });
+  document.getElementById("import-template-btn")?.addEventListener("click", openTemplateImportModal);
+
+  document.getElementById("export-select-all")?.addEventListener("change", (event) => {
+    document.querySelectorAll("#export-backup-list .export-check").forEach((c) => { c.checked = event.target.checked; });
+    updateExportCount();
+  });
+  document.getElementById("export-run-btn")?.addEventListener("click", runExportBackup);
+  document.getElementById("export-cancel-btn")?.addEventListener("click", () => closeBackupModalById("export-backup-modal"));
+
+  document.getElementById("restore-file-input")?.addEventListener("change", onRestoreFileChosen);
+  document.getElementById("restore-run-btn")?.addEventListener("click", () => runRestoreBackup());
+  document.getElementById("restore-cancel-btn")?.addEventListener("click", () => closeBackupModalById("restore-backup-modal"));
+
+  document.getElementById("template-file-input")?.addEventListener("change", onTemplateFileChosen);
+  document.getElementById("template-cancel-btn")?.addEventListener("click", () => closeBackupModalById("template-import-modal"));
+
+  // Cierre por clic en el overlay (común a los 3 modales).
+  document.querySelectorAll("[data-close-backup]").forEach((overlay) => {
+    overlay.addEventListener("click", () => closeBackupModalById(overlay.dataset.closeBackup));
+  });
+
+  // Historial local (solo lectura; no toca la BD).
+  renderBackupHistory();
+}
+
+initBackupSystem();
