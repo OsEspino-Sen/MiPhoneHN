@@ -1616,6 +1616,13 @@ function forceCloseProductModal() {
   formIsDirty = false;
   clearFieldErrors();
   clearPreviewObjectUrls();
+  // Hook: el subsistema de backup reacciona al cerrar el drawer
+  // (p. ej., reanudar la revisión de importación que quedó detrás).
+  if (typeof alCerrarDrawerDesdeRevision === "function") {
+    const cb = alCerrarDrawerDesdeRevision;
+    alCerrarDrawerDesdeRevision = null;
+    try { cb(); } catch (err) { console.warn("[backup] hook de cierre del drawer:", err); }
+  }
 }
 
 /* ---- Detección de cambios sin guardar (solo Drawer de producto) ---- */
@@ -3018,6 +3025,25 @@ async function submitProductForm() {
       throw new Error("Revisa los campos marcados para continuar.");
     }
 
+    // CAPA ANTI-DUPLICADOS (dura): bloquear clones exactos del catálogo actual.
+    // Se compara contra TODOS los productos (excepto el propio en edición) por
+    // nombre + marca + categoría + colores + capacidades + imágenes. Solo se
+    // permite crear si los datos difieren del existente.
+    const borradorDup = captureFormToObject();
+    const candidatoDup = {
+      title: borradorDup.title,
+      brand: borradorDup.brand,
+      category: borradorDup.category,
+      images: borradorDup.galleryUrls || [],
+      variants: { colors: borradorDup.colors || [], storage: borradorDup.storage || [] }
+    };
+    const duplicado = buscarDuplicadoEnCatalogo(candidatoDup, isEditing ? String(editingProductId) : null);
+    if (duplicado && duplicado.matched >= 5) {
+      setFieldError("product-title", `Este producto ya existe (${duplicado.id}): mismas características. No se permiten duplicados.`);
+      document.getElementById("product-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      throw new Error(`Producto duplicado: ya existe "${duplicado.title}" (${duplicado.id}) con las mismas características. Edítalo directamente desde la lista, o cambia sus datos (colores, capacidades o imágenes) para crear una versión distinta.`);
+    }
+
     // Subida múltiple. Las URLs ya guardadas se conservan y los archivos nuevos
     // se agregan al array en el mismo orden mostrado por la vista previa.
     let uploadedImageUrls = [];
@@ -3106,6 +3132,8 @@ async function submitProductForm() {
       const colRef = doc(db, "productos", nuevoId);
       await setDoc(colRef, productData);
       showAlert("Nuevo producto agregado con éxito a Supabase.", "success");
+      // Flag para el subsistema de backup: el drawer cerró tras CREAR.
+      ultimoProductoCreadoId = nuevoId;
     }
 
     // Guardado exitoso: no hay cambios pendientes, cerrar sin confirmación.
@@ -5496,7 +5524,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
               <div class="usuario-cell-info"><strong>${esc(nombre)}</strong>${yo ? '<em class="usuario-yo">(tú)</em>' : ''}</div>
             </div>
           </td>
-          <td>${esc(u.correo) || '—'}</td>
+          <td class="usuario-correo">${esc(u.correo) || '—'}</td>
           <td><span class="rol-pill ${rl.clase}"><i class="ph ${rl.icon}" aria-hidden="true"></i>${esc(rl.texto)}</span></td>
           <td><span class="estado-pill ${activo ? 'is-active' : 'is-inactive'}">${activo ? 'Activo' : 'Bloqueado'}</span></td>
           <td>${fmtFecha(u.fechaCreacion)}</td>
@@ -6197,6 +6225,15 @@ let currentImportLogId = null;
 let compareMode = "import";
 let templateCompareRow = null;
 let templateCompareMatchId = null;
+/* Hook: callback que el drawer de producto ejecuta al cerrarse, cuando fue
+   abierto desde una revisión de backup (para reanudarla detrás). */
+let alCerrarDrawerDesdeRevision = null;
+/* ID del último producto creado en submitProductForm (para saber si el drawer
+   cerró tras guardar o tras cancelar). */
+let ultimoProductoCreadoId = null;
+/* Bloqueo anti-duplicados en vivo dentro del drawer. */
+let productoDuplicadoBloqueado = false;
+let dupLiveTimer = null;
 const IMPORT_LOG_KEY = "miphone_import_log";
 const IMPORT_LOG_MAX = 30;
 
@@ -6571,20 +6608,49 @@ function collectCompareRow() {
 
 function saveCompareImport() {
   // Cualquiera de los dos caminos ("Es otro") lleva al FORMULARIO DE CREACIÓN
-  // con los datos precargados: allí vive la lógica que impide duplicados
-  // (validación de colores repetidos por producto) y el guardado final.
+  // con los datos precargados. La ventana de importación queda ATRÁS (blur) y
+  // reaparece al cerrar el drawer: sin ese producto si se creó; se cierra sola
+  // si ya no queda nada por revisar. La edición real ocurre en el formulario,
+  // donde la capa anti-duplicados bloquea clones exactos antes de guardar.
   const row = collectCompareRow();
-  closeBackupModalById("compare-import-modal");
-  if (!row) return;
-  if (compareMode === "discarded") {
-    appendImportItems([{ id: row.id, title: row.title || row.id, accion: "revision", detalle: `verificado lado a lado contra ${templateCompareMatchId}: es otro producto; enviado al formulario de creación` }]);
-    const idx = importAnalysis?.discarded?.findIndex((d) => String(d.row.id) === String(row.id));
-    if (idx >= 0) importAnalysis.discarded.splice(idx, 1);
-    if (importSummary) { importSummary.descartados = Math.max(0, importSummary.descartados - 1); importSummary.revisados += 1; }
-    renderAnalysisChips(importAnalysis);
-    renderImportResultsList();
+  if (!row) { closeBackupModalById("compare-import-modal"); return; }
+  const origen = compareMode === "discarded" ? "discarded" : "revision";
+  const ctx = { origen, baseId: String(row.id), matchId: templateCompareMatchId || "", titulo: row.title || row.id };
+  loadProductAsTemplate(row, {
+    alCerrar: () => reanudarRevisionTrasCreacion(ctx)
+  });
+}
+
+/* Reanuda la ventana de importación al cerrarse el drawer de creación:
+   - Si se GUARDÓ (hay producto recién creado): quita el producto de la cola,
+     registra la creación y cierra la ventana si ya no queda nada.
+   - Si se CANCELÓ: el producto vuelve a estar disponible para revisarlo de nuevo. */
+function reanudarRevisionTrasCreacion(ctx) {
+  document.getElementById("restore-backup-modal")?.classList.remove("is-behind");
+  const creadoId = ultimoProductoCreadoId;
+  ultimoProductoCreadoId = null;
+  const creado = !!creadoId;
+  if (creado) {
+    appendImportItems([{ id: creadoId, title: ctx.titulo || "(producto recién creado)", accion: "creado", detalle: `creado desde la revisión lado a lado (referencia: ${ctx.matchId || ctx.baseId})` }]);
+    if (importSummary) importSummary.creados += 1;
   }
-  loadProductAsTemplate(row);
+  if (ctx.origen === "revision") {
+    const idx = importReviewQueue.findIndex((r) => String(r.row.id) === String(ctx.baseId));
+    if (idx >= 0 && creado) importReviewQueue.splice(idx, 1);
+  } else if (ctx.origen === "discarded") {
+    const idx = importAnalysis?.discarded?.findIndex((d) => String(d.row.id) === String(ctx.baseId));
+    if (idx >= 0 && creado) importAnalysis.discarded.splice(idx, 1);
+  }
+  if (creado && importSummary) importSummary.revisados += 1;
+  renderAnalysisChips(importAnalysis);
+  renderImportResultsList();
+  const quedan = importReviewQueue.length + (importAnalysis?.discarded?.length || 0);
+  if (quedan === 0) {
+    showAlert(creado ? "Importación completada. Todo quedó registrado en el historial." : "No se creó ningún producto. Ventana cerrada.", creado ? "success" : "info");
+    closeBackupModalById("restore-backup-modal");
+  } else {
+    setBackupStatus("restore-status", `${importReviewQueue.length} pendiente(s) de revisión · ${importAnalysis?.discarded?.length || 0} descartado(s) verificable(s).`, "info");
+  }
 }
 
 function discardCompareImport() {
@@ -6928,11 +6994,15 @@ function backupFacets(row) {
   };
 }
 
-function findBackupDuplicate(fileRow) {
-  const f = backupFacets(fileRow);
+/* Busca en el catálogo actual el producto con el mismo título que más facetas
+   comparta con el candidato (marca, categoría, colores, capacidades, imágenes).
+   excludeId: ID a ignorar (el propio producto en edición). */
+function buscarDuplicadoEnCatalogo(candidate, excludeId = null) {
+  const f = backupFacets(candidate);
   if (!f.title) return null;
   let best = null;
   for (const cand of (Array.isArray(products) ? products : [])) {
+    if (excludeId && String(cand?.id) === String(excludeId)) continue;
     if (normalizeCatalogText(cand?.title) !== f.title) continue;
     const c = backupFacets(cand);
     const matched = [
@@ -6944,6 +7014,11 @@ function findBackupDuplicate(fileRow) {
     ].filter(Boolean).length;
     if (!best || matched > best.matched) best = { matched, id: cand.id, title: cand.title };
   }
+  return best;
+}
+
+function findBackupDuplicate(fileRow) {
+  const best = buscarDuplicadoEnCatalogo(fileRow);
   if (!best) return null;
   if (best.matched >= 5) return { level: "identical", ...best };
   if (best.matched >= 3) return { level: "similar", ...best };
@@ -7005,12 +7080,66 @@ async function onTemplateFileChosen(event) {
   }
 }
 
-function loadProductAsTemplate(rawRow) {
+function loadProductAsTemplate(rawRow, opciones = {}) {
   closeBackupModalById("template-import-modal");
+  // Si la revisión viene de Importar/Restaurar, el modal queda ATRÁS (blur) y
+  // reacciona al cerrarse el drawer: reanuda la cola o se cierra si ya no hay nada.
+  if (typeof opciones.alCerrar === "function") {
+    alCerrarDrawerDesdeRevision = opciones.alCerrar;
+    document.getElementById("restore-backup-modal")?.classList.add("is-behind");
+  } else {
+    alCerrarDrawerDesdeRevision = null;
+  }
   // Abrir el drawer en modo "Nuevo" (editingProductId = null) y volcar la plantilla.
   openProductModal(null);
   fillProductForm(snakeToCamelRow(rawRow));
-  showAlert(`Plantilla "${escapeHTML(rawRow.title || rawRow.id)}" cargada. Revisa los datos y guarda para crear un producto nuevo.`, "success");
+  // Validación inmediata: si el título coincide con un existente, el bloqueo
+  // anti-duplicados aparece antes de intentar guardar.
+  setTimeout(() => validarDuplicadoProductoEnVivo(), 400);
+  showAlert(`Plantilla "${escapeHTML(row.title || rawRow.id)}" cargada. Revisa los datos y guarda para crear un producto nuevo.`, "success");
+}
+
+/* ---------- CAPA ANTI-DUPLICADOS EN VIVO (dentro del drawer) ---------- */
+function clearFieldErrorById(targetId) {
+  const slot = productForm?.querySelector(`[data-error-for="${targetId}"]`);
+  if (slot) { slot.hidden = true; slot.textContent = ""; }
+  document.getElementById(targetId)?.classList.remove("field-invalid");
+}
+
+function liberarBloqueoDuplicado() {
+  productoDuplicadoBloqueado = false;
+  clearFieldErrorById("product-title");
+  const saveBtn = document.getElementById("save-product-btn");
+  if (saveBtn) saveBtn.disabled = false;
+  // Restaurar el estado de otros bloqueos (p. ej., conflicto de color repetido).
+  try { updateVariantColorWarning(); } catch { /* no bloquea */ }
+}
+
+function validarDuplicadoProductoEnVivo() {
+  try {
+    if (!productModal || productModal.hidden) return;
+    const saveBtn = document.getElementById("save-product-btn");
+    const draft = captureFormToObject();
+    const title = String(draft.title || "").trim();
+    if (!title) { if (productoDuplicadoBloqueado) liberarBloqueoDuplicado(); return; }
+    const candidatoDup = {
+      title,
+      brand: draft.brand,
+      category: draft.category,
+      images: draft.galleryUrls || [],
+      variants: { colors: draft.colors || [], storage: draft.storage || [] }
+    };
+    const dup = buscarDuplicadoEnCatalogo(candidatoDup, editingProductId);
+    if (dup && dup.matched >= 5) {
+      productoDuplicadoBloqueado = true;
+      setFieldError("product-title", `Este producto ya existe (${dup.id}): mismas características. No se permiten duplicados.`);
+      if (saveBtn) saveBtn.disabled = true;
+    } else if (productoDuplicadoBloqueado) {
+      liberarBloqueoDuplicado();
+    }
+  } catch (err) {
+    console.warn("[backup] validación anti-duplicados en vivo:", err);
+  }
 }
 
 /* ---------- LIMPIAR HISTORIAL (confirma con la llave de acceso del sistema) ---------- */
@@ -7074,6 +7203,22 @@ function initBackupSystem() {
 
   // Limpiar historial (confirma con la llave de acceso del sistema).
   document.getElementById("clear-history-btn")?.addEventListener("click", () => clearBackupHistory());
+
+  // Capa anti-duplicados en vivo: valida mientras se llena el drawer
+  // (delegación de eventos: cubre filas dinámicas de includes/specs/colores/capacidades).
+  const drawerBodyDup = document.getElementById("drawer-body");
+  if (drawerBodyDup) {
+    const programarValidacionDup = () => {
+      clearTimeout(dupLiveTimer);
+      dupLiveTimer = setTimeout(() => validarDuplicadoProductoEnVivo(), 350);
+    };
+    drawerBodyDup.addEventListener("input", (event) => {
+      if (event.target.closest("#fs-main, #fs-description, #includes-list, #specs-list, #fs-colors, #fs-storage")) programarValidacionDup();
+    });
+    drawerBodyDup.addEventListener("change", (event) => {
+      if (event.target.closest("#fs-main, #fs-colors, #fs-storage")) programarValidacionDup();
+    });
+  }
 
   document.getElementById("export-select-all")?.addEventListener("change", (event) => {
     document.querySelectorAll("#export-backup-list .export-check").forEach((c) => { c.checked = event.target.checked; });
