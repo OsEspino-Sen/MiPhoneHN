@@ -5542,13 +5542,13 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       const yo = esYo(u);
       return `
         <tr data-id="${esc(u.id)}">
-          <td>
+          <td class="ta-left">
             <div class="usuario-cell">
               <span class="usuario-avatar">${esc((nombre.trim()[0] || '?').toUpperCase())}</span>
               <div class="usuario-cell-info"><strong>${esc(nombre)}</strong>${yo ? '<em class="usuario-yo">(tú)</em>' : ''}</div>
             </div>
           </td>
-          <td>${esc(u.correo) || '—'}</td>
+          <td class="ta-left">${esc(u.correo) || '—'}</td>
           <td><span class="rol-pill ${rl.clase}"><i class="ph ${rl.icon}" aria-hidden="true"></i>${esc(rl.texto)}</span></td>
           <td><span class="estado-pill ${activo ? 'is-active' : 'is-inactive'}">${activo ? 'Activo' : 'Bloqueado'}</span></td>
           <td>${fmtFecha(u.fechaCreacion)}</td>
