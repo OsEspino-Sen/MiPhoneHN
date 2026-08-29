@@ -6217,6 +6217,16 @@ function updateExportCount() {
 }
 
 async function runExportBackup() {
+  // Confirmación con llave de acceso del sistema: sin llave correcta, no exporta.
+  const idsPrevios = getSelectedExportIds();
+  const okLlave = await pedirLlave(
+    "Exportar backup",
+    `Se exportarán ${idsPrevios.length} producto(s) con TODA su información a un archivo JSON. Introduce tu llave de acceso para confirmar.`
+  );
+  if (!okLlave) {
+    setBackupStatus("export-status", "Exportación cancelada: llave incorrecta o no proporcionada.", "error");
+    return;
+  }
   const ids = getSelectedExportIds();
   if (ids.length === 0) {
     setBackupStatus("export-status", "Selecciona al menos un producto.", "error");
@@ -6371,6 +6381,15 @@ async function runSmartImport() {
     return;
   }
   if (!backupRestorePayload?.products?.length || !importAnalysis) return;
+  // Confirmación con llave de acceso del sistema: sin llave correcta, no importa nada.
+  const okLlave = await pedirLlave(
+    "Importar backup",
+    `Se aplicará la importación: ${importAnalysis.toCreate.length} producto(s) nuevo(s) se crearán, ${importAnalysis.discarded.length} ya existen y se descartarán${importAnalysis.review.length ? `, ${importAnalysis.review.length} pasarán a revisión` : ""}. Introduce tu llave de acceso para confirmar.`
+  );
+  if (!okLlave) {
+    setBackupStatus("restore-status", "Importación cancelada: llave incorrecta o no proporcionada.", "error");
+    return;
+  }
   const btn = document.getElementById("restore-run-btn");
   setButtonBusy(btn, true, "Importando…");
   try {
