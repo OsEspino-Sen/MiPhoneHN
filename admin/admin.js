@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    MI PHONE HN — PANEL ADMIN SAAS CON SUPABASE + CLOUDINARY
    ========================================================================== */
 
@@ -7466,3 +7466,4 @@ initBackupSystem();
     : `Panel conectado a PRODUCCIÓN (${import.meta.env.VITE_SUPABASE_URL || "?"}). Las acciones aquí afectan a la tienda publicada.`;
   badge.hidden = false;
 })();
+
