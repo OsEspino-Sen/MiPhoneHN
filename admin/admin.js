@@ -6909,6 +6909,35 @@ function loadProductAsTemplate(rawRow) {
   showAlert(`Plantilla "${escapeHTML(rawRow.title || rawRow.id)}" cargada. Revisa los datos y guarda para crear un producto nuevo.`, "success");
 }
 
+/* ---------- LIMPIAR HISTORIAL (con clave de confirmación) ---------- */
+function openClearHistoryModal() {
+  const history = getBackupHistory();
+  const log = getImportLog();
+  document.getElementById("clear-history-counts").textContent =
+    `${history.length} respaldo(s) automático(s) y ${log.length} registro(s) de importación`;
+  const input = document.getElementById("clear-history-input");
+  input.value = "";
+  document.getElementById("clear-history-error").hidden = true;
+  openBackupModalById("clear-history-modal");
+  setTimeout(() => input.focus(), 120);
+}
+
+function confirmClearHistory() {
+  const input = document.getElementById("clear-history-input");
+  if ((input.value || "").trim().toUpperCase() !== "ELIMINAR") {
+    document.getElementById("clear-history-error").hidden = false;
+    input.focus();
+    return;
+  }
+  // Solo historiales locales del navegador: la BD y el catálogo no se tocan.
+  localStorage.removeItem(BACKUP_HISTORY_KEY);
+  localStorage.removeItem(IMPORT_LOG_KEY);
+  renderBackupHistory();
+  renderImportLog();
+  closeBackupModalById("clear-history-modal");
+  showAlert("Historial limpiado. Tu catálogo y tu base de datos no fueron tocados.", "success");
+}
+
 /* ------------------------------------------------------------------
    WIRING del subsistema de backup
    (Este script es type=module → defer → DOM ya está parseado.)
@@ -6946,6 +6975,14 @@ function initBackupSystem() {
   // Revisión lado a lado.
   document.getElementById("compare-discard-btn")?.addEventListener("click", discardCompareImport);
   document.getElementById("compare-save-btn")?.addEventListener("click", saveCompareImport);
+
+  // Limpiar historial (con clave de confirmación).
+  document.getElementById("clear-history-btn")?.addEventListener("click", openClearHistoryModal);
+  document.getElementById("clear-history-cancel")?.addEventListener("click", () => closeBackupModalById("clear-history-modal"));
+  document.getElementById("clear-history-ok")?.addEventListener("click", confirmClearHistory);
+  document.getElementById("clear-history-input")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); confirmClearHistory(); }
+  });
 
   document.getElementById("export-select-all")?.addEventListener("change", (event) => {
     document.querySelectorAll("#export-backup-list .export-check").forEach((c) => { c.checked = event.target.checked; });

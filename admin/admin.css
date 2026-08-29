@@ -5634,6 +5634,9 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 .import-log-items li.is-ok i,.import-log-items li.is-ok{color:var(--accent)}
 .import-log-items li.is-review i,.import-log-items li.is-review{color:var(--warning)}
 .import-log-items li span{color:var(--ink-3)}
+.backup-history-footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.backup-history-scope{display:inline-flex;align-items:center;gap:6px;font-size:.71875rem;color:var(--ink-3);line-height:1.4;min-width:0}
+.backup-history-scope i{flex-shrink:0;color:var(--warning)}
 .backup-list-empty,.backup-list-loading{padding:18px;text-align:center;font-size:.8125rem;color:var(--ink-3)}
 
 .backup-file-drop{display:flex;align-items:center;gap:10px;justify-content:center;padding:18px;border:1px dashed var(--line-strong);border-radius:var(--r-md);background:var(--surface-2);cursor:pointer;font-size:.8125rem;font-weight:700;color:var(--ink-2);margin-bottom:14px;transition:var(--t-fast)}
