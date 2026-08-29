@@ -5612,6 +5612,8 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 .backup-card .backup-modal-hint,.backup-card .backup-file-drop,.backup-card .backup-analysis,
 .backup-card .backup-modal-status,.backup-card .backup-result,.backup-card .backup-select-bar,
 .backup-card .confirm-button-group--full{flex-shrink:0}
+/* Todos los hijos pueden encoger para que los botones nunca salgan de la tarjeta. */
+.backup-card > *{min-height:0}
 .backup-card .backup-product-list{flex:1 1 auto;min-height:140px;max-height:none;overflow-y:auto}
 .backup-card .confirm-button-group--full{margin-top:12px}
 .backup-modal-hint{font-size:.8125rem;color:var(--ink-3);margin:6px 0 14px;line-height:1.5}
@@ -5645,14 +5647,13 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 /* Comparación lado a lado (importar vs existente) */
 .confirm-card--wide.compare-card{width:min(1100px,96vw);display:flex;flex-direction:column;overflow:hidden}
 .compare-card .backup-modal-hint,.compare-card .confirm-button-group--full{flex-shrink:0}
-.compare-card .compare-panes{flex:1 1 auto;min-height:0}
-/* La ventana de importación queda ATRÁS (blur) mientras el drawer de creación
+.compare-card .compare-panes{flex:1 1 auto;min-height:0}/* La ventana de importación queda ATRÁS (blur) mientras el drawer de creación
    está abierto: baja de z-index (70 → 55) para que el drawer (z-index 60) la
    pinte POR ENCIMA con su propio overlay. Al cerrarse el drawer se quita esta
    clase y la ventana vuelve a z-index 70, nítida. */
 #restore-backup-modal.is-behind{z-index:55;pointer-events:none}
 #restore-backup-modal.is-behind .confirm-card{filter:blur(5px);opacity:.8;pointer-events:none}
-.compare-panes{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.compare-panes{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr);gap:14px;align-items:stretch}
 .compare-pane{display:flex;flex-direction:column;min-height:0;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
 .compare-pane-head{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:.8125rem;font-weight:800;border-bottom:1px solid var(--line)}
 .compare-pane-head.is-editable{background:var(--accent-soft);color:var(--accent)}
