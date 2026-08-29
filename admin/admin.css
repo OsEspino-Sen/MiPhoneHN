@@ -360,7 +360,7 @@ textarea:focus {
    AVISO DE PRODUCTO DUPLICADO — compacto, flat y discreto
    ========================================================================== */
 .duplicate-warning{
-  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  display:flex;align-items:center;gap:10px;padding:10px 14px;margin-top:10px;
   border:1px solid var(--danger-line);border-left:3px solid var(--danger);
   border-radius:var(--r-sm);background:var(--danger-bg);
   animation:dupFade .25s ease
