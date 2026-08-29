@@ -5321,6 +5321,9 @@ body #products-table-body .data-grid-row::before {
 .estado-pill.is-inactive{color:#cd3d4a;background:rgba(230,57,70,.12)}
 
 .ta-right{text-align:right}
+/* El encabezado "Acciones" de usuarios debe alinear a la derecha con sus botones:
+   esta regla gana la especificidad contra .usuarios-table thead th (text-align:left). */
+.usuarios-table thead th.ta-right{text-align:right}
 
 /* Editores inline de usuario */
 .usuario-edit-nombre{width:100%;max-width:200px;height:32px;padding:0 8px;font-size:.8125rem;color:var(--ink,#1d2a44);background:rgba(240,247,255,.5);border:1px solid var(--line-strong,#bcd2ec);border-radius:var(--r-sm,8px);outline:none;transition:border-color var(--t-fast,.2s),box-shadow var(--t-fast,.2s)}
