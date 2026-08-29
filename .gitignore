@@ -6,3 +6,6 @@ dist/
 
 .vercel
 .env*
+
+# Logs del dev server
+dev_test_*.log

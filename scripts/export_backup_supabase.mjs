@@ -31,7 +31,13 @@ const {
   VITE_SUPABASE_ANON_KEY
 } = process.env;
 
-if (!SUPABASE_URL || !VITE_SUPABASE_ANON_KEY) {
+// Con la SERVICE ROLE KEY el export funciona incluso con el modo mantenimiento
+// activo (las políticas RLS bloquean la lectura anónima del catálogo, pero la
+// service key las omite). Sin ella, sigue funcionando en modo público.
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+const READ_KEY = SERVICE_KEY || VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !READ_KEY) {
   console.error("Faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY en .env");
   process.exit(1);
 }
@@ -40,8 +46,8 @@ const EXTERNAL_BACKUP_DIR = process.env.EXTERNAL_BACKUP_DIR || "D:\\Oscar Espino
 const PAGE_SIZE = 500;
 
 const headers = {
-  apikey: VITE_SUPABASE_ANON_KEY,
-  Authorization: `Bearer ${VITE_SUPABASE_ANON_KEY}`,
+  apikey: READ_KEY,
+  Authorization: `Bearer ${READ_KEY}`,
   "Content-Type": "application/json"
 };
 
@@ -158,6 +164,7 @@ const outDir = path.resolve(process.cwd(), "backup", "supabase", timestamp);
 fs.mkdirSync(outDir, { recursive: true });
 
 console.log("=== BACKUP READ-ONLY SUPABASE + INVENTARIO CLOUDINARY ===");
+console.log(`Modo       : ${report.mode}`);
 console.log(`Destino repo : ${outDir}`);
 console.log(`Destino ext. : ${EXTERNAL_BACKUP_DIR}\\${timestamp}`);
 console.log("");
@@ -166,7 +173,7 @@ const tables = ["productos", "categorias", "configuracion", "imagenes"];
 const report = {
   generatedAt: new Date().toISOString(),
   supabaseUrl: SUPABASE_URL,
-  mode: "read-only (anon key, políticas de lectura pública)",
+  mode: SERVICE_KEY ? "service role key (lectura completa, ignora mantenimiento)" : "read-only (anon key, políticas de lectura pública)",
   tables: {},
   deepVerification: null,
   cloudinary: null

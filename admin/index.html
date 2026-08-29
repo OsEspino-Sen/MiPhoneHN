@@ -144,6 +144,7 @@
               <button type="button" class="settings-tab" data-tab="llaves"><i class="ph ph-key" aria-hidden="true"></i><span>Llaves</span></button>
               <button type="button" class="settings-tab" data-tab="usuarios"><i class="ph ph-users" aria-hidden="true"></i><span>Usuarios</span></button>
               <button type="button" class="settings-tab" data-tab="mantenimiento"><i class="ph ph-siren" aria-hidden="true"></i><span>Mantenimiento</span></button>
+              <button type="button" class="settings-tab" data-tab="backup"><i class="ph ph-cloud-arrow-down" aria-hidden="true"></i><span>Backup</span></button>
             </div>
 
             <div class="settings-tab-content active" id="settings-empresa-tab">
@@ -757,6 +758,28 @@
               </div>
             </div>
 
+            <div class="settings-tab-content" id="settings-backup-tab">
+              <div class="settings-grid settings-grid--single">
+                <article class="settings-form-card settings-backup-card">
+                  <div class="settings-image-header">
+                    <div class="settings-image-icon settings-image-icon--backup"><i class="ph ph-database-backup" aria-hidden="true"></i></div>
+                    <div>
+                      <h3>Backup de productos</h3>
+                      <p>Exporta el catálogo completo (con todas sus variantes e imágenes) a un archivo JSON y restáuralo cuando lo necesites. Antes de cualquier restauración se genera automáticamente un respaldo de seguridad.</p>
+                    </div>
+                  </div>
+                  <div class="backup-actions">
+                    <button type="button" id="export-backup-btn" class="btn btn-primary"><i class="ph ph-download-simple" aria-hidden="true"></i> Exportar backup</button>
+                    <button type="button" id="restore-backup-btn" class="btn btn-secondary"><i class="ph ph-upload-simple" aria-hidden="true"></i> Importar / Restaurar</button>
+                  </div>
+                  <div class="backup-history" id="backup-history-section">
+                    <h4><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i> Respaldos automáticos (antes de restaurar)</h4>
+                    <div id="backups-history-list" class="backups-history-list"></div>
+                  </div>
+                </article>
+              </div>
+            </div>
+
           </section>
         </div>
       </main>
@@ -1050,8 +1073,9 @@
         </div>
 
         <footer class="drawer-footer">
-          <span class="drawer-footer-hint"><i class="ph ph-info" aria-hidden="true"></i> Los campos con <em>*</em> son obligatorios</span>
+          <span class="drawer-footer-hint"><i class="ph ph-info" aria-hidden="true"></i> Los campos con <span class="req">*</span> son obligatorios</span>
           <div class="drawer-actions-right">
+            <button type="button" id="import-template-btn" class="btn btn-secondary"><i class="ph ph-file-arrow-down" aria-hidden="true"></i> Importar desde backup</button>
             <button type="button" id="cancel-form-btn" class="btn btn-secondary">Cancelar</button>
             <button type="submit" id="save-product-btn" class="btn btn-primary btn-save-product"><i class="ph ph-check" aria-hidden="true"></i> Guardar producto</button>
           </div>
@@ -1071,6 +1095,71 @@
       <div class="confirm-button-group">
         <button type="button" id="unsaved-discard-btn" class="btn btn-danger-ghost">Salir sin guardar</button>
         <button type="button" id="unsaved-stay-btn" class="btn btn-primary">Seguir editando</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EXPORTAR BACKUP -->
+  <div id="export-backup-modal" class="confirm-backdrop" role="dialog" aria-labelledby="export-backup-title" hidden>
+    <div class="confirm-overlay" data-close-backup="export-backup-modal"></div>
+    <div class="confirm-card confirm-card--wide backup-card">
+      <div class="confirm-icon confirm-icon--primary"><i class="ph ph-download-simple" aria-hidden="true"></i></div>
+      <span class="confirm-eyebrow">Backup</span>
+      <h3 id="export-backup-title">Exportar productos</h3>
+      <p class="backup-modal-hint">Selecciona los productos a incluir. El archivo contendrá <strong>toda</strong> su información: variantes, capacidades, precios, stock y URLs de imágenes.</p>
+      <div class="backup-select-bar">
+        <label class="backup-select-all"><input type="checkbox" id="export-select-all" checked> Seleccionar todos</label>
+        <span class="backup-count" id="export-count">0 seleccionados</span>
+      </div>
+      <div class="backup-product-list" id="export-backup-list"></div>
+      <div class="backup-modal-status" id="export-status" hidden></div>
+      <div class="confirm-button-group confirm-button-group--full">
+        <button type="button" id="export-cancel-btn" class="btn btn-secondary">Cancelar</button>
+        <button type="button" id="export-run-btn" class="btn btn-primary"><i class="ph ph-download-simple" aria-hidden="true"></i> Exportar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL IMPORTAR / RESTAURAR BACKUP -->
+  <div id="restore-backup-modal" class="confirm-backdrop" role="dialog" aria-labelledby="restore-backup-title" hidden>
+    <div class="confirm-overlay" data-close-backup="restore-backup-modal"></div>
+    <div class="confirm-card confirm-card--wide backup-card">
+      <div class="confirm-icon confirm-icon--blue"><i class="ph ph-upload-simple" aria-hidden="true"></i></div>
+      <span class="confirm-eyebrow">Backup</span>
+      <h3 id="restore-backup-title">Importar / Restaurar</h3>
+      <p class="backup-modal-hint">Elige un archivo de backup. Antes de modificar cualquier producto se generará un <strong>respaldo de seguridad automático</strong>.</p>
+      <label class="backup-file-drop" for="restore-file-input">
+        <i class="ph ph-file-arrow-up" aria-hidden="true"></i>
+        <span id="restore-file-label">Haz clic para elegir un archivo .json</span>
+        <input type="file" id="restore-file-input" accept="application/json,.json" hidden>
+      </label>
+      <div class="backup-product-list" id="restore-backup-list"></div>
+      <div class="backup-modal-status" id="restore-status" hidden></div>
+      <div class="backup-result" id="restore-result" hidden></div>
+      <div class="confirm-button-group confirm-button-group--full">
+        <button type="button" id="restore-cancel-btn" class="btn btn-secondary">Cerrar</button>
+        <button type="button" id="restore-run-btn" class="btn btn-primary" disabled><i class="ph ph-database" aria-hidden="true"></i> Restaurar seleccionados</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL IMPORTAR COMO PLANTILLA (Crear producto) -->
+  <div id="template-import-modal" class="confirm-backdrop" role="dialog" aria-labelledby="template-import-title" hidden>
+    <div class="confirm-overlay" data-close-backup="template-import-modal"></div>
+    <div class="confirm-card confirm-card--wide backup-card">
+      <div class="confirm-icon confirm-icon--green"><i class="ph ph-copy" aria-hidden="true"></i></div>
+      <span class="confirm-eyebrow">Crear producto</span>
+      <h3 id="template-import-title">Importar desde backup</h3>
+      <p class="backup-modal-hint">Elige un archivo y selecciona un producto para cargarlo en el formulario <strong>como plantilla</strong>. Se creará un producto <strong>nuevo</strong>: el original no se modifica.</p>
+      <label class="backup-file-drop" for="template-file-input">
+        <i class="ph ph-file-arrow-up" aria-hidden="true"></i>
+        <span id="template-file-label">Haz clic para elegir un archivo .json</span>
+        <input type="file" id="template-file-input" accept="application/json,.json" hidden>
+      </label>
+      <div class="backup-product-list" id="template-import-list"></div>
+      <div class="backup-modal-status" id="template-status" hidden></div>
+      <div class="confirm-button-group confirm-button-group--full">
+        <button type="button" id="template-cancel-btn" class="btn btn-secondary">Cancelar</button>
       </div>
     </div>
   </div>

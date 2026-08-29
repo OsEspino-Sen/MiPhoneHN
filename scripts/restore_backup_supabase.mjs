@@ -32,13 +32,18 @@ const CONFIRM = args.includes("--confirm");
 const PRUNE = args.includes("--prune");
 const tablesArg = args.find((a) => a.startsWith("--tables="));
 const BACKUP_DIR = args.find((a) => !a.startsWith("--"));
+// --url=<URL> permite restaurar en OTRO proyecto (p. ej. sembrar el proyecto
+// de desarrollo local) sin modificar el .env del proyecto de producción.
+const urlArg = args.find((a) => a.startsWith("--url="));
 
 const {
   VITE_SUPABASE_URL: SUPABASE_URL
 } = process.env;
 
+const TARGET_URL = urlArg ? urlArg.split("=")[1] : SUPABASE_URL;
+
 if (!BACKUP_DIR || !fs.existsSync(path.join(BACKUP_DIR, "productos.json"))) {
-  console.error("Uso: node scripts/restore_backup_supabase.mjs <carpeta-backup> [--confirm] [--prune] [--tables=productos,categorias]");
+  console.error("Uso: node scripts/restore_backup_supabase.mjs <carpeta-backup> [--confirm] [--prune] [--tables=productos,categorias] [--url=<URL-proyecto-destino>]");
   process.exit(1);
 }
 
@@ -52,8 +57,8 @@ if (CONFIRM && !SERVICE_KEY) {
   console.error("Uso: $env:SUPABASE_SERVICE_ROLE_KEY=\"<clave>\"; node scripts/restore_backup_supabase.mjs <carpeta> --confirm");
   process.exit(1);
 }
-if (!SUPABASE_URL) {
-  console.error("Falta VITE_SUPABASE_URL en .env");
+if (!TARGET_URL) {
+  console.error("Falta VITE_SUPABASE_URL en .env (o pasa --url=<URL-destino>)");
   process.exit(1);
 }
 
@@ -76,13 +81,13 @@ const TABLES = tablesArg
 const ORDER_COL = { productos: "id", categorias: "id", configuracion: "key", imagenes: "id" };
 
 async function fetchCurrent(table) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, { headers: READ_HEADERS });
+  const res = await fetch(`${TARGET_URL}/rest/v1/${table}?select=*`, { headers: READ_HEADERS });
   if (!res.ok) throw new Error(`GET ${table}: ${res.status} ${await res.text()}`);
   return res.json();
 }
 
 async function upsertRows(table, rows) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+  const res = await fetch(`${TARGET_URL}/rest/v1/${table}`, {
     method: "POST",
     headers,
     body: JSON.stringify(rows)
@@ -102,6 +107,7 @@ function stableStringify(value) {
 
 console.log("=== RESTAURACIÓN DE BACKUP SUPABASE ===");
 console.log(`Backup   : ${BACKUP_DIR}`);
+console.log(`Destino  : ${TARGET_URL}${urlArg ? " (vía --url)" : ""}`);
 console.log(`Modo     : ${CONFIRM ? "ESCRITURA REAL (--confirm)" : "SIMULACIÓN (dry-run)"}`);
 console.log(`--prune  : ${PRUNE ? "ACTIVADO (eliminará registros posteriores al backup)" : "desactivado (no elimina NADA)"}`);
 console.log("");
@@ -137,4 +143,27 @@ for (const table of TABLES) {
 console.log("");
 console.log(CONFIRM ? "RESTAURACIÓN EJECUTADA. Verifica los resultados en el panel." : "SIMULACIÓN COMPLETA — nada fue modificado.");
 if (PRUNE && !CONFIRM) console.log("⚠ --prune requiere --confirm para actuar.");
+
+// ---------------------------------------------------------------------------
+// Sincronización de contadores _meta: en un proyecto recién creado (p. ej. el
+// de desarrollo) los contadores empiezan en 0 y obtener_siguiente_id() crearía
+// IDs que ya existen en los datos sembrados (producto-1, producto-2, …).
+// Se recalcula el contador desde los IDs realmente presentes en el destino.
+// ---------------------------------------------------------------------------
+if (CONFIRM && TABLES.includes("productos")) {
+  try {
+    const rows = await fetchCurrent("productos");
+    const maxSuffix = rows.reduce((max, r) => {
+      const m = String(r.id || "").match(/^producto-(\d+)$/);
+      return m ? Math.max(max, Number(m[1])) : max;
+    }, 0);
+    if (maxSuffix > 0) {
+      await upsertRows("_meta", [{ key: "contador_productos", ultimo: maxSuffix }]);
+      console.log(`[_meta] contador_productos = ${maxSuffix} (próximo ID: producto-${maxSuffix + 1})`);
+    }
+  } catch (err) {
+    console.warn(`[_meta] No se pudo sincronizar el contador: ${err.message}`);
+    console.warn("        Si creas productos nuevos en este proyecto, revisa contador_productos en _meta.");
+  }
+}
 process.exit(hadError ? 1 : 0);
