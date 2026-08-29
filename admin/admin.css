@@ -2492,10 +2492,7 @@ body #products-table-body .data-grid-row::before {
   padding: 20px 28px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 10
+  flex-shrink: 0
 }
 
 .drawer-heading-icon {
@@ -2583,16 +2580,11 @@ body #products-table-body .data-grid-row::before {
 .drawer-body {
   flex: 1;
   overflow-y: auto;
-  padding: 0 28px 28px 28px;
+  padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   scroll-behavior: smooth
-}
-
-.drawer-body > .drawer-notice:first-child,
-.drawer-body > .form-section:first-of-type {
-  margin-top: 28px;
 }
 
 /* --- Aviso de actualización --- */
@@ -2659,41 +2651,6 @@ body #products-table-body .data-grid-row::before {
   padding: 18px 22px;
   background: var(--surface-2);
   border-bottom: 1px solid var(--line-soft)
-}
-
-/* — Variantes sticky: el encabezado de Colores y Almacenamiento se pega bajo el drawer-header al hacer scroll — */
-#fs-colors,
-#fs-storage {
-  overflow: visible;
-}
-
-#fs-colors .fs-head,
-#fs-storage .fs-head {
-  position: sticky;
-  top: 0;
-  z-index: 4;
-  /* mantiene el borde pegado al del drawer-header y evita transparencias al superponerse */
-  box-shadow: 0 1px 0 var(--line-soft);
-}
-
-/* — Barra de variantes (tabs Producto principal / Naranja …) pegada al header — */
-.variant-bar-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 9;
-  background: var(--canvas);
-  border-bottom: 1px solid var(--line);
-  /* extiende el fondo/borde a todo el ancho del drawer y elimina el hueco con el header */
-  margin: 0 -28px;
-  padding: 12px 28px;
-  /* evita que el contenido se transparente al pegarse */
-  backdrop-filter: saturate(1.02);
-}
-
-#variant-bar-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 9;
 }
 
 .fs-icon {
@@ -5085,3 +5042,59 @@ body[data-rol="editor"] .settings-file-btn{display:none}
   display: none;
 }
 
+
+/* ==========================================================================
+   BACKUP DE PRODUCTOS — Exportar / Restaurar / Plantilla
+   ========================================================================== */
+.ph-spin{display:inline-block;animation:settingsSpin .6s linear infinite}
+
+.settings-image-icon--backup{background:var(--accent-soft);border:1px solid #C7D2FE;color:var(--accent)}
+
+.settings-backup-card .backup-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+.backup-history{margin-top:22px;padding-top:18px;border-top:1px solid var(--line-soft)}
+.backup-history h4{display:flex;align-items:center;gap:8px;font-size:.875rem;font-weight:800;color:var(--ink-2);margin:0 0 10px}
+.backup-history h4 i{font-size:1.05rem;color:var(--accent)}
+.backups-history-list{display:flex;flex-direction:column;gap:8px}
+.backup-history-empty{margin:0;font-size:.8125rem;color:var(--ink-3)}
+.backup-history-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface-2)}
+.backup-history-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.backup-history-info strong{font-size:.8125rem;font-weight:800}
+.backup-history-info span{font-size:.75rem;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.confirm-card--wide.backup-card{width:min(680px,94vw);max-height:88vh;overflow-y:auto;text-align:left;align-items:stretch}
+.backup-modal-hint{font-size:.8125rem;color:var(--ink-3);margin:6px 0 14px;line-height:1.5}
+.backup-select-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.backup-select-all{display:inline-flex;align-items:center;gap:8px;font-size:.8125rem;font-weight:700;cursor:pointer}
+.backup-select-all input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.backup-count{font-size:.75rem;font-weight:700;color:var(--ink-3)}
+
+.backup-product-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r-md);padding:8px;background:var(--surface-2)}
+.backup-product-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);cursor:pointer;font-size:.8125rem;transition:var(--t-fast)}
+.backup-product-item:hover{border-color:var(--line-strong)}
+.backup-product-item input[type="checkbox"]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.backup-product-item--btn{width:100%;text-align:left;font:inherit}
+.backup-item-title{font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.backup-item-meta{color:var(--ink-3);font-size:.75rem;flex-shrink:0}
+.backup-item-id{font-family:var(--font-mono);font-size:.6875rem;color:var(--ink-3);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-pill);padding:2px 8px;flex-shrink:0}
+.backup-item-dest{font-size:.6875rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:var(--r-pill);padding:3px 9px;flex-shrink:0}
+.backup-item-dest.is-update{background:var(--accent-soft);color:var(--accent);border:1px solid #C7D2FE}
+.backup-item-dest.is-create{background:var(--success-bg);color:var(--success);border:1px solid var(--success-line)}
+.backup-list-empty,.backup-list-loading{padding:18px;text-align:center;font-size:.8125rem;color:var(--ink-3)}
+
+.backup-file-drop{display:flex;align-items:center;gap:10px;justify-content:center;padding:18px;border:1px dashed var(--line-strong);border-radius:var(--r-md);background:var(--surface-2);cursor:pointer;font-size:.8125rem;font-weight:700;color:var(--ink-2);margin-bottom:14px;transition:var(--t-fast)}
+.backup-file-drop:hover{border-color:var(--accent);color:var(--accent)}
+.backup-file-drop i{font-size:1.25rem}
+
+.backup-modal-status{display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px 14px;border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--line);font-size:.8125rem;color:var(--ink-2)}
+.backup-modal-status.is-error{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger)}
+.backup-result{margin-top:14px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface-2)}
+.backup-result h4{display:flex;align-items:center;gap:8px;font-size:.8125rem;font-weight:800;margin:0 0 10px}
+.backup-result ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.backup-result li{display:flex;align-items:center;gap:8px;font-size:.78125rem}
+.backup-result li.is-ok{color:var(--success)}
+.backup-result li.is-diff{color:var(--danger)}
+
+/* Rol editor: la restauración es tarea de administración */
+body[data-rol="editor"] #restore-backup-btn,
+body[data-rol="editor"] #backup-history-section{display:none}
