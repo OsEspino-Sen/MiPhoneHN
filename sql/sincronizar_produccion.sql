@@ -1,20 +1,14 @@
 -- ============================================================
 -- SINCRONIZAR CATALOGO DE PRODUCCION = copia exacta del DEV (33 productos, IDs renumerados)
--- ⚠️ EJECUTAR SOLO EN EL PROYECTO DE PRODUCCION (dtaroricdbzavktglteu)
--- Pegar TODO este archivo en el SQL Editor y pulsar Run UNA VEZ.
--- NO toca 'configuracion' ni '_meta' de llaves: el mantenimiento activo se conserva.
+-- ⚠️ EJECUTAR SOLO EN EL SQL EDITOR DEL PROYECTO DE PRODUCCION (dtaroricdbzavktglteu)
+-- Pegar TODO este archivo y pulsar Run UNA VEZ.
+-- Reemplaza TODOS los productos de produccion por los 33 del dev.
+-- NO toca 'configuracion': el mantenimiento activo de produccion se conserva.
 -- Transaccional: si el conteo final no es 33, revierte solo.
 -- ============================================================
 BEGIN;
 
-DO $guard$
-BEGIN
-  IF (SELECT count(*) FROM public.productos) <> 33 THEN
-    RAISE EXCEPTION 'El catalogo de produccion no tiene 33 productos. Ejecucion abortada (no se cambio nada).';
-  END IF;
-END $guard$;
-
--- 1) Retirar el catalogo actual de produccion
+-- 1) Retirar el catalogo actual de produccion (cualquier cantidad: se reemplaza completo)
 DELETE FROM productos;
 
 -- 2) Insertar los 33 productos del dev (IDs nuevos producto-1..33)
@@ -56,7 +50,7 @@ INSERT INTO productos (id,title,brand,price,old_price,category,condition,badge,b
 INSERT INTO _meta (key, ultimo) VALUES ('contador_productos', 33)
 ON CONFLICT (key) DO UPDATE SET ultimo = 33;
 
--- 4) Verificación dura: si el conteo no es 33, TODO revierte
+-- 4) Verificación dura: si el conteo final no es 33, TODO revierte
 DO $guard2$
 BEGIN
   IF (SELECT count(*) FROM public.productos) <> 33 THEN
