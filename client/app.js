@@ -92,6 +92,10 @@ let modalSelectedColor = "";
    entrada está registrada (Atrás la cierra), false en carga directa por enlace
    compartido (Atrás sale del sitio, como en toda página web). */
 let vistaProductoConHistoria = false;
+/* Cuántos productos consecutivos hay apilados en el historial desde el
+   catálogo (Catálogo → A → B → C = 3). Permite que "clic fuera" regrese al
+   catálogo de un solo salto, sin recorrer producto por producto. */
+let profundidadHistorialProducto = 0;
 let modalSelectedStorage = "";
 let modalActiveImageIndex = 0;
 let modalActiveTab = "description";
@@ -652,7 +656,7 @@ function setupEventListeners() {
   cartDrawerOverlay?.addEventListener("click", closeCart);
   checkoutBtn?.addEventListener("click", checkoutCartWhatsApp);
 
-  productModalOverlay?.addEventListener("click", closeProductModal);
+  productModalOverlay?.addEventListener("click", cerrarDetalleCompleto);
   // Boton "Compartir" del detalle: delegacion porque el cuerpo del modal se
   // re-renderiza al cambiar de color/capacidad (un solo listener para todos).
   productModalBody?.addEventListener("click", (event) => {
@@ -702,7 +706,7 @@ function setupEventListeners() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    closeProductModal();
+    cerrarDetalleCompleto();
     closeCart();
   });
 
@@ -1178,12 +1182,15 @@ function openProductModal(productId, colorName = "", opciones = {}) {
   if (opciones.cargaDirecta) {
     // Enlace compartido abierto directo: Atrás sale del sitio (como toda página web).
     vistaProductoConHistoria = false;
+    profundidadHistorialProducto = 0;
   } else if (opciones.desdeHistorial) {
-    // La entrada ya existe en el historial (navegación Atrás/Adelante).
+    // La entrada ya existe en el historial (navegación Atrás/Adelante);
+    // la profundidad ya fue establecida por el manejador de popstate.
     vistaProductoConHistoria = true;
   } else {
+    profundidadHistorialProducto += 1;
     history.pushState(
-      { vistaProducto: { id: String(productId), color: modalSelectedColor } },
+      { vistaProducto: { id: String(productId), color: modalSelectedColor }, profundidad: profundidadHistorialProducto },
       "",
       obtenerUrlCompartirProducto(productId, modalSelectedColor)
     );
@@ -1195,12 +1202,17 @@ function openProductModal(productId, colorName = "", opciones = {}) {
   requestAnimationFrame(() => panelProducto?.focus({ preventScroll: true }));
 }
 
-function closeProductModal() {
+/* "Cerrar" (clic/tap fuera, ESC, tras agregar al carrito): cierre INDEPENDIENTE
+   que regresa al catálogo de un solo salto, deshaciendo las entradas de
+   productos apiladas SIN recorrer el historial de productos (nunca muestra
+   el producto anterior ni cambia la URL hacia otro producto). */
+function cerrarDetalleCompleto() {
   if (!productModal?.classList.contains("active")) return;
-  // Volver es navegación real: si la vista tiene entrada en el historial,
-  // Atrás la cierra y regresa exactamente al contexto anterior.
-  if (vistaProductoConHistoria) {
-    history.back();
+  if (vistaProductoConHistoria && profundidadHistorialProducto > 0) {
+    // Un solo salto al entry del catálogo: el popstate cierra la vista y
+    // deja la URL del catálogo. El historial queda disponible para
+    // Atrás/Adelante reales del navegador.
+    history.go(-profundidadHistorialProducto);
     return;
   }
   cerrarVistaProductoSilenciosa();
@@ -1215,6 +1227,7 @@ function cerrarVistaProductoSilenciosa() {
   document.body.classList.remove("product-modal-open");
   document.body.style.overflow = "";
   vistaProductoConHistoria = false;
+  profundidadHistorialProducto = 0;
 
   window.setTimeout(() => {
     if (!productModal.classList.contains("active")) {
@@ -1223,20 +1236,22 @@ function cerrarVistaProductoSilenciosa() {
   }, 280);
 }
 
-/* Atrás/Adelante del navegador: la vista de producto participa del historial.
-   - Atrás con la vista abierta → cierra y regresa al contexto anterior.
-   - Adelante sobre un producto → reabre la vista en ese producto/variante. */
+/* Atrás/Adelante del navegador: NAVEGA el historial de productos.
+   - Atrás → el producto anterior (C → B → A → Catálogo).
+   - Adelante → el producto siguiente. */
 window.addEventListener("popstate", (event) => {
   const estado = event.state;
   const abierta = productModal?.classList.contains("active");
   if (estado && estado.vistaProducto) {
+    profundidadHistorialProducto = Number(estado.profundidad) || 1;
     if (!abierta || String(currentBaseProduct?.id || "") !== String(estado.vistaProducto.id)) {
       openProductModal(estado.vistaProducto.id, estado.vistaProducto.color || "", { desdeHistorial: true });
     } else {
       vistaProductoConHistoria = true;
     }
-  } else if (abierta) {
-    cerrarVistaProductoSilenciosa();
+  } else {
+    profundidadHistorialProducto = 0;
+    if (abierta) cerrarVistaProductoSilenciosa();
   }
 });
 
@@ -1497,7 +1512,7 @@ function renderModalContent() {
       // coherente con Atrás/Adelante) sin crear entradas extra en el historial.
       if (currentBaseProduct && productModal?.classList.contains("active")) {
         history.replaceState(
-          { vistaProducto: { id: String(currentBaseProduct.id), color: modalSelectedColor } },
+          { vistaProducto: { id: String(currentBaseProduct.id), color: modalSelectedColor }, profundidad: profundidadHistorialProducto },
           "",
           obtenerUrlCompartirProducto(currentBaseProduct.id, modalSelectedColor)
         );
@@ -1604,7 +1619,7 @@ function addModalProductToCart() {
   if (!currentSelectedProduct) return;
 
   const added = addToCart(currentSelectedProduct, modalSelectedColor, modalSelectedStorage);
-  if (added) closeProductModal();
+  if (added) cerrarDetalleCompleto();
 }
 
 function addToCart(product, color, storage) {
