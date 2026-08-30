@@ -132,11 +132,10 @@
 
   <div id="product-modal" class="product-modal" role="dialog" aria-modal="true" aria-label="Detalle de producto">
     <div class="product-modal-overlay" id="product-modal-overlay"></div>
-    <div class="product-modal-content">
-      <button type="button" id="product-modal-close" class="product-modal-close-btn icon-btn" aria-label="Cerrar detalle de producto">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-      <div class="product-modal-body" id="product-modal-body"></div>
+    <div class="product-modal-content" tabindex="-1">
+      <div class="product-modal-scroll" id="product-modal-scroll">
+        <div class="product-modal-body" id="product-modal-body"></div>
+      </div>
     </div>
   </div>
 
