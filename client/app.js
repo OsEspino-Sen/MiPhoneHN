@@ -1147,59 +1147,80 @@ function openProductModal(productId, colorName = "", opciones = {}) {
   const product = products.find((item) => String(item.id) === String(productId));
   if (!product) return;
 
-  currentBaseProduct = product;
-  const availableColors = getProductColors(product);
+  // Cambio de producto con la vista ya abierta (relacionados, Atrás/Adelante):
+  // transición suave de salida antes de mostrar el nuevo. No aplica a la
+  // primera apertura ni con movimiento reducido del sistema.
+  const cambioConTransicion =
+    productModal.classList.contains("active") &&
+    currentBaseProduct &&
+    String(currentBaseProduct.id) !== String(productId) &&
+    !REDUCED_MOTION_QUERY.matches;
 
-  // Permite abrir el modal ya posicionado en una variante concreta (ej. desde
-  // un punto de color de la tarjeta). Si el color no existe, se usa el primero.
-  const requestedColor = colorName
-    ? availableColors.find((color) => String(color.name) === String(colorName))
-    : null;
-  modalSelectedColor = requestedColor?.name || availableColors[0]?.name || "Color estándar";
+  const abrirVista = () => {
+    currentBaseProduct = product;
+    const availableColors = getProductColors(product);
 
-  // El producto efectivo puede tener capacidades/precios/stock propios.
-  currentSelectedProduct = resolveVariantProduct(product, modalSelectedColor);
+    // Permite abrir el modal ya posicionado en una variante concreta (ej. desde
+    // un punto de color de la tarjeta). Si el color no existe, se usa el primero.
+    const requestedColor = colorName
+      ? availableColors.find((color) => String(color.name) === String(colorName))
+      : null;
+    modalSelectedColor = requestedColor?.name || availableColors[0]?.name || "Color estándar";
 
-  const storageOptions = getStorageOptions(currentSelectedProduct);
-  const firstAvailableOption = storageOptions.find((option) => !getStockInfo(currentSelectedProduct, option.name).isOut);
-  modalSelectedStorage = (firstAvailableOption || storageOptions[0]).name;
-  modalActiveImageIndex = 0;
-  modalActiveTab = "description";
+    // El producto efectivo puede tener capacidades/precios/stock propios.
+    currentSelectedProduct = resolveVariantProduct(product, modalSelectedColor);
 
-  renderModalContent();
-  productModal?.classList.add("active");
-  productModal?.setAttribute("aria-hidden", "false");
-  document.body.classList.add("product-modal-open");
-  document.body.style.overflow = "hidden";
-  startModalGalleryAuto();
+    const storageOptions = getStorageOptions(currentSelectedProduct);
+    const firstAvailableOption = storageOptions.find((option) => !getStockInfo(currentSelectedProduct, option.name).isOut);
+    modalSelectedStorage = (firstAvailableOption || storageOptions[0]).name;
+    modalActiveImageIndex = 0;
+    modalActiveTab = "description";
 
-  const modalContent = productModal?.querySelector(".product-modal-scroll");
-  modalContent?.scrollTo({ top: 0, behavior: "auto" });
+    renderModalContent();
+    productModal?.classList.add("active");
+    productModal?.setAttribute("aria-hidden", "false");
+    document.body.classList.add("product-modal-open");
+    document.body.style.overflow = "hidden";
+    startModalGalleryAuto();
 
-  // La vista de producto se comporta como una PÁGINA: registra su propia
-  // entrada en el historial para que Atrás regrese al catálogo (móvil y
-  // escritorio) y Adelante la reabra. La URL queda compartible.
-  if (opciones.cargaDirecta) {
-    // Enlace compartido abierto directo: Atrás sale del sitio (como toda página web).
-    vistaProductoConHistoria = false;
-    profundidadHistorialProducto = 0;
-  } else if (opciones.desdeHistorial) {
-    // La entrada ya existe en el historial (navegación Atrás/Adelante);
-    // la profundidad ya fue establecida por el manejador de popstate.
-    vistaProductoConHistoria = true;
-  } else {
-    profundidadHistorialProducto += 1;
-    history.pushState(
-      { vistaProducto: { id: String(productId), color: modalSelectedColor }, profundidad: profundidadHistorialProducto },
-      "",
-      obtenerUrlCompartirProducto(productId, modalSelectedColor)
-    );
-    vistaProductoConHistoria = true;
+    const modalContent = productModal?.querySelector(".product-modal-scroll");
+    modalContent?.scrollTo({ top: 0, behavior: "auto" });
+
+    // La vista de producto se comporta como una PÁGINA: registra su propia
+    // entrada en el historial para que Atrás regrese al catálogo (móvil y
+    // escritorio) y Adelante la reabra. La URL queda compartible.
+    if (opciones.cargaDirecta) {
+      // Enlace compartido abierto directo: Atrás sale del sitio (como toda página web).
+      vistaProductoConHistoria = false;
+      profundidadHistorialProducto = 0;
+    } else if (opciones.desdeHistorial) {
+      // La entrada ya existe en el historial (navegación Atrás/Adelante).
+      vistaProductoConHistoria = true;
+    } else {
+      profundidadHistorialProducto += 1;
+      history.pushState(
+        { vistaProducto: { id: String(productId), color: modalSelectedColor }, profundidad: profundidadHistorialProducto },
+        "",
+        obtenerUrlCompartirProducto(productId, modalSelectedColor)
+      );
+      vistaProductoConHistoria = true;
+    }
+
+    // Sin botón de cierre: el foco pasa al contenido de la vista.
+    const panelProducto = productModal?.querySelector(".product-modal-content");
+    requestAnimationFrame(() => panelProducto?.focus({ preventScroll: true }));
+  };
+
+  if (cambioConTransicion) {
+    productModalBody.classList.add("producto-cambiando");
+    window.setTimeout(() => {
+      abrirVista();
+      requestAnimationFrame(() => productModalBody.classList.remove("producto-cambiando"));
+    }, 190);
+    return;
   }
 
-  // Sin botón de cierre: el foco pasa al contenido de la vista.
-  const panelProducto = productModal?.querySelector(".product-modal-content");
-  requestAnimationFrame(() => panelProducto?.focus({ preventScroll: true }));
+  abrirVista();
 }
 
 /* "Cerrar" (clic/tap fuera, ESC, tras agregar al carrito): cierre INDEPENDIENTE
