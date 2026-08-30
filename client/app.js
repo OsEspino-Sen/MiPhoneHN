@@ -88,6 +88,10 @@ let searchQuery = "";
 let currentBaseProduct = null;   // Producto agrupado original (sin overrides)
 let currentSelectedProduct = null; // Producto efectivo según la variante (color) activa
 let modalSelectedColor = "";
+/* La vista de producto participa del historial del navegador: true cuando su
+   entrada está registrada (Atrás la cierra), false en carga directa por enlace
+   compartido (Atrás sale del sitio, como en toda página web). */
+let vistaProductoConHistoria = false;
 let modalSelectedStorage = "";
 let modalActiveImageIndex = 0;
 let modalActiveTab = "description";
@@ -122,7 +126,6 @@ const cartBadge = document.getElementById("cart-badge");
 const checkoutBtn = document.getElementById("checkout-whatsapp-btn");
 const productModal = document.getElementById("product-modal");
 const productModalOverlay = document.getElementById("product-modal-overlay");
-const productModalClose = document.getElementById("product-modal-close");
 const productModalBody = document.getElementById("product-modal-body");
 const calcAmount = document.getElementById("calc-amount");
 const calcWhatsappBtn = document.getElementById("calc-whatsapp-btn");
@@ -167,6 +170,89 @@ function notify(message, type = "info") {
   }, 3500);
 }
 
+/* ==========================================================================
+   COMPARTIR PRODUCTOS POR ENLACE
+   - "Compartir" en el detalle: usa el menu nativo del telefono (WhatsApp,
+     etc.) si existe; si no, copia el enlace al portapapeles.
+   - Enlace profundo: ?producto=<id>&color=<nombre> abre ese producto al
+     cargar la pagina (funciona en Inicio y en Tienda).
+   ========================================================================== */
+
+function obtenerUrlCompartirProducto(productId, colorName = "") {
+  const url = new URL(window.location.href);
+  url.hash = "";
+  url.search = "";
+  url.searchParams.set("producto", String(productId));
+  if (colorName) url.searchParams.set("color", String(colorName));
+  return url.toString();
+}
+
+function compartirProductoActual() {
+  const producto = currentBaseProduct;
+  if (!producto) return;
+  const url = obtenerUrlCompartirProducto(producto.id, modalSelectedColor);
+  const titulo = `${producto.title || "Producto"} — Mi Phone HN`;
+  // Menu nativo de compartir (ideal en movil: WhatsApp, Instagram, etc.)
+  if (typeof navigator.share === "function") {
+    navigator.share({ title: titulo, text: titulo, url })
+      .then(() => notify("¡Producto compartido!", "success"))
+      .catch((err) => {
+        if (err && err.name === "AbortError") return; // el usuario cancelo: sin ruido
+        copiarEnlaceProducto(url);
+      });
+    return;
+  }
+  copiarEnlaceProducto(url);
+}
+
+function copiarEnlaceProducto(url) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => notify("Enlace del producto copiado", "success"))
+      .catch(() => copiarEnlaceConTextarea(url));
+    return;
+  }
+  copiarEnlaceConTextarea(url);
+}
+
+function copiarEnlaceConTextarea(url) {
+  const area = document.createElement("textarea");
+  area.value = url;
+  area.setAttribute("aria-hidden", "true");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+  try {
+    document.execCommand("copy");
+    notify("Enlace del producto copiado", "success");
+  } catch {
+    notify("Copia este enlace manualmente: " + url, "error");
+  }
+  area.remove();
+}
+
+let enlaceProductoAtendido = false;
+
+// Abre el producto indicado por ?producto= al cargar (enlace compartido).
+// La URL se CONSERVA: la vista es la página del producto (compartible y
+// recargable). Respeta el gate de mantenimiento (si bloquea, no abre).
+function abrirProductoDesdeEnlaceCompartido() {
+  if (enlaceProductoAtendido) return;
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("producto");
+  if (!id) return;
+  if (document.getElementById("mantenimiento-overlay")) return;
+  enlaceProductoAtendido = true;
+  const existe = products.some((item) => String(item.id) === String(id));
+  if (!existe) {
+    if (products.length > 0) notify("El producto compartido ya no está disponible", "error");
+    return;
+  }
+  const color = params.get("color") || "";
+  openProductModal(id, color, { cargaDirecta: true });
+}
+
 /* ========================================================================== 
    INICIALIZACIÓN
    ========================================================================== */
@@ -201,7 +287,10 @@ document.addEventListener("DOMContentLoaded", () => {
   initFinancingCalculator();
   Promise.allSettled([loadProducts(), loadCategories(), loadSiteSettings()])
     .then(() => document.fonts.ready)
-    .then(finishPageLoader);
+    .then(() => {
+      abrirProductoDesdeEnlaceCompartido();
+      finishPageLoader();
+    });
   window.addEventListener("load", finishPageLoader);
   setTimeout(finishPageLoader, 4000);
 
@@ -563,8 +652,21 @@ function setupEventListeners() {
   cartDrawerOverlay?.addEventListener("click", closeCart);
   checkoutBtn?.addEventListener("click", checkoutCartWhatsApp);
 
-  productModalClose?.addEventListener("click", closeProductModal);
   productModalOverlay?.addEventListener("click", closeProductModal);
+  // Boton "Compartir" del detalle: delegacion porque el cuerpo del modal se
+  // re-renderiza al cambiar de color/capacidad (un solo listener para todos).
+  productModalBody?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-share-product]")) compartirProductoActual();
+  });
+  // Scrollbar elegante: visible solo mientras el usuario se desplaza y con
+  // desvanecimiento suave al soltar (en navegadores con ::-webkit-scrollbar).
+  const scrollProducto = document.getElementById("product-modal-scroll");
+  let scrollProductoTimer = null;
+  scrollProducto?.addEventListener("scroll", () => {
+    scrollProducto.classList.add("is-scrolling");
+    clearTimeout(scrollProductoTimer);
+    scrollProductoTimer = setTimeout(() => scrollProducto.classList.remove("is-scrolling"), 900);
+  }, { passive: true });
 
   calcAmount?.addEventListener("input", calculateFinancing);
   themeToggle?.addEventListener("click", toggleTheme);
@@ -1036,7 +1138,7 @@ function resetModalGalleryAuto() {
    MODAL DE PRODUCTO
    ========================================================================== */
 
-function openProductModal(productId, colorName = "") {
+function openProductModal(productId, colorName = "", opciones = {}) {
   if (!productModal || !productModalBody) return;
   const product = products.find((item) => String(item.id) === String(productId));
   if (!product) return;
@@ -1067,12 +1169,44 @@ function openProductModal(productId, colorName = "") {
   document.body.style.overflow = "hidden";
   startModalGalleryAuto();
 
-  const modalContent = productModal?.querySelector(".product-modal-content");
+  const modalContent = productModal?.querySelector(".product-modal-scroll");
   modalContent?.scrollTo({ top: 0, behavior: "auto" });
-  requestAnimationFrame(() => productModalClose?.focus());
+
+  // La vista de producto se comporta como una PÁGINA: registra su propia
+  // entrada en el historial para que Atrás regrese al catálogo (móvil y
+  // escritorio) y Adelante la reabra. La URL queda compartible.
+  if (opciones.cargaDirecta) {
+    // Enlace compartido abierto directo: Atrás sale del sitio (como toda página web).
+    vistaProductoConHistoria = false;
+  } else if (opciones.desdeHistorial) {
+    // La entrada ya existe en el historial (navegación Atrás/Adelante).
+    vistaProductoConHistoria = true;
+  } else {
+    history.pushState(
+      { vistaProducto: { id: String(productId), color: modalSelectedColor } },
+      "",
+      obtenerUrlCompartirProducto(productId, modalSelectedColor)
+    );
+    vistaProductoConHistoria = true;
+  }
+
+  // Sin botón de cierre: el foco pasa al contenido de la vista.
+  const panelProducto = productModal?.querySelector(".product-modal-content");
+  requestAnimationFrame(() => panelProducto?.focus({ preventScroll: true }));
 }
 
 function closeProductModal() {
+  if (!productModal?.classList.contains("active")) return;
+  // Volver es navegación real: si la vista tiene entrada en el historial,
+  // Atrás la cierra y regresa exactamente al contexto anterior.
+  if (vistaProductoConHistoria) {
+    history.back();
+    return;
+  }
+  cerrarVistaProductoSilenciosa();
+}
+
+function cerrarVistaProductoSilenciosa() {
   if (!productModal?.classList.contains("active")) return;
   stopModalGalleryAuto();
 
@@ -1080,6 +1214,7 @@ function closeProductModal() {
   productModal.setAttribute("aria-hidden", "true");
   document.body.classList.remove("product-modal-open");
   document.body.style.overflow = "";
+  vistaProductoConHistoria = false;
 
   window.setTimeout(() => {
     if (!productModal.classList.contains("active")) {
@@ -1087,6 +1222,23 @@ function closeProductModal() {
     }
   }, 280);
 }
+
+/* Atrás/Adelante del navegador: la vista de producto participa del historial.
+   - Atrás con la vista abierta → cierra y regresa al contexto anterior.
+   - Adelante sobre un producto → reabre la vista en ese producto/variante. */
+window.addEventListener("popstate", (event) => {
+  const estado = event.state;
+  const abierta = productModal?.classList.contains("active");
+  if (estado && estado.vistaProducto) {
+    if (!abierta || String(currentBaseProduct?.id || "") !== String(estado.vistaProducto.id)) {
+      openProductModal(estado.vistaProducto.id, estado.vistaProducto.color || "", { desdeHistorial: true });
+    } else {
+      vistaProductoConHistoria = true;
+    }
+  } else if (abierta) {
+    cerrarVistaProductoSilenciosa();
+  }
+});
 
 function renderModalContent() {
   if (!productModalBody || !currentSelectedProduct) return;
@@ -1189,6 +1341,10 @@ function renderModalContent() {
         <section class="modal-details">
           <div class="modal-product-kicker">
             <span class="modal-condition-badge ${String(product.condition).toLowerCase() === "nuevo" ? "is-new" : "is-used"}">${escapeHTML(product.badge || product.condition || "Disponible")}</span>
+            <button type="button" class="modal-share-btn" data-share-product aria-label="Compartir este producto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="18" cy="5" r="2.8"></circle><circle cx="6" cy="12" r="2.8"></circle><circle cx="18" cy="19" r="2.8"></circle><path d="m8.6 10.6 6.8-4M8.6 13.4l6.8 4"></path></svg>
+              Compartir
+            </button>
           </div>
           <span class="product-brand">${escapeHTML(product.brand || "")}</span>
           <h1 class="modal-title">${escapeHTML(product.title || "Producto")}</h1>
@@ -1337,6 +1493,15 @@ function renderModalContent() {
         modalSelectedStorage = firstAvailable.name;
       }
       renderModalContent();
+      // La URL de la vista refleja siempre la variante activa (compartible y
+      // coherente con Atrás/Adelante) sin crear entradas extra en el historial.
+      if (currentBaseProduct && productModal?.classList.contains("active")) {
+        history.replaceState(
+          { vistaProducto: { id: String(currentBaseProduct.id), color: modalSelectedColor } },
+          "",
+          obtenerUrlCompartirProducto(currentBaseProduct.id, modalSelectedColor)
+        );
+      }
     });
   });
 
