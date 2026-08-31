@@ -2396,19 +2396,26 @@ html.entrada-producto-directa #announcement-bar {
 }
 
 .producto-buscador-resultados {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 8px;
+  right: 8px;
+  z-index: 40;
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 8px;
-  margin: -6px 0 14px;
   border: 1px solid var(--border-light);
   border-radius: 16px;
   background: var(--bg-primary);
-  box-shadow: 0 12px 30px rgba(2, 12, 26, .10);
+  box-shadow: 0 18px 44px rgba(2, 12, 26, .18);
+  max-height: min(340px, 48vh);
+  overflow-y: auto;
+  animation: dupFade .22s ease;
 }
 
 /* El atributo hidden debe ganar siempre: sin esta regla, el display:flex de
-   arriba anula el ocultado y deja una barra vacía permanente bajo el buscador */
+   arriba anula el ocultado y deja el panel visible sin resultados */
 .producto-buscador-resultados[hidden] {
   display: none;
 }
@@ -2441,8 +2448,8 @@ html.entrada-producto-directa #announcement-bar {
 }
 
 .producto-resultado img {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   object-fit: cover;
   border-radius: 10px;
   flex-shrink: 0;
