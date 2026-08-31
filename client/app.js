@@ -455,8 +455,10 @@ function finishPageLoader() {
   // resolución del enlace compartido.
   if (ENLACE_PRODUCTO_EN_URL && !productoEnlaceResuelto) return;
   const elapsed = performance.now() - pageLoadStart;
-  if (elapsed < 900) {
-    setTimeout(finishPageLoader, 900 - elapsed);
+  // Mínimo visible: suficiente para que el loader se perciba como pantalla
+  // de entrada (y no como un destello) antes del crossfade de revelado.
+  if (elapsed < 1300) {
+    setTimeout(finishPageLoader, 1300 - elapsed);
     return;
   }
   loader.dataset.done = "1";

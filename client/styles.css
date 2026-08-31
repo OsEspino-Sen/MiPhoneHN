@@ -3229,7 +3229,7 @@ html.entrada-producto-directa #announcement-bar {
 }
 
 .modal-actions {
-  margin: 0 0 16px;
+  margin: 0 0 24px;
 }
 
 .modal-cart-button {
@@ -3251,7 +3251,7 @@ html.entrada-producto-directa #announcement-bar {
 .modal-trust-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  gap: 9px;
   padding: 0;
   background: transparent;
 }
@@ -3260,8 +3260,8 @@ html.entrada-producto-directa #announcement-bar {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px;
+  gap: 8px;
+  padding: 12px 11px;
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
@@ -3306,7 +3306,7 @@ html.entrada-producto-directa #announcement-bar {
 
 .modal-tabs {
   overflow: hidden;
-  margin: 0;
+  margin-top: 16px;
   padding: 0;
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
@@ -3360,7 +3360,7 @@ html.entrada-producto-directa #announcement-bar {
 
 .modal-tab-panels {
   min-height: 238px;
-  padding: clamp(22px, 3vw, 34px);
+  padding: clamp(24px, 3vw, 36px);
 }
 
 .modal-tab-panel {
@@ -3379,7 +3379,7 @@ html.entrada-producto-directa #announcement-bar {
 
 .tab-content-eyebrow {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: var(--accent);
   font-size: .62rem;
   font-weight: 800;
@@ -3388,7 +3388,7 @@ html.entrada-producto-directa #announcement-bar {
 }
 
 .modal-tab-panel h3 {
-  margin: 0 0 11px;
+  margin: 0 0 14px;
   color: var(--text-primary);
   font-family: var(--font-heading);
   font-size: 1.3rem;
@@ -3487,8 +3487,12 @@ html.entrada-producto-directa #announcement-bar {
   font-weight: 650;
 }
 
+/* RESPIRO: la sección de relacionados queda claramente separada de la
+   ficha/tabs arriba (gap del shell + margin + padding), en todos los
+   tamaños de pantalla. */
 .related-products {
-  padding-top: 2px;
+  margin-top: 26px;
+  padding-top: 22px;
 }
 
 .related-products-heading {
@@ -3496,7 +3500,7 @@ html.entrada-producto-directa #announcement-bar {
   align-items: flex-end;
   justify-content: space-between;
   gap: 18px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   padding: 0 2px;
 }
 
@@ -3731,13 +3735,14 @@ html.entrada-producto-directa #announcement-bar {
   .storage-selectors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .modal-trust-summary { grid-template-columns: 1fr; }
   .trust-summary-item small { display: block; }
-  .modal-tabs { border-radius: 17px; }
+  .modal-tabs { margin-top: 12px; border-radius: 17px; }
   .modal-tab-list { overflow-x: auto; }
   .modal-tab-btn { flex: 1 0 auto; padding-inline: 13px; }
-  .modal-tab-panels { min-height: 260px; padding: 21px 17px; }
+  .modal-tab-panels { min-height: 260px; padding: 22px 18px; }
   .specs-table th, .specs-table td { padding: 11px 12px; font-size: .72rem; }
   .specs-table th { width: 40%; }
   .includes-grid { grid-template-columns: 1fr; }
+  .related-products { margin-top: 18px; padding-top: 16px; }
   .related-products-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
 }
 
