@@ -100,6 +100,7 @@ let profundidadHistorialProducto = 0;
    el loader (logo animado) permanece y el Home no debe asomar jamás. */
 const ENLACE_PRODUCTO_EN_URL = new URLSearchParams(window.location.search).has("producto");
 let productoEnlaceResuelto = false;
+let entradaProductoPendiente = false;
 let modalSelectedStorage = "";
 let modalActiveImageIndex = 0;
 let modalActiveTab = "description";
@@ -367,6 +368,16 @@ function finishPageLoader() {
   loader.dataset.done = "1";
   document.body.classList.add("page-ready");
   loader.classList.add("page-loader--done");
+  // Animación de entrada del producto (deep link): la vista sube y aparece
+  // mientras el loader se desvanece. Una sola vez por carga.
+  if (entradaProductoPendiente) {
+    entradaProductoPendiente = false;
+    const panel = productModal?.querySelector(".product-modal-content");
+    if (panel) {
+      panel.classList.add("entrada-producto");
+      setTimeout(() => panel.classList.remove("entrada-producto"), 650);
+    }
+  }
   setTimeout(() => loader.remove(), 700);
 }
 
@@ -1305,6 +1316,10 @@ function openProductModal(productId, colorName = "", opciones = {}) {
         vistaProductoConHistoria = true;
         profundidadHistorialProducto = 1;
       } catch { /* sin historial interno: el header cubre la navegación */ }
+      // La vista aparece SIN transición (queda bajo el loader); al revelarse,
+      // finishPageLoader dispara la animación de entrada del producto.
+      productModal.classList.add("sin-animacion");
+      entradaProductoPendiente = true;
     } else if (opciones.desdeHistorial) {
       // La entrada ya existe en el historial (navegación Atrás/Adelante).
       vistaProductoConHistoria = true;
@@ -1635,12 +1650,10 @@ function renderModalContent() {
     resetModalGalleryAuto();
   }, { passive: true });
 
-  // Buscador integrado: filtra el catálogo SIN salir de la vista del producto.
-  // Oculta SOLO la ficha (shell): la barra y los resultados permanecen visibles.
+  // Buscador contextual COMPACTO: panel desplegable sobre el contenido, sin
+  // reemplazar la ficha ni sacar al usuario del producto. Máximo 5 resultados.
   const buscadorProducto = productModalBody.querySelector("#producto-buscador");
   const resultadosProducto = productModalBody.querySelector("#producto-buscador-resultados");
-  const shellProducto = productModalBody.querySelector(".modal-product-shell");
-  const scrollProductoVista = productModalBody.closest(".product-modal-scroll");
   let buscadorProductoTimer = null;
   buscadorProducto?.addEventListener("input", () => {
     clearTimeout(buscadorProductoTimer);
@@ -1649,17 +1662,15 @@ function renderModalContent() {
       if (!consulta) {
         resultadosProducto.hidden = true;
         resultadosProducto.innerHTML = "";
-        shellProducto?.classList.remove("oculto-por-busqueda");
         return;
       }
       const coincidencias = products
         .filter((item) => String(item.id) !== String(currentBaseProduct?.id || ""))
         .filter((item) => `${item.title || ""} ${item.brand || ""}`.toLowerCase().includes(consulta))
-        .slice(0, 12);
-      shellProducto?.classList.add("oculto-por-busqueda");
+        .slice(0, 5);
       resultadosProducto.hidden = false;
       resultadosProducto.innerHTML = coincidencias.length
-        ? coincidencias.map((item) => {
+        ? `<span class="producto-resultados-titulo">Resultados de búsqueda</span>` + coincidencias.map((item) => {
             const imagen = getProductImageUrls(item)[0] || FALLBACK_IMAGE;
             const precio = Number(item.price) || 0;
             return `
@@ -1669,15 +1680,14 @@ function renderModalContent() {
               <span class="producto-resultado-precio">${formatCurrency(precio)}</span>
             </button>`;
           }).join("")
-        : `<div class="producto-resultado-vacio">Sin coincidencias para "${escapeHTML(buscadorProducto.value.trim())}"</div>`;
-      // Los resultados deben verse desde el inicio del panel.
-      scrollProductoVista?.scrollTo({ top: 0, behavior: "auto" });
-    }, 200);
+        : `<div class="producto-resultado-vacio">No encontramos productos que coincidan con tu búsqueda.</div>`;
+    }, 180);
   });
   buscadorProducto?.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       buscadorProducto.value = "";
-      buscadorProducto.dispatchEvent(new Event("input"));
+      resultadosProducto.hidden = true;
+      resultadosProducto.innerHTML = "";
       buscadorProducto.blur();
     }
   });
@@ -1687,7 +1697,6 @@ function renderModalContent() {
     resultadosProducto.hidden = true;
     resultadosProducto.innerHTML = "";
     buscadorProducto.value = "";
-    shellProducto?.classList.remove("oculto-por-busqueda");
     openProductModal(boton.dataset.resultadoId);
   });
 

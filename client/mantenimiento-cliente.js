@@ -201,6 +201,18 @@ async function mostrarProductoCompartidoEnMantenimiento() {
       if (legado) producto = await traerProductoPublico(legado);
     }
     if (!producto || !producto.title) return;
+    // Sembrar el catálogo en el historial: Atrás desde la ficha mantiene al
+    // usuario dentro del sitio (la página de mantenimiento se mantiene).
+    try {
+      const urlCatalogo = new URL(window.location.href);
+      urlCatalogo.searchParams.delete('producto');
+      history.replaceState({ tienda: true }, '', urlCatalogo.toString());
+      history.pushState(
+        { vistaProducto: { id: String(producto.id) }, profundidad: 1 },
+        '',
+        window.location.href
+      );
+    } catch { /* sin historial interno disponible */ }
     renderProductoCompartido(producto);
   } catch (err) {
     console.warn('[mantenimiento] No se pudo mostrar el producto compartido:', err);
