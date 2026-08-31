@@ -258,28 +258,69 @@ function resolverIdProductoLegado(id) {
   return PRODUCTO_IDS_LEGADO[String(id || "").trim().toLowerCase()] || null;
 }
 
-// Abre el producto indicado por ?producto= al cargar (enlace compartido).
-// Acepta IDs legados (anteriores a la renumeración). La URL se CONSERVA: la
-// vista es la página del producto. Respeta el gate de mantenimiento.
-function abrirProductoDesdeEnlaceCompartido() {
-  if (enlaceProductoAtendido) return;
+function resolverProductoDelEnlace(id) {
+  // 1) por ID exacto; 2) por ID legado (anterior a la renumeración); 3) null
+  const directo = products.find((item) => String(item.id) === String(id));
+  if (directo) return directo;
+  const remapeado = resolverIdProductoLegado(id);
+  if (remapeado) return products.find((item) => String(item.id) === String(remapeado)) || null;
+  return null;
+}
+
+/* Abre el producto indicado por ?producto=<id> — AUTOSUFICIENTE: no depende
+   de haber visitado la tienda, del estado previo ni de que realtime haya
+   cargado. Estrategia:
+   1) Esperar el catálogo por realtime (llega en ms; reintenta hasta ~3.5s).
+   2) Fallback definitivo: leer el producto DIRECTO de la base con la función
+      pública producto_publico e inyectarlo en el catálogo para abrirlo.
+   La URL se CONSERVA (es la página del producto) y respeta el gate de
+   mantenimiento (si bloquea, la ficha la pinta el propio gate). */
+async function abrirProductoDesdeEnlaceCompartido() {
   const params = new URLSearchParams(window.location.search);
-  let id = params.get("producto");
+  const id = params.get("producto");
   if (!id) return;
-  if (document.getElementById("mantenimiento-overlay")) return;
+  if (document.getElementById("mantenimiento-overlay")) return; // la ficha la pinta el gate
   enlaceProductoAtendido = true;
-  // Compatibilidad: si el ID ya no existe, resolver el ID legado equivalente.
-  if (!products.some((item) => String(item.id) === String(id))) {
-    const remapeado = resolverIdProductoLegado(id);
-    if (remapeado) id = remapeado;
-  }
-  const existe = products.some((item) => String(item.id) === String(id));
-  if (!existe) {
-    if (products.length > 0) notify("El producto compartido ya no está disponible", "error");
-    return;
-  }
   const color = params.get("color") || "";
-  openProductModal(id, color, { cargaDirecta: true });
+
+  // 1) Esperar el catálogo (realtime)
+  for (let intento = 0; intento < 7; intento++) {
+    const producto = resolverProductoDelEnlace(id);
+    if (producto) {
+      openProductModal(producto.id, color, { cargaDirecta: true });
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+
+  // 2) Fallback: lectura directa por RPC (funciona siempre, incluso con
+  //    mantenimiento activo o realtime caído).
+  try {
+    const { supabase } = await import("./supabase-config.js");
+    let idBuscado = id;
+    let data = null;
+    const directa = await supabase.rpc("producto_publico", { p_id: String(idBuscado) });
+    data = directa?.data || null;
+    if (!data) {
+      const legado = resolverIdProductoLegado(idBuscado);
+      if (legado) {
+        const resp = await supabase.rpc("producto_publico", { p_id: legado });
+        data = resp?.data || null;
+      }
+    }
+    if (data && data.id) {
+      const producto = normalizeProductRecord({ id: data.id, ...data });
+      if (!products.some((item) => String(item.id) === String(producto.id))) {
+        products.push(producto); // queda disponible para la vista y el carrito
+      }
+      openProductModal(producto.id, color, { cargaDirecta: true });
+      return;
+    }
+  } catch (err) {
+    console.warn("[compartir] No se pudo cargar el producto por RPC:", err);
+  }
+
+  notify("El producto compartido ya no está disponible", "error");
 }
 
 /* ========================================================================== 
