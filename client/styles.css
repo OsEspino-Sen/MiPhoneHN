@@ -4076,13 +4076,28 @@ html.entrada-producto-directa #announcement-bar {
   flex-shrink: 0;
 }
 
+/* Hero con imagen: capa ::before independiente para hacer crossfade
+   (la imagen aparece con fade cuando terminó de cargar; nunca de golpe). */
 .hero-section.has-hero-img {
   position: relative;
   background-color: var(--bg-primary);
+}
+
+.hero-section.has-hero-img::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   background-image: linear-gradient(rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.88)), var(--hero-img);
   background-position: center top;
   background-size: cover;
   background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.hero-section.has-hero-img.hero-img-lista::before {
+  opacity: 1;
 }
 
 .hero-section.has-hero-img .hero-content,
@@ -4093,6 +4108,9 @@ html.entrada-producto-directa #announcement-bar {
 
 [data-theme="dark"] .hero-section.has-hero-img {
   background-color: var(--bg-primary);
+}
+
+[data-theme="dark"] .hero-section.has-hero-img::before {
   background-image: linear-gradient(rgba(10, 15, 25, 0.86), rgba(10, 15, 25, 0.86)), var(--hero-img);
   background-position: center top;
   background-size: cover;
@@ -4927,5 +4945,15 @@ body.page-ready > *:not(.page-loader) {
 }
 
 .brand-logo-img.logo-cargada {
+  opacity: 1;
+}
+
+/* Fade-in de imágenes de categorías (sin pop-in al hacer scroll) */
+.category-card-image img {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.category-card-image img.cat-cargada {
   opacity: 1;
 }

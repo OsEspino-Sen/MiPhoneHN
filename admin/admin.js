@@ -661,6 +661,8 @@ function init() {
         }
 
         adminApp.hidden = false;
+        // El loader cubre hasta que las imágenes de la BD estén aplicadas.
+        ocultarAdminLoaderCuandoListo();
         listenToProducts();
         listenToCategories();
         // Migración de estructura ya realizada (IDs secuenciales producto-N / Usuario-Admin-N).
@@ -3919,26 +3921,46 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     window.__imagenesSupabase = window.__imagenesSupabase || {};
     window.__imagenesSupabase[key] = true;
     const finalUrl = url.startsWith('data:') ? url : url + '?t=' + Date.now();
-    switch (key) {
-      case 'imagen_banner_panel':
-        const bannerImg = document.querySelector('#admin-banner');
-        if (bannerImg) bannerImg.style.backgroundImage = `url('${finalUrl}')`;
-        break;
-      case 'imagen_sidebar':
-        const sidebarBg = document.getElementById('sidebar-bg');
-        if (sidebarBg) sidebarBg.style.backgroundImage = `url('${finalUrl}')`;
-        break;
-      case 'imagen_tarjeta_promocional':
-        const promoBg = document.getElementById('promo-bg');
-        if (promoBg) promoBg.style.backgroundImage = `url('${finalUrl}')`;
-        break;
-      case 'imagen_barra_principal':
-        const barraImg = document.getElementById('imagen-barra');
-        if (barraImg) { barraImg.src = finalUrl; barraImg.style.display = 'block'; }
-        break;
-      case 'imagen_login':
-        break;
-    }
+    // Precarga + aparición suave: la imagen solo se aplica cuando el archivo
+    // está completo (nunca a medio cargar, nunca de golpe).
+    const aplicar = () => {
+      switch (key) {
+        case 'imagen_banner_panel': {
+          const bannerImg = document.querySelector('#admin-banner');
+          if (bannerImg) { bannerImg.style.backgroundImage = `url('${finalUrl}')`; aparecer(bannerImg); }
+          break;
+        }
+        case 'imagen_sidebar': {
+          const sidebarBg = document.getElementById('sidebar-bg');
+          if (sidebarBg) { sidebarBg.style.backgroundImage = `url('${finalUrl}')`; aparecer(sidebarBg); }
+          break;
+        }
+        case 'imagen_tarjeta_promocional': {
+          const promoBg = document.getElementById('promo-bg');
+          if (promoBg) { promoBg.style.backgroundImage = `url('${finalUrl}')`; aparecer(promoBg); }
+          break;
+        }
+        case 'imagen_barra_principal': {
+          const barraImg = document.getElementById('imagen-barra');
+          if (barraImg) { barraImg.src = finalUrl; barraImg.style.display = 'block'; aparecer(barraImg); }
+          break;
+        }
+        case 'imagen_login':
+          break;
+      }
+    };
+    if (url.startsWith('data:')) { aplicar(); return; }
+    const test = new Image();
+    test.onload = aplicar;
+    test.onerror = aplicar;
+    test.src = finalUrl;
+  }
+
+  function aparecer(el) {
+    if (!el) return;
+    el.classList.remove('img-aparece');
+    void el.offsetWidth;
+    el.classList.add('img-aparece');
   }
 
   function readAsDataURL(blob) {
@@ -4336,6 +4358,38 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     document.title = `${nombre} - Panel de administración`;
     const brandCopy = document.querySelector('.sidebar-brand-copy strong');
     if (brandCopy) brandCopy.textContent = nombre;
+    // Loader de entrada: nombre real confirmado → visible (sin swap).
+    const loaderBrand = document.querySelector('.admin-loader-brand');
+    if (loaderBrand) {
+      loaderBrand.textContent = nombre;
+      loaderBrand.classList.add('marca-confirmada');
+    }
+  }
+
+  /* Oculta el loader de entrada cuando la sesión y las imágenes de la BD
+     están listas (con tope de seguridad). Nunca antes: la entrada se ve
+     completa, sin imágenes que aparecen de golpe después. */
+  function ocultarAdminLoaderCuandoListo() {
+    const loader = document.getElementById('admin-loader');
+    if (!loader || loader.dataset.done) return;
+    const fin = () => {
+      if (loader.dataset.done) return;
+      loader.dataset.done = '1';
+      loader.classList.add('admin-loader--done');
+      setTimeout(() => loader.remove(), 600);
+    };
+    const t0 = performance.now();
+    const esperar = async () => {
+      try {
+        await Promise.race([
+          window.__imagenesDbListas || Promise.resolve(),
+          new Promise((r) => setTimeout(r, 2500))
+        ]);
+      } catch {}
+      const restante = Math.max(0, 600 - (performance.now() - t0));
+      setTimeout(fin, restante);
+    };
+    esperar();
   }
 
   /* Marca TEMPRANA: lee el nombre real del negocio al arrancar el panel,
@@ -4345,7 +4399,15 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     try {
       const snap = await getDoc(doc(db, SETTINGS_COLLECTION, 'empresa'));
       if (snap.exists()) aplicarMarcaEnAdmin(snap.data()?.name);
-    } catch { /* silencioso: loadDoc aplicará la marca en su flujo normal */ }
+      else ocultarMarcaLoader();
+    } catch {
+      ocultarMarcaLoader();
+    }
+    function ocultarMarcaLoader() {
+      // Sin respuesta de la BD: revelar la marca por defecto (fallback de red).
+      const loaderBrand = document.querySelector('.admin-loader-brand');
+      if (loaderBrand) loaderBrand.classList.add('marca-confirmada');
+    }
   })();
 
   function marcarOriginalDoc(docId) {

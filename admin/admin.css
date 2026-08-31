@@ -5762,3 +5762,93 @@ section:not([hidden]) {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ==========================================================================
+   LOADER DE ENTRADA (Panel Admin + Login)
+   Cubre la pantalla mientras la sesión y las imágenes de la BD cargan.
+   La marca solo aparece cuando el nombre real fue confirmado.
+   ========================================================================== */
+.admin-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary, #f4f5f7);
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.admin-loader--done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.admin-loader-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-loader-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent, #2440e8), #6a7dff);
+  animation: admin-loader-late 1.4s ease-in-out infinite;
+}
+
+.admin-loader-brand {
+  font-family: var(--font-heading, Inter, sans-serif);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text-primary, #12141a);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.admin-loader-brand.marca-confirmada {
+  opacity: 1;
+}
+
+.admin-loader-bar {
+  position: relative;
+  width: 130px;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, #2440e8) 18%, transparent);
+  overflow: hidden;
+}
+
+.admin-loader-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--accent, #2440e8);
+  transform-origin: left;
+  animation: admin-loader-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes admin-loader-late {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+@keyframes admin-loader-slide {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(110%); }
+}
+
+/* Aparición suave de imágenes del panel (sin pops) */
+.img-aparece {
+  animation: img-aparece 0.5s ease;
+}
+
+@keyframes img-aparece {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
