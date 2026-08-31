@@ -17,6 +17,30 @@
 </head>
 <body>
 
+  <!-- LOADER DE ENTRADA -->
+  <div id="admin-loader" class="admin-loader admin-loader--login">
+    <div class="admin-loader-inner">
+      <span class="admin-loader-mark"></span>
+      <span class="admin-loader-bar"></span>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var t0 = performance.now();
+      var quitar = function () {
+        var l = document.getElementById('admin-loader');
+        if (!l || l.dataset.done) return;
+        l.dataset.done = '1';
+        l.classList.add('admin-loader--done');
+        setTimeout(function () { l.remove(); }, 600);
+      };
+      var programar = function () { setTimeout(quitar, Math.max(0, 600 - (performance.now() - t0))); };
+      if (document.readyState === 'complete') programar();
+      else window.addEventListener('load', programar);
+      setTimeout(quitar, 3000);
+    })();
+  </script>
+
   <section id="login-screen" class="login-screen">
     <div class="login-outer">
       <!-- Left: Image -->

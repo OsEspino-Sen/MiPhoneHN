@@ -475,9 +475,21 @@ function finishPageLoader() {
   setTimeout(() => loader.remove(), 700);
 }
 
+/* Fade-in de imágenes de categorías al terminar de cargar (sin pop-in).
+   Listener en captura + barrido para imágenes ya completas desde caché. */
+function marcarImagenCargada(img) {
+  if (img instanceof HTMLImageElement && img.closest(".category-card-image")) {
+    img.classList.add("cat-cargada");
+  }
+}
+document.addEventListener("load", (e) => marcarImagenCargada(e.target), true);
+
 document.addEventListener("DOMContentLoaded", () => {
   iniciarMantenimientoCliente();
   registrarNodosMarca();
+  document.querySelectorAll(".category-card-image img").forEach((img) => {
+    if (img.complete && img.naturalWidth > 0) img.classList.add("cat-cargada");
+  });
   aplicarWhatsAppEnlaces();
   initTheme();
   updateCartUI();
@@ -3126,9 +3138,16 @@ function applyHeroImage(dataUrl) {
   const hero = document.getElementById("hero");
   if (!hero) return;
   const finalUrl = optimizeCloudinaryUrl(dataUrl, 1920);
-  hero.style.setProperty("--hero-img", `url('${finalUrl}')`);
-  // Precarga rastreada: la revelación de la página espera el fondo del hero.
-  promesaHeroPrecargado = precargarImagen(finalUrl);
+  // Crossfade: precargar → aplicar → fundido de entrada (nunca de golpe).
+  promesaHeroPrecargado = precargarImagen(finalUrl).then(() => {
+    const yaVisible = hero.classList.contains("hero-img-lista");
+    if (yaVisible) hero.classList.remove("hero-img-lista");
+    hero.style.setProperty("--hero-img", `url('${finalUrl}')`);
+    hero.classList.add("has-hero-img");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => hero.classList.add("hero-img-lista"));
+    });
+  });
   hero.classList.add("has-hero-img");
 }
 
@@ -3389,25 +3408,33 @@ async function loadSiteSettings() {
     const settingsRef = collection(db, "configuracion");
     const imagesRef = collection(db, "imagenes");
 
-    /* Guarda anti-carrera: cada evento dispara un applyAll asíncrono. Si una
-       petición antigua resuelve DESPUÉS de una reciente, se descarta (solo la
-       más reciente escribe estado). Nunca datos viejos sobre datos nuevos. */
-    let applySeq = 0;
-    const applyAll = async () => {
-      const seq = ++applySeq;
-      try {
-        const [snapA, snapB] = await Promise.all([getDocs(settingsRef), getDocs(imagesRef)]);
-        if (seq !== applySeq) return;
-        applySiteSettings([...snapA.docs, ...snapB.docs]);
-        cerrarPrimera();
-      } catch (err) {
-        console.warn("No se pudo cargar la configuración del sitio:", err);
-        cerrarPrimera();
-      }
+    /* OPTIMIZACIÓN: realtime ya entrega el snapshot completo de cada
+       colección — se aplica directamente, SIN re-consultar. Antes cada evento
+       disparaba 2 getDocs (y el arranque, 4 consultas); ahora: 2 en total.
+       Solo se aplica cuando AMBAS colecciones tienen dato reciente. */
+    let ultimasConfig = null;
+    let ultimasImagenes = null;
+    const aplicarConLoUltimo = () => {
+      if (!ultimasConfig || !ultimasImagenes) return;
+      applySiteSettings([...ultimasConfig.docs, ...ultimasImagenes.docs]);
+      cerrarPrimera();
     };
 
-    onSnapshot(settingsRef, () => { applyAll(); }, applyAll);
-    onSnapshot(imagesRef, () => { applyAll(); }, applyAll);
+    onSnapshot(settingsRef, (snap) => {
+      ultimasConfig = snap;
+      aplicarConLoUltimo();
+    }, async () => {
+      try { ultimasConfig = await getDocs(settingsRef); aplicarConLoUltimo(); }
+      catch (err) { console.warn("No se pudo cargar la configuración del sitio:", err); cerrarPrimera(); }
+    });
+
+    onSnapshot(imagesRef, (snap) => {
+      ultimasImagenes = snap;
+      aplicarConLoUltimo();
+    }, async () => {
+      try { ultimasImagenes = await getDocs(imagesRef); aplicarConLoUltimo(); }
+      catch (err) { console.warn("No se pudieron cargar las imágenes del sitio:", err); cerrarPrimera(); }
+    });
   } catch (error) {
     console.warn("No se pudo conectar para cargar la configuración del sitio:", error);
     cerrarPrimera();
