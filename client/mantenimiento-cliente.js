@@ -118,6 +118,11 @@ export async function iniciarMantenimientoCliente() {
   if (estado) aplicarEstado(estado);
   quitarBoot();
 
+  // Producto compartido (?producto=<id>): mostrar su ficha sobre la página de
+  // mantenimiento leyéndolo vía función pública (el catálogo está cerrado por
+  // RLS, pero un enlace compartido no debe morir durante el cierre).
+  await mostrarProductoCompartidoEnMantenimiento();
+
   try {
     const { supabase } = await import('./supabase-config.js');
     const canal = supabase
@@ -139,4 +144,107 @@ export async function iniciarMantenimientoCliente() {
   } catch (err) {
     console.warn('[mantenimiento] Realtime no disponible:', err);
   }
+}
+
+/* ==========================================================================
+   PRODUCTO COMPARTIDO DURANTE EL MANTENIMIENTO
+   Un enlace ?producto=<id> abierto mientras la tienda está cerrada muestra
+   la ficha de ESE producto sobre la página de mantenimiento, leyéndolo por
+   la función pública producto_publico (el catálogo sigue bloqueado por RLS).
+   ========================================================================== */
+
+let productoCompartidoAtendido = false;
+
+/* IDs legados → actuales (tras la renumeración del catálogo). Enlaces
+   compartidos antes de la renumeración siguen funcionando. */
+const PRODUCTO_IDS_LEGADO = {
+  'producto-2': 'producto-1', 'producto-3': 'producto-2', 'producto-4': 'producto-3',
+  'producto-6': 'producto-4', 'producto-7': 'producto-5', 'producto-8': 'producto-6',
+  'producto-41': 'producto-7', 'producto-13': 'producto-8', 'producto-14': 'producto-9',
+  'producto-15': 'producto-10', 'producto-16': 'producto-11', 'producto-17': 'producto-12',
+  'producto-18': 'producto-13', 'producto-19': 'producto-14', 'producto-20': 'producto-15',
+  'producto-21': 'producto-16', 'producto-22': 'producto-17', 'producto-23': 'producto-18',
+  'producto-24': 'producto-19', 'producto-25': 'producto-20', 'producto-26': 'producto-21',
+  'producto-27': 'producto-22', 'producto-28': 'producto-23', 'producto-29': 'producto-24',
+  'producto-30': 'producto-25', 'producto-31': 'producto-26', 'producto-32': 'producto-27',
+  'producto-33': 'producto-28', 'producto-34': 'producto-29', 'producto-35': 'producto-30',
+  'producto-36': 'producto-31', 'producto-37': 'producto-32', 'producto-38': 'producto-33'
+};
+
+function mntEsc(valor) {
+  return String(valor ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function traerProductoPublico(id) {
+  const { supabase } = await import('./supabase-config.js');
+  const { data, error } = await supabase.rpc('producto_publico', { p_id: String(id) });
+  if (error) throw error;
+  return data || null;
+}
+
+async function mostrarProductoCompartidoEnMantenimiento() {
+  if (productoCompartidoAtendido) return;
+  const params = new URLSearchParams(window.location.search);
+  let id = params.get('producto');
+  if (!id) return;
+  productoCompartidoAtendido = true;
+
+  try {
+    let producto = await traerProductoPublico(id);
+    // Compatibilidad: enlaces compartidos antes de la renumeración del catálogo.
+    if (!producto) {
+      const legado = PRODUCTO_IDS_LEGADO[String(id).trim().toLowerCase()];
+      if (legado) producto = await traerProductoPublico(legado);
+    }
+    if (!producto || !producto.title) return;
+    renderProductoCompartido(producto);
+  } catch (err) {
+    console.warn('[mantenimiento] No se pudo mostrar el producto compartido:', err);
+  }
+}
+
+function mntColoresHTML(colores) {
+  if (!Array.isArray(colores) || colores.length === 0) return '';
+  const items = colores
+    .filter((c) => c && c.name)
+    .slice(0, 8)
+    .map((c) => {
+      const hex = /^#[0-9a-fA-F]{3,8}$/.test(String(c.hex || c.value || '')) ? (c.hex || c.value) : '#cccccc';
+      return `<span class="mnt-producto-color"><i style="--swatch:${mntEsc(hex)}" aria-hidden="true"></i>${mntEsc(c.name)}</span>`;
+    })
+    .join('');
+  return items ? `<div class="mnt-producto-colores">${items}</div>` : '';
+}
+
+function renderProductoCompartido(p) {
+  const pagina = document.querySelector('#mantenimiento-overlay .mnt-page');
+  if (!pagina) return;
+
+  const imagenes = Array.isArray(p.images) ? p.images : [];
+  const imagen = imagenes[0] || p.image || '';
+  const storage = Array.isArray(p.variants?.storage) ? p.variants.storage : [];
+  const precio = storage.length ? Number(storage[0].price) || 0 : Number(p.price) || 0;
+  const colores = Array.isArray(p.variants?.colors) ? p.variants.colors : [];
+  const condicion = String(p.condition || '').toLowerCase() === 'seminuevo' ? 'Seminuevo' : 'Nuevo';
+
+  const tarjeta = `
+    <article class="mnt-producto" aria-label="Producto compartido">
+      ${imagen ? `<img class="mnt-producto-img" src="${mntEsc(imagen)}" alt="${mntEsc(p.title || 'Producto')}" loading="lazy" onerror="this.style.display='none'">` : ''}
+      <div class="mnt-producto-info">
+        <div class="mnt-producto-fila">
+          <span class="mnt-producto-badge ${condicion === 'Nuevo' ? '' : 'is-used'}">${mntEsc(condicion)}</span>
+          <span class="mnt-producto-marca">${mntEsc(p.brand || '')}</span>
+        </div>
+        <h2 class="mnt-producto-nombre">${mntEsc(p.title || 'Producto')}</h2>
+        <span class="mnt-producto-precio">L ${precio.toLocaleString('es-HN')}</span>
+        ${p.description ? `<p class="mnt-producto-desc">${mntEsc(p.description)}</p>` : ''}
+        ${mntColoresHTML(colores)}
+        <span class="mnt-producto-nota"><i class="ph ph-clock-countdown" aria-hidden="true"></i> La tienda está temporalmente cerrada. Este producto estará disponible cuando reabramos.</span>
+      </div>
+    </article>`;
+  pagina.insertAdjacentHTML('beforeend', tarjeta);
 }
