@@ -221,7 +221,10 @@
         const snap = await getDoc(doc(db, 'imagenes', 'logo'));
         const data = snap.exists() ? snap.data() : null;
         const url = data?.url || data?.data;
-        if (!url) return;
+        if (!url) {
+          document.querySelector('#admin-loader .admin-loader-mark')?.classList.add('fallback-visible');
+          return;
+        }
         const src = url.startsWith('data:') ? url : url + '?t=' + Date.now();
         const mark = document.querySelector('.login-brand-mark');
         if (mark) {
@@ -232,8 +235,13 @@
         }
         const loaderMark = document.querySelector('#admin-loader .admin-loader-mark');
         if (loaderMark && !loaderMark.classList.contains('has-logo')) {
-          loaderMark.innerHTML = `<img src="${src}" alt="" class="admin-loader-logo">`;
-          loaderMark.classList.add('has-logo');
+          const imgLoader = new Image();
+          imgLoader.onload = () => {
+            loaderMark.innerHTML = `<img src="${src}" alt="" class="admin-loader-logo">`;
+            loaderMark.classList.add('has-logo', 'logo-lista');
+          };
+          imgLoader.onerror = () => loaderMark.classList.add('fallback-visible');
+          imgLoader.src = src;
         }
       } catch (_) {}
     })();

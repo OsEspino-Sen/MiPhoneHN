@@ -5867,3 +5867,16 @@ section:not([hidden]) {
   background: transparent;
   border: none;
 }
+
+/* La marca del loader permanece invisible hasta que su contenido estA listo:
+   logo cargado (logo-lista) o fallback con degradado (fallback-visible).
+   Nunca se ve el cuadro azul vacIo y luego el logo apareciendo de golpe. */
+.admin-loader-mark {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.admin-loader-mark.logo-lista,
+.admin-loader-mark.fallback-visible {
+  opacity: 1;
+}
