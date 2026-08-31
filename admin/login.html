@@ -46,9 +46,12 @@
     <div class="login-outer">
       <!-- Left: Image -->
       <div class="login-visual" aria-hidden="true">
-        <div class="login-image-wrapper" id="login-image-wrapper">
-          <img id="login-custom-image" src="imagen-login.jpeg" alt="Visual administracion" loading="eager">
-          <div class="login-image-placeholder" id="login-image-placeholder">
+        <div class="login-image-wrapper is-cargando" id="login-image-wrapper">
+          <!-- Sin src inicial: la imagen solo aparece cuando la fuente real
+               (BD o fallback local) terminó de precargar. Nunca se muestra
+               primero una imagen anterior mientras carga la actual. -->
+          <img id="login-custom-image" alt="Visual administracion" loading="eager">
+          <div class="login-image-placeholder" id="login-image-placeholder" hidden>
             <span class="placeholder-icon"><i class="ph ph-image" aria-hidden="true"></i></span>
             <strong>Tu imagen 3D aquí</strong>
             <span>Coloca un archivo llamado <code>imagen-login.jpg</code> en la carpeta principal</span>
@@ -111,6 +114,20 @@
       const placeholder = document.getElementById('login-image-placeholder');
       if (!wrapper || !img) return;
 
+      // Muestra una imagen solo después de precargarla: nunca se ve una
+      // imagen parcial o anterior durante la carga.
+      const mostrar = (src) => {
+        const pre = new Image();
+        pre.onload = () => {
+          img.src = src;
+          wrapper.classList.add('has-image');
+          wrapper.classList.remove('is-cargando');
+          if (placeholder) placeholder.hidden = true;
+        };
+        pre.onerror = () => wrapper.classList.remove('is-cargando');
+        pre.src = src;
+      };
+
       // Primer intento: leer desde Supabase
       import('./supabase-config.js').then(async ({ db, collection, getDocs, getDoc, doc }) => {
         try {
@@ -120,10 +137,7 @@
           const docData = docSnap.exists() ? docSnap.data() : (docSnapLegacy && docSnapLegacy.exists() ? docSnapLegacy.data() : null);
           const loginSrc = docData ? (docData.data || docData.url) : null;
           if (loginSrc) {
-            img.src = loginSrc;
-            img.style.opacity = '1';
-            wrapper.classList.add('has-image');
-            if (placeholder) placeholder.style.display = 'none';
+            mostrar(loginSrc);
             return;
           }
         } catch (_) {}
@@ -142,18 +156,14 @@
         let i = 0;
         const tryNext = () => {
           if (i >= candidates.length) {
+            wrapper.classList.remove('is-cargando');
             wrapper.classList.remove('has-image');
-            if (placeholder) placeholder.style.display = 'flex';
+            if (placeholder) placeholder.hidden = false;
             return;
           }
           const src = candidates[i++];
           const test = new Image();
-          test.onload = () => {
-            img.src = src;
-            img.style.opacity = '1';
-            wrapper.classList.add('has-image');
-            if (placeholder) placeholder.style.display = 'none';
-          };
+          test.onload = () => mostrar(src);
           test.onerror = tryNext;
           test.src = src + '?t=' + Date.now();
         };
@@ -168,7 +178,8 @@
           const url = URL.createObjectURL(file);
           img.src = url;
           wrapper.classList.add('has-image');
-          if (placeholder) placeholder.style.display = 'none';
+          wrapper.classList.remove('is-cargando');
+          if (placeholder) placeholder.hidden = true;
         }
       });
     })();

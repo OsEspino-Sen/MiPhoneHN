@@ -5880,3 +5880,117 @@ section:not([hidden]) {
 .admin-loader-mark.fallback-visible {
   opacity: 1;
 }
+
+/* ==========================================================================
+   SKELETON DE TABLA DE PRODUCTOS (Admin)
+   Se muestra mientras el primer snapshot llega desde Supabase. Misma
+   estructura que una fila real para evitar saltos de layout. Nunca se ve
+   una tabla vacia sin indicacion ni datos de una carga anterior.
+   ========================================================================== */
+.data-grid-row--skeleton {
+  pointer-events: none;
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--ink, #12141a) 8%, transparent) 25%,
+    color-mix(in srgb, var(--ink, #12141a) 16%, transparent) 50%,
+    color-mix(in srgb, var(--ink, #12141a) 8%, transparent) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-onda 1.3s ease-in-out infinite;
+}
+
+.skeleton-line--producto {
+  width: 70%;
+  height: 30px;
+  border-radius: 9px;
+}
+
+.skeleton-line--corta {
+  width: 45%;
+}
+
+.skeleton-line--cuadro {
+  width: 34px;
+  height: 30px;
+  border-radius: 9px;
+  margin-left: auto;
+}
+
+@keyframes skeleton-onda {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* Estado de error del loader de entrada: sesion no verificada (sin red) */
+.admin-loader-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 92px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  font-family: var(--font-heading, Inter, sans-serif);
+}
+
+.admin-loader-error p {
+  margin: 0;
+  color: var(--text-secondary, #4a4f5c);
+  font-size: 0.875rem;
+}
+
+.admin-loader-error p:first-child {
+  font-weight: 700;
+  color: var(--text-primary, #12141a);
+}
+
+.admin-loader-error button {
+  border: 0;
+  cursor: pointer;
+  padding: 8px 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: #fff;
+  background: var(--accent, #2440e8);
+  transition: filter 0.2s ease;
+}
+
+.admin-loader-error button:hover {
+  filter: brightness(1.1);
+}
+
+/* Imagen del login: invisible hasta que la imagen real termina de precargar
+   (has-image). Nunca se muestra una imagen anterior mientras carga la actual. */
+.login-image-wrapper img {
+  opacity: 0;
+}
+
+/* Skeleton del area visual mientras se determina la imagen real */
+.login-image-wrapper.is-cargando::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+  animation: login-skeleton 1.4s ease-in-out infinite;
+}
+
+@keyframes login-skeleton {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* El placeholder solo aparece si al final no hay ninguna imagen */
+.login-image-wrapper.is-cargando .login-image-placeholder {
+  visibility: hidden;
+}
+
+.login-image-placeholder[hidden] {
+  display: none;
+}

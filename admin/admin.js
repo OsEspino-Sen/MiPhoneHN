@@ -520,6 +520,7 @@ function closeCategoryModal() {
 }
 
 let products = [];
+let productsCargando = false;
 let editingProductId = null;
 let confirmCallback = null;
 let unsubscribeRealtime = null;
@@ -687,6 +688,19 @@ if (document.readyState === "loading") {
 }
 
 function init() {
+  // Watchdog: si la verificación de sesión no responde (p. ej. sin Internet),
+  // el loader muestra un estado de error con reintento en vez de colgarse.
+  setTimeout(() => {
+    const loader = document.getElementById('admin-loader');
+    if (!loader || loader.dataset.done || adminApp.hidden) return;
+    if (loader.querySelector('.admin-loader-error')) return;
+    const aviso = document.createElement('div');
+    aviso.className = 'admin-loader-error';
+    aviso.innerHTML = '<p>No se pudo verificar la sesión.</p><p>Comprueba tu conexión a Internet e inténtalo nuevamente.</p><button type="button">Reintentar</button>';
+    aviso.querySelector('button').addEventListener('click', () => window.location.reload());
+    loader.appendChild(aviso);
+  }, 10000);
+
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       try {
@@ -1448,6 +1462,7 @@ async function autoImportProductsJson() {
 
 function listenToProducts() {
   setLoading(true);
+  renderProductsSkeleton();
   const productsRef = collection(db, "productos");
 
   if (unsubscribeRealtime) {
@@ -1465,6 +1480,7 @@ function listenToProducts() {
         ...docSnap.data()
       }));
 
+      productsCargando = false;
       migrateLegacyProductImages(products);
       renderProductsTable();
       updateDashboardMetrics();
@@ -1478,6 +1494,26 @@ function listenToProducts() {
   }
 }
 
+/* Skeleton de la tabla mientras el primer snapshot llega desde Supabase:
+   la tabla nunca se queda vacía sin indicación (parecía rota) ni muestra
+   datos de una carga anterior. */
+function renderProductsSkeleton() {
+  if (!productsTableBody) return;
+  productsCargando = true;
+  emptyTableMsg.hidden = true;
+  const skeletonRow = `
+    <div class="data-grid-row data-grid-row--skeleton" aria-hidden="true">
+      <div class="data-grid-cell"><div class="skeleton-line skeleton-line--producto"></div></div>
+      <div class="data-grid-cell"><div class="skeleton-line"></div></div>
+      <div class="data-grid-cell"><div class="skeleton-line skeleton-line--corta"></div></div>
+      <div class="data-grid-cell data-grid-cell--right"><div class="skeleton-line skeleton-line--corta"></div></div>
+      <div class="data-grid-cell data-grid-cell--right data-grid-cell--actions"><div class="skeleton-line skeleton-line--cuadro"></div></div>
+    </div>`;
+  productsTableBody.innerHTML = skeletonRow.repeat(8);
+  const chip = document.getElementById("table-count-chip");
+  if (chip) chip.textContent = "Cargando…";
+}
+
 async function fetchProductsFallback() {
   try {
     const productsRef = collection(db, "productos");
@@ -1486,11 +1522,15 @@ async function fetchProductsFallback() {
       id: docSnap.id,
       ...docSnap.data()
     }));
+    productsCargando = false;
     migrateLegacyProductImages(products);
     renderProductsTable();
     updateDashboardMetrics();
   } catch (err) {
     console.error("Error al obtener productos vía fallback:", err);
+    productsCargando = false;
+    productsTableBody.innerHTML = "";
+    emptyTableMsg.hidden = false;
     showAlert("Conexión bloqueada por el navegador.", "error");
   } finally {
     setLoading(false);
@@ -1536,6 +1576,9 @@ function getFilteredProducts() {
 }
 
 function renderProductsTable() {
+  // Mientras el primer snapshot no llega, la tabla mantiene su skeleton
+  // (búsqueda/filtro no deben pintar "sin productos" con datos a medias).
+  if (productsCargando) { renderProductsSkeleton(); return; }
   // FLAT OPS v7 — Rework total de renderizado: colores planos, sin círculos infantiles, jerarquía editorial
   const filtered = getFilteredProducts();
 
@@ -3749,6 +3792,11 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   const setSidebarBg = () => {
     const el = document.getElementById('sidebar-bg');
     if (!el) return;
+    /* DATOS ACTUALES > DATOS ANTIGUOS: los archivos estáticos del repo son
+       SOLO un último recurso, igual que imagen_barra. Se prueban DESPUÉS de
+       que la BD terminó de cargar sin imagen para esta clave; nunca antes
+       (mostraban la imagen vieja y luego llegaba la de la BD con un salto). */
+    const fromSupabase = () => window.__imagenesSupabase && window.__imagenesSupabase.imagen_sidebar;
     const candidates = [
       'imagensidebar.jpg','imagensidebar.png','imagensidebar.webp','imagensidebar.jpeg',
       'imagensidebar.JPG','imagensidebar.PNG',
@@ -3757,6 +3805,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     ];
     let idx=0;
     const tryNext=()=>{
+      if (fromSupabase()) return;
       if(idx>=candidates.length){
         // fallback: generate subtle dark texture with canvas
         el.style.background = 'radial-gradient(400px 300px at 20% 20%, #151A2E, transparent 70%), radial-gradient(500px 360px at 80% 80%, #12182C, transparent 70%), #0E101C';
@@ -3767,6 +3816,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       const src=candidates[idx++];
       const img=new Image();
       img.onload=()=>{
+        if (fromSupabase()) return;
         el.style.backgroundImage = `url('${src}')`;
         el.style.backgroundSize='cover';
         el.style.backgroundPosition='center';
@@ -3781,6 +3831,9 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   const setPromoBg = () => {
     const el=document.getElementById('promo-bg');
     if(!el) return;
+    /* Mismo criterio que sidebar: los estáticos solo después de que la BD
+       terminó sin imagen para esta clave. */
+    const fromSupabase = () => window.__imagenesSupabase && window.__imagenesSupabase.imagen_tarjeta_promocional;
     const candidates=[
       'imagentarjeta.jpg','imagentarjeta.png','imagentarjeta.webp','imagentarjeta.jpeg',
       'imagentarjeta.JPG','imagentarjeta.PNG',
@@ -3789,6 +3842,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     ];
     let idx=0;
     const tryNext=()=>{
+      if (fromSupabase()) return;
       if(idx>=candidates.length){
         el.style.background='linear-gradient(135deg, #1A1F3A 0%, #121525 100%)';
         el.classList.add('is-loaded');
@@ -3797,6 +3851,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       const src=candidates[idx++];
       const img=new Image();
       img.onload=()=>{
+        if (fromSupabase()) return;
         el.style.backgroundImage=`url('${src}')`;
         el.style.backgroundSize='cover';
         el.style.backgroundPosition='center';
@@ -3823,15 +3878,24 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     new MutationObserver(updatePromoStats).observe(metricTotal,{childList:true,characterData:true,subtree:true});
   }
 
-  // Init after DOM
+  // Los estáticos del repo se prueban SOLO cuando la carga de la BD terminó
+  // sin imagen para estas claves (nunca antes: evita el flash de imagen vieja
+  // seguida de la actual). Con tope de espera por si la BD no responde.
+  const cuandoBdLista = (cb) => {
+    const t0 = Date.now();
+    const intentar = () => {
+      if (window.__imagenesDbListas) { window.__imagenesDbListas.finally(cb); return; }
+      if (Date.now() - t0 > 4000) { cb(); return; }
+      setTimeout(intentar, 100);
+    };
+    intentar();
+  };
+  const aplicarFondos = () => { setSidebarBg(); setPromoBg(); };
   if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',()=>{ setSidebarBg(); setPromoBg(); updatePromoStats(); });
+    document.addEventListener('DOMContentLoaded',()=>{ updatePromoStats(); cuandoBdLista(aplicarFondos); });
   }else{
-    setSidebarBg(); setPromoBg(); updatePromoStats();
+    updatePromoStats(); cuandoBdLista(aplicarFondos);
   }
-
-  // Also try again after 2s in case images uploaded late
-  setTimeout(()=>{ setSidebarBg(); setPromoBg(); }, 2000);
 
   console.log('[v8 Final] Sidebar imagen + promo tarjeta integrada lista');
 })();
@@ -4325,7 +4389,9 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   ];
 
   const docsState = {};
-  TEXT_DOCS.forEach(d => { docsState[d] = { loaded: null, changed: false }; });
+  // `cargado` = la lectura desde la BD terminó BIEN (red OK). Solo entonces
+  // se permite guardar: evita persistir los DEFAULTS por un fallo de carga.
+  TEXT_DOCS.forEach(d => { docsState[d] = { loaded: null, changed: false, cargado: false }; });
   const imgState = {};
   const imgSaved = {};
   IMG_KEYS.forEach(k => { imgState[k] = { url: '', file: null, changed: false, hasImage: false, source: '' }; imgSaved[k] = ''; });
@@ -4809,6 +4875,15 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 
   // ---- Guardar / Cancelar por documento ----
   async function doSaveDoc(docId, card) {
+    // PROTECCIÓN DE DATOS: si la lectura inicial del doc falló (red caída),
+    // el formulario contiene DEFAULTS, no el estado real. Guardar ahora
+    // sobrescribiría la BD con valores antiguos/genéricos. Se bloquea.
+    if (!docsState[docId]?.cargado) {
+      cardStatus(card, 'error', 'Carga incompleta');
+      showAlert(`No se pudo cargar "${docId}" desde la base de datos. Comprueba tu conexión y recarga la página antes de guardar.`, 'error');
+      setTimeout(() => cardStatus(card, '', ''), 4000);
+      return;
+    }
     const values = collectDocValues(docId);
     LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => {
       values[cfg.listKey] = collectList(cfg);
@@ -5485,13 +5560,23 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   duoCard()?.querySelector('.settings-duo-cancel')?.addEventListener('click', doCancelPhones);
 
   // ---- Carga inicial ----
+  const reintentosDoc = {};
   async function loadDoc(docId) {
     let data = DEFAULTS[docId];
+    docsState[docId].cargado = false;
     try {
       const snap = await getDoc(doc(db, SETTINGS_COLLECTION, docId));
       if (snap.exists()) data = deepMerge(DEFAULTS[docId], snap.data());
+      // Red OK aunque el doc no exista: guardar es seguro.
+      docsState[docId].cargado = true;
     } catch (err) {
       console.warn(`[Settings Content] No se pudo cargar "${docId}".`);
+      // Reintento automático único: sin él, un fallo puntual dejaría el
+      // formulario en DEFAULTS y guardar pisaría la BD con valores viejos.
+      reintentosDoc[docId] = (reintentosDoc[docId] || 0) + 1;
+      if (reintentosDoc[docId] <= 2 && !docsState[docId].changed) {
+        setTimeout(() => { if (!docsState[docId].cargado) loadDoc(docId); }, 2500 * reintentosDoc[docId]);
+      }
     }
     docsState[docId].loaded = data;
     applyDocValues(docId, data);
