@@ -630,6 +630,15 @@ const includesList = document.getElementById("includes-list");
 const specsList = document.getElementById("specs-list");
 const colorsList = document.getElementById("colors-list");
 const addColorBtn = document.getElementById("add-color-btn");
+
+/* Regla: cada variante representa UN solo color. El botón "Agregar color"
+   solo existe cuando NO hay ningún color (p. ej. si el administrador quitó
+   el único). Con uno presente, desaparece: más colores = crear variante. */
+function actualizarBotonAgregarColor() {
+  if (!addColorBtn) return;
+  const hayColor = Boolean(colorsList?.querySelector(".color-row"));
+  addColorBtn.hidden = hayColor || activeVariantIndex > 0;
+}
 const storageList = document.getElementById("storage-list");
 const addIncludeBtn = document.getElementById("add-include-btn");
 const addSpecBtn = document.getElementById("add-spec-btn");
@@ -790,13 +799,17 @@ function init() {
   });
   /* Re-evaluación del estado del botón Guardar ante cambios ESTRUCTURALES:
      quitar filas (color/almacenamiento/incluye/especificaciones) no dispara
-     'input', así que sin esto el botón de actualizar no se habilitaba. */
+     'input', así que sin esto el botón de actualizar no se habilitaba.
+     También re-evalúa la visibilidad del botón "Agregar color". */
   productForm?.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
     const estructural = target.closest(".remove-row-btn") ||
       target.closest("#add-include-btn, #add-spec-btn, #add-storage-btn, #add-color-btn");
-    if (estructural) setTimeout(() => updateVariantColorWarning(), 0);
+    if (estructural) setTimeout(() => {
+      updateVariantColorWarning();
+      actualizarBotonAgregarColor();
+    }, 0);
   });
   /* Variantes de producto */
   addVariantBarBtn?.addEventListener("click", () => {
@@ -2118,7 +2131,7 @@ function renderVariantColorMode(draft) {
   const isVariant = activeVariantIndex > 0;
   if (variantColorEditor) variantColorEditor.hidden = !isVariant;
   if (colorsList) colorsList.hidden = isVariant;
-  if (addColorBtn) addColorBtn.hidden = isVariant;
+  actualizarBotonAgregarColor();
   if (isVariant) {
     variantColorNameInput.value = draft.colorName || "";
     updateVariantHexInput(draft.hex || "#cccccc", false);
@@ -2800,6 +2813,8 @@ function addColorRow(colorOrName = "", legacyValue = "#cccccc") {
     row.remove();
   });
   colorsList.appendChild(row);
+  // Con un color presente, el botón "Agregar color" desaparece (1 variante = 1 color).
+  actualizarBotonAgregarColor();
 }
 
 function addStorageRow(name = "128GB", price = 0, oldPrice = 0, stock = null) {

@@ -138,6 +138,10 @@ const FALLBACK_IMAGE =
   );
 
 let products = [];
+/* Estado de carga del catálogo: mientras el primer snapshot real no llega,
+   la tienda muestra skeletons y ningún render (búsqueda/filtros) puede
+   pintar "sin resultados" con datos a medias. */
+let catalogoCargando = true;
 let categories = [];
 let cart = getStoredCart();
 let activeCategory = "all";
@@ -495,6 +499,8 @@ document.addEventListener("DOMContentLoaded", () => {
   updateCartUI();
   setupEventListeners();
   initFinancingCalculator();
+  // Skeleton inicial de destacados (Inicio) mientras el catálogo actual llega.
+  showFeaturedLoading();
   Promise.allSettled([loadProducts(), loadCategories(), loadSiteSettings()])
     .then(() => document.fonts.ready)
     .then(async () => {
@@ -584,8 +590,13 @@ async function loadProducts() {
         id: docSnap.id,
         ...docSnap.data()
       }));
+      catalogoCargando = false;
       renderProducts();
       renderFeaturedCarousel();
+      // El detalle abierto y el carrito pasan a reflejar el estado ACTUAL
+      // del catálogo (precios, stock, productos eliminados) sin parpadeos.
+      sincronizarModalConCatalogo();
+      revalidarCarritoConCatalogo();
       cerrarPrimera();
     }, async (error) => {
       console.warn("?? Streaming en tiempo real bloqueado, intentando lectura única getDocs:", error);
@@ -595,8 +606,11 @@ async function loadProducts() {
           id: docSnap.id,
           ...docSnap.data()
         }));
+        catalogoCargando = false;
         renderProducts();
         renderFeaturedCarousel();
+        sincronizarModalConCatalogo();
+        revalidarCarritoConCatalogo();
       } catch (getErr) {
         console.error("Error al obtener catálogo desde Supabase:", getErr);
         showCatalogError();
@@ -822,12 +836,46 @@ function applyCategoryParamFilter() {
 
 function showCatalogLoading() {
   if (!productsGrid) return;
+  catalogoCargando = true;
 
-  productsGrid.innerHTML = `
-    <div class="catalog-status" role="status">
-      <p>Cargando productos...</p>
-    </div>
+  /* Skeleton con la MISMA estructura de una tarjeta real (imagen cuadrada,
+     textos y botón): la cuadrícula mantiene sus proporciones y no hay saltos
+     cuando llegan los datos actuales. */
+  const skeletonCard = `
+    <article class="product-card product-card--skeleton" aria-hidden="true">
+      <span class="product-image-container">
+        <span class="skeleton-bone skeleton-bone--imagen"></span>
+      </span>
+      <div class="product-info">
+        <span class="skeleton-bone skeleton-bone--linea" style="width: 42%"></span>
+        <span class="skeleton-bone skeleton-bone--linea skeleton-bone--titulo" style="width: 86%"></span>
+        <span class="skeleton-bone skeleton-bone--linea" style="width: 58%"></span>
+        <span class="skeleton-bone skeleton-bone--linea" style="width: 34%"></span>
+        <span class="skeleton-bone skeleton-bone--boton"></span>
+      </div>
+    </article>
   `;
+  productsGrid.innerHTML = skeletonCard.repeat(8);
+}
+
+/* Skeleton del carrusel de destacados (Inicio): mismas proporciones que una
+   featured-card real mientras el catálogo actual llega desde la BD. */
+function showFeaturedLoading() {
+  const track = document.getElementById("featured-track");
+  const section = document.getElementById("featured-section");
+  if (!track) return;
+  if (section) section.hidden = false;
+  track.innerHTML = Array.from({ length: 5 }, () => `
+    <span class="featured-card featured-card--skeleton" aria-hidden="true">
+      <span class="featured-image-wrap">
+        <span class="skeleton-bone skeleton-bone--imagen"></span>
+      </span>
+      <span class="featured-card-info">
+        <span class="skeleton-bone skeleton-bone--linea" style="width: 78%"></span>
+        <span class="skeleton-bone skeleton-bone--linea" style="width: 48%"></span>
+      </span>
+    </span>
+  `).join("");
 }
 
 function showCatalogError() {
@@ -835,8 +883,8 @@ function showCatalogError() {
 
   productsGrid.innerHTML = `
     <div class="catalog-status catalog-status-error" role="alert">
-      <h3>No se pudo cargar el catálogo</h3>
-      <p>Verifica tu conexión a internet y la configuración de Supabase.</p>
+      <h3>No se pudo cargar la información</h3>
+      <p>Comprueba tu conexión a Internet e inténtalo nuevamente.</p>
       <button type="button" class="btn btn-secondary" id="retry-catalog-btn">Reintentar</button>
     </div>
   `;
@@ -987,6 +1035,11 @@ function resetCatalogPagination() {
 
 function renderProducts() {
   if (!productsGrid) return;
+
+  // Mientras el primer snapshot real no llega, el catálogo mantiene sus
+  // skeletons: búsqueda/filtros no pueden pintar "sin resultados" con el
+  // catálogo todavía vacío.
+  if (catalogoCargando) { showCatalogLoading(); return; }
 
   let filteredProducts = products.filter((product) => {
     const title = String(product.title || "").toLowerCase();
@@ -1241,6 +1294,9 @@ function renderFeaturedCarousel() {
   const track = document.getElementById("featured-track");
   const section = document.getElementById("featured-section");
   if (!track) return;
+  // Mientras el catálogo actual no llega, mantener el skeleton de destacados
+  // (la sección no se oculta ni se pinta con datos a medias).
+  if (catalogoCargando) { showFeaturedLoading(); return; }
   stopFeaturedAutoScroll();
 
   if (!products.length) {
@@ -1384,6 +1440,80 @@ function resetModalGalleryAuto() {
 /* ========================================================================== 
    MODAL DE PRODUCTO
    ========================================================================== */
+
+/* El detalle de producto abierto SIEMPRE refleja el estado actual del
+   catálogo: si el producto visible cambió en la BD (precio, stock, imágenes)
+   la vista se re-renderiza con los datos vigentes; si dejó de existir, se
+   cierra con aviso. Nunca se muestran datos obsoletos en pantalla. */
+function sincronizarModalConCatalogo() {
+  if (!productModal?.classList.contains("active") || !currentBaseProduct) return;
+  const id = String(currentBaseProduct.id);
+  const actualizado = products.find((item) => String(item.id) === id);
+  if (!actualizado) {
+    cerrarDetalleCompleto();
+    notify("Este producto ya no está disponible.", "warning");
+    return;
+  }
+  // Ambos pasan por normalizeProductRecord → misma forma/orden de claves:
+  // la comparación textual es estable y evita re-renders innecesarios.
+  if (JSON.stringify(actualizado) === JSON.stringify(currentBaseProduct)) return;
+  currentBaseProduct = actualizado;
+  currentSelectedProduct = resolveVariantProduct(actualizado, modalSelectedColor);
+  renderModalContent();
+}
+
+/* El carrito persistido guarda una instantánea (precio, stock) del momento
+   en que se agregó cada item. Tras cada catálogo vigente se revalida:
+   precios actuales, cantidades limitadas al stock real y retiro de productos
+   que ya no existen. El usuario siempre ve valores vigentes, no antiguos. */
+function revalidarCarritoConCatalogo() {
+  if (!cart.length) return;
+  let cambio = false;
+  let retirados = 0;
+  const siguiente = [];
+  cart.forEach((item) => {
+    const product = products.find((p) => String(p.id) === String(item.id));
+    if (!product) { cambio = true; retirados++; return; }
+    // Precio vigente de la variante/capacidad guardada (overrides incluidos).
+    const opciones = getVariantStorageOptions(product, item.color);
+    const opcion = opciones.find((o) => String(o.name) === String(item.storage));
+    if (!opcion) { cambio = true; retirados++; return; }
+    if (Number(opcion.price) !== Number(item.price)) {
+      item.price = opcion.price;
+      item.oldPrice = opcion.oldPrice || "";
+      cambio = true;
+    }
+    const stockInfo = getStockInfo(product, item.storage);
+    if (stockInfo.quantity !== null && Number(item.quantity) > stockInfo.quantity) {
+      item.quantity = stockInfo.quantity;
+      cambio = true;
+      if (item.quantity > 0) {
+        notify(`Stock actualizado: quedan ${stockInfo.quantity} unidad(es) de ${item.title}.`, "warning");
+      }
+    }
+    if (Number(item.quantity) <= 0) { cambio = true; retirados++; return; }
+    siguiente.push(item);
+  });
+  if (!cambio) return;
+  cart = siguiente;
+  saveCart();
+  updateCartUI();
+  if (retirados > 0) {
+    notify("Algunos productos ya no están disponibles y se retiraron del carrito.", "warning");
+  }
+}
+
+/* CONEXIÓN: la verdad real es siempre el resultado de las peticiones (errores
+   de red / estados de carga); online/offline solo añade avisos oportunos y
+   reintento automático del catálogo al volver la conexión. */
+window.addEventListener("offline", () => {
+  notify("Sin conexión a Internet. La información se actualizará al reconectar.", "warning");
+});
+
+window.addEventListener("online", () => {
+  notify("Conexión restablecida. Actualizando información…", "success");
+  if (catalogoCargando) loadProducts();
+});
 
 function openProductModal(productId, colorName = "", opciones = {}) {
   if (!productModal || !productModalBody) return;

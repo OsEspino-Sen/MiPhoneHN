@@ -4957,3 +4957,71 @@ body.page-ready > *:not(.page-loader) {
 .category-card-image img.cat-cargada {
   opacity: 1;
 }
+
+/* ==========================================================================
+   SKELETONS DE CARGA (Cliente)
+   Tarjetas de producto y destacados: replican la estructura real mientras
+   el catálogo actual llega desde la BD. Sin datos antiguos, sin saltos.
+   ========================================================================== */
+.skeleton-bone {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--text-primary) 7%, transparent) 25%,
+    color-mix(in srgb, var(--text-primary) 14%, transparent) 50%,
+    color-mix(in srgb, var(--text-primary) 7%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-onda 1.4s ease-in-out infinite;
+}
+
+.skeleton-bone--imagen {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.skeleton-bone--linea {
+  height: 13px;
+  margin: 5px 0;
+}
+
+.skeleton-bone--titulo {
+  height: 18px;
+  margin: 8px 0;
+}
+
+.skeleton-bone--boton {
+  height: 42px;
+  margin-top: 14px;
+  border-radius: 999px;
+}
+
+.product-card--skeleton,
+.featured-card--skeleton {
+  pointer-events: none;
+}
+
+.product-card--skeleton .product-image-container {
+  cursor: default;
+}
+
+.featured-card--skeleton .featured-image-wrap {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+
+@keyframes skeleton-onda {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bone,
+  .skeleton-line {
+    animation: none;
+  }
+}
