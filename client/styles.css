@@ -2296,9 +2296,9 @@ select:focus-visible {
   gap: 10px;
   position: sticky;
   top: 0;
-  z-index: 6;
+  z-index: 10;
   padding: 8px 10px;
-  margin: -10px -10px 20px;
+  margin: -10px -10px 14px;
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-light);
   border-radius: 14px 14px 0 0;
@@ -2379,6 +2379,12 @@ select:focus-visible {
   border-radius: 16px;
   background: var(--bg-primary);
   box-shadow: 0 12px 30px rgba(2, 12, 26, .10);
+}
+
+/* El atributo hidden debe ganar siempre: sin esta regla, el display:flex de
+   arriba anula el ocultado y deja una barra vacía permanente bajo el buscador */
+.producto-buscador-resultados[hidden] {
+  display: none;
 }
 
 .producto-resultado {
