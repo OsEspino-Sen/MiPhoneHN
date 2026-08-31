@@ -2484,10 +2484,50 @@ html.entrada-producto-directa #announcement-bar {
 }
 
 .producto-resultado-vacio {
-  padding: 16px;
+  padding: 14px;
   text-align: center;
-  font-size: .8125rem;
+  font-size: .78125rem;
   color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.producto-ver-mas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--accent);
+  font-size: .8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease;
+}
+
+.producto-ver-mas svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  transition: transform .2s ease;
+}
+
+.producto-ver-mas:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.producto-ver-mas:hover svg {
+  transform: translateX(3px);
+}
+
+@keyframes dupFade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
 }
 
 .modal-product-shell.oculto-por-busqueda {
