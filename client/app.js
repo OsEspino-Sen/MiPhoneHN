@@ -238,16 +238,41 @@ function copiarEnlaceConTextarea(url) {
 
 let enlaceProductoAtendido = false;
 
+/* Mapa de IDs legados → IDs actuales (tras la renumeración del catálogo).
+   Los enlaces compartidos ANTES de la renumeración siguen funcionando. */
+const PRODUCTO_IDS_LEGADO = {
+  "producto-2": "producto-1", "producto-3": "producto-2", "producto-4": "producto-3",
+  "producto-6": "producto-4", "producto-7": "producto-5", "producto-8": "producto-6",
+  "producto-41": "producto-7", "producto-13": "producto-8", "producto-14": "producto-9",
+  "producto-15": "producto-10", "producto-16": "producto-11", "producto-17": "producto-12",
+  "producto-18": "producto-13", "producto-19": "producto-14", "producto-20": "producto-15",
+  "producto-21": "producto-16", "producto-22": "producto-17", "producto-23": "producto-18",
+  "producto-24": "producto-19", "producto-25": "producto-20", "producto-26": "producto-21",
+  "producto-27": "producto-22", "producto-28": "producto-23", "producto-29": "producto-24",
+  "producto-30": "producto-25", "producto-31": "producto-26", "producto-32": "producto-27",
+  "producto-33": "producto-28", "producto-34": "producto-29", "producto-35": "producto-30",
+  "producto-36": "producto-31", "producto-37": "producto-32", "producto-38": "producto-33"
+};
+
+function resolverIdProductoLegado(id) {
+  return PRODUCTO_IDS_LEGADO[String(id || "").trim().toLowerCase()] || null;
+}
+
 // Abre el producto indicado por ?producto= al cargar (enlace compartido).
-// La URL se CONSERVA: la vista es la página del producto (compartible y
-// recargable). Respeta el gate de mantenimiento (si bloquea, no abre).
+// Acepta IDs legados (anteriores a la renumeración). La URL se CONSERVA: la
+// vista es la página del producto. Respeta el gate de mantenimiento.
 function abrirProductoDesdeEnlaceCompartido() {
   if (enlaceProductoAtendido) return;
   const params = new URLSearchParams(window.location.search);
-  const id = params.get("producto");
+  let id = params.get("producto");
   if (!id) return;
   if (document.getElementById("mantenimiento-overlay")) return;
   enlaceProductoAtendido = true;
+  // Compatibilidad: si el ID ya no existe, resolver el ID legado equivalente.
+  if (!products.some((item) => String(item.id) === String(id))) {
+    const remapeado = resolverIdProductoLegado(id);
+    if (remapeado) id = remapeado;
+  }
   const existe = products.some((item) => String(item.id) === String(id));
   if (!existe) {
     if (products.length > 0) notify("El producto compartido ya no está disponible", "error");
@@ -1216,7 +1241,7 @@ function openProductModal(productId, colorName = "", opciones = {}) {
     window.setTimeout(() => {
       abrirVista();
       requestAnimationFrame(() => productModalBody.classList.remove("producto-cambiando"));
-    }, 190);
+    }, 240);
     return;
   }
 
