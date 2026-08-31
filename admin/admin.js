@@ -6837,6 +6837,10 @@ function pushExportLog({ archivo, items = [] }) {
   renderExportLog();
 }
 
+/* Exportaciones expandidas manualmente (Ver más). El resto inicia colapsado
+   a 7 productos para que una exportación grande no ocupe toda la pestaña. */
+const exportacionesExpandidas = new Set();
+
 function renderExportLog() {
   const listEl = document.getElementById("export-log-list");
   if (!listEl) return;
@@ -6847,16 +6851,31 @@ function renderExportLog() {
   }
   listEl.innerHTML = log.map((entry) => {
     const fecha = new Date(entry.createdAt);
-    const items = (entry.items || []).map((it) => `<li><i class="ph ph-package" aria-hidden="true"></i> <strong>${escapeHTML(String(it.title || it.id))}</strong> <span>${escapeHTML(String(it.id))}</span></li>`).join("");
+    const items = entry.items || [];
+    const expandida = exportacionesExpandidas.has(entry.id);
+    const visibles = expandida ? items : items.slice(0, 7);
+    const itemsHTML = visibles.map((it) => `<li><i class="ph ph-package" aria-hidden="true"></i> <strong>${escapeHTML(String(it.title || it.id))}</strong> <span>${escapeHTML(String(it.id))}</span></li>`).join("");
+    const toggle = items.length > 7
+      ? `<button type="button" class="export-log-toggle" data-exp-toggle="${escapeHTML(entry.id)}">${expandida ? "Ver menos" : `Ver más (${items.length - 7} más)`}</button>`
+      : "";
     return `
     <div class="backup-history-item import-log-item">
       <div class="backup-history-info">
         <div class="backup-history-line"><strong>${escapeHTML(fecha.toLocaleDateString())} ${escapeHTML(fecha.toLocaleTimeString())}</strong>${entry.archivo ? `<span class="import-log-file"><i class="ph ph-file-json" aria-hidden="true"></i> ${escapeHTML(entry.archivo)}</span>` : ""}</div>
-        <div class="import-log-chips"><span class="analysis-chip is-create"><i class="ph ph-download-simple" aria-hidden="true"></i> ${entry.count ?? (entry.items || []).length} producto(s) exportado(s)</span></div>
-        <ul class="import-log-items">${items}</ul>
+        <div class="import-log-chips"><span class="analysis-chip is-create"><i class="ph ph-download-simple" aria-hidden="true"></i> ${entry.count ?? items.length} producto(s) exportado(s)</span></div>
+        <ul class="import-log-items">${itemsHTML}</ul>
+        ${toggle}
       </div>
     </div>`;
   }).join("");
+  listEl.querySelectorAll("[data-exp-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.expToggle;
+      if (exportacionesExpandidas.has(id)) exportacionesExpandidas.delete(id);
+      else exportacionesExpandidas.add(id);
+      renderExportLog();
+    });
+  });
 }
 
 const IMPORT_ACCIONES = {
