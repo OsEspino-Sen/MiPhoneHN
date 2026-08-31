@@ -375,7 +375,11 @@ function finishPageLoader() {
     const panel = productModal?.querySelector(".product-modal-content");
     if (panel) {
       panel.classList.add("entrada-producto");
-      setTimeout(() => panel.classList.remove("entrada-producto"), 650);
+      setTimeout(() => {
+        panel.classList.remove("entrada-producto");
+        // Restaurar las transiciones normales para cambios de producto posteriores.
+        productModal?.classList.remove("sin-animacion");
+      }, 650);
     }
   }
   setTimeout(() => loader.remove(), 700);
@@ -1651,22 +1655,57 @@ function renderModalContent() {
   }, { passive: true });
 
   // Buscador contextual COMPACTO: panel desplegable sobre el contenido, sin
-  // reemplazar la ficha ni sacar al usuario del producto. Máximo 5 resultados.
+  // reemplazar la ficha del producto. Máximo 5 resultados. Consulta DIRECTA
+  // a la base: funciona aunque realtime aún no haya cargado el catálogo.
   const buscadorProducto = productModalBody.querySelector("#producto-buscador");
   const resultadosProducto = productModalBody.querySelector("#producto-buscador-resultados");
   let buscadorProductoTimer = null;
+  let catalogoBusquedaCache = null;
+
+  const normalizarBusqueda = (texto) => String(texto || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  // Catálogo ligero para la búsqueda: si realtime aún no cargó (o cargó
+  // parcialmente en el escenario de deep link), se lee DIRECTO de la base.
+  async function obtenerCatalogoBusqueda() {
+    if (products.length >= 5) return products;
+    if (catalogoBusquedaCache) return catalogoBusquedaCache;
+    try {
+      const { supabase } = await import("./supabase-config.js");
+      const { data, error } = await supabase
+        .from("productos")
+        .select("id,title,brand,price,images,variants");
+      if (!error && Array.isArray(data) && data.length) {
+        catalogoBusquedaCache = data.map((r) => normalizeProductRecord({ id: r.id, ...r }));
+        return catalogoBusquedaCache;
+      }
+    } catch (err) {
+      console.warn("[compartir] No se pudo leer el catálogo para la búsqueda:", err);
+    }
+    return products;
+  }
+
   buscadorProducto?.addEventListener("input", () => {
     clearTimeout(buscadorProductoTimer);
-    buscadorProductoTimer = setTimeout(() => {
-      const consulta = buscadorProducto.value.toLowerCase().trim();
+    buscadorProductoTimer = setTimeout(async () => {
+      const consulta = normalizarBusqueda(buscadorProducto.value);
       if (!consulta) {
         resultadosProducto.hidden = true;
         resultadosProducto.innerHTML = "";
         return;
       }
-      const coincidencias = products
+      const catalogo = await obtenerCatalogoBusqueda();
+      // El usuario pudo seguir escribiendo durante la consulta: aplicar solo
+      // si el término sigue vigente.
+      if (normalizarBusqueda(buscadorProducto.value) !== consulta) return;
+      const coincidencias = catalogo
         .filter((item) => String(item.id) !== String(currentBaseProduct?.id || ""))
-        .filter((item) => `${item.title || ""} ${item.brand || ""}`.toLowerCase().includes(consulta))
+        .filter((item) => {
+          const objetivo = normalizarBusqueda(`${item.title || ""} ${item.brand || ""}`);
+          return objetivo.includes(consulta);
+        })
         .slice(0, 5);
       resultadosProducto.hidden = false;
       resultadosProducto.innerHTML = coincidencias.length
