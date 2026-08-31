@@ -230,6 +230,11 @@
           mark.innerHTML = `<img src="${src}" alt="${esc(nombreActual)}" class="brand-logo-img">`;
           mark.classList.add('has-logo');
         }
+        const loaderMark = document.querySelector('#admin-loader .admin-loader-mark');
+        if (loaderMark && !loaderMark.classList.contains('has-logo')) {
+          loaderMark.innerHTML = `<img src="${src}" alt="" class="admin-loader-logo">`;
+          loaderMark.classList.add('has-logo');
+        }
       } catch (_) {}
     })();
 

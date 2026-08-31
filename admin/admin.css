@@ -5852,3 +5852,18 @@ section:not([hidden]) {
   from { opacity: 0.25; }
   to { opacity: 1; }
 }
+
+/* Logo real dentro de la marca del loader (deja de verse vacía) */
+.admin-loader-mark img,
+.admin-loader-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+  display: block;
+}
+
+.admin-loader-mark.has-logo {
+  background: transparent;
+  border: none;
+}

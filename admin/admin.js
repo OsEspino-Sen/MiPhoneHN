@@ -583,6 +583,22 @@ function ocultarAdminLoaderCuandoListo() {
   esperar();
 }
 
+/* Logo real para la marca del loader de entrada, lo antes posible. */
+(async () => {
+  try {
+    const snap = await getDoc(doc(db, 'imagenes', 'logo'));
+    const data = snap.exists() ? snap.data() : null;
+    const url = data?.url || data?.data;
+    if (!url) return;
+    const src = url.startsWith('data:') ? url : url + '?t=' + Date.now();
+    const loaderMark = document.querySelector('#admin-loader .admin-loader-mark');
+    if (loaderMark && !loaderMark.classList.contains('has-logo')) {
+      loaderMark.innerHTML = `<img src="${src}" alt="" class="admin-loader-logo">`;
+      loaderMark.classList.add('has-logo');
+    }
+  } catch {}
+})();
+
 const logoutBtn = document.getElementById("logout-btn");
 const adminAlert = document.getElementById("admin-alert");
 const productsTableBody = document.getElementById("products-table-body");
@@ -5992,6 +6008,13 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       if (sideMark) {
         sideMark.innerHTML = `<img src="${src}" alt="Mi Phone HN" class="brand-logo-img">`;
         sideMark.classList.add('has-logo');
+      }
+
+      // Loader de entrada: el logo real dentro de la marca (ya no vacía)
+      const loaderMark = document.querySelector('#admin-loader .admin-loader-mark');
+      if (loaderMark) {
+        loaderMark.innerHTML = `<img src="${src}" alt="" class="admin-loader-logo">`;
+        loaderMark.classList.add('has-logo');
       }
 
       // Sección "Usuarios del sistema" (antes usaba iconografía genérica ph-users)
