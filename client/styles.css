@@ -2286,34 +2286,35 @@ select:focus-visible {
 }
 
 /* ==========================================================================
-   BARRA DE NAVEGACIÓN MÓVIL DENTRO DEL PRODUCTO
-   Volver a la tienda · título · buscar otro producto. Solo visible en móvil;
-   en escritorio la vista mantiene su diseño de panel centrado.
+   BARRA SUPERIOR DEL PRODUCTO — Volver a la tienda + buscador integrado.
+   Presente en todos los dispositivos: sticky dentro de la vista, permite
+   buscar y cambiar de producto sin salir del detalle.
    ========================================================================== */
-.producto-topbar-movil {
-  display: none;
+.producto-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   position: sticky;
   top: 0;
   z-index: 6;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  padding: 8px 10px;
+  margin: -10px -10px 20px;
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-light);
+  border-radius: 14px 14px 0 0;
 }
 
 .producto-topbar-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  width: 38px;
   height: 38px;
-  padding: 0 10px;
+  flex-shrink: 0;
   border: 0;
   border-radius: 10px;
   background: transparent;
   color: var(--text-primary);
-  font-size: .8125rem;
-  font-weight: 700;
   cursor: pointer;
   transition: background-color .2s ease, color .2s ease;
 }
@@ -2324,25 +2325,125 @@ select:focus-visible {
 }
 
 .producto-topbar-btn svg {
-  width: 19px;
-  height: 19px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
-.producto-topbar-titulo {
+.producto-topbar-buscador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.producto-topbar-buscador:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.producto-topbar-buscador svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.producto-topbar-buscador input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: .875rem;
+  font-weight: 500;
+}
+
+.producto-topbar-buscador input::placeholder {
+  color: var(--text-muted);
+}
+
+.producto-buscador-resultados {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  background: var(--bg-primary);
+  box-shadow: 0 12px 30px rgba(2, 12, 26, .10);
+}
+
+.producto-resultado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color .15s ease;
+}
+
+.producto-resultado:hover {
+  background: var(--accent-light);
+}
+
+.producto-resultado img {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.producto-resultado-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
   flex: 1;
+}
+
+.producto-resultado-info strong {
+  font-size: .8125rem;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: center;
-  font-size: .8125rem;
-  font-weight: 700;
+}
+
+.producto-resultado-info small {
+  font-size: .71875rem;
   color: var(--text-secondary);
 }
 
-@media (max-width: 600px) {
-  .producto-topbar-movil { display: flex; }
+.producto-resultado-precio {
+  font-size: .8125rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.producto-resultado-vacio {
+  padding: 16px;
+  text-align: center;
+  font-size: .8125rem;
+  color: var(--text-secondary);
+}
+
+.modal-product-shell.oculto-por-busqueda {
+  display: none;
 }
 
 .product-modal-body {
