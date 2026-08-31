@@ -5,9 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style id="mnt-boot-css">html.mnt-boot{visibility:hidden}</style>
     <style>
-      /* CARGA PRIMERO: el loader debe ser la PRIMERA cosa visible. CSS
-         critico inline para no esperar styles.css (sin destello de contenido). */
+      /* CARGA PRIMERO: el loader es lo UNICO visible desde el primer pixel.
+         El contenido permanece oculto (visibility, no solo tapado) hasta
+         body.page-ready: fisicamente imposible un destello de contenido
+         antes del loader, sin importar el timing del gate ni de styles.css. */
       #page-loader{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#fff}
+      #page-loader .page-loader-brand{visibility:hidden}
+      html.mnt-boot #page-loader{visibility:visible}
+      body:not(.page-ready)>*:not(#page-loader):not(#mantenimiento-overlay){visibility:hidden;animation:revelar-failsafe 0s 12s forwards}
+      #page-loader{animation:ocultar-loader-failsafe .5s ease 12s forwards}
+      @keyframes revelar-failsafe{to{visibility:visible}}
+      @keyframes ocultar-loader-failsafe{to{opacity:0;visibility:hidden}}
     </style>
   <script>
     document.documentElement.classList.add("mnt-boot");

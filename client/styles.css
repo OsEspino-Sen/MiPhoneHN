@@ -4768,12 +4768,46 @@ html.entrada-producto-directa #announcement-bar {
   animation: page-loader-pulse 1.8s ease-in-out infinite;
 }
 
+/* El loader es lo UNICO visible hasta el revelado (body.page-ready):
+   el contenido se mantiene oculto hasta que los datos estan listos, asi
+   ningun timing puede mostrar contenido antes del loader. */
+html.mnt-boot #page-loader {
+  visibility: visible;
+}
+
+body:not(.page-ready) > *:not(#page-loader):not(#mantenimiento-overlay) {
+  visibility: hidden;
+  /* Failsafe CSS puro: si el JS muriera, el contenido se revela solo a los 12s. */
+  animation: revelar-failsafe 0s 12s forwards;
+}
+
+@keyframes revelar-failsafe {
+  to { visibility: visible; }
+}
+
+/* Failsafe espejo: sin JS, el loader se retira solo a los 12s. */
+#page-loader {
+  animation: ocultar-loader-failsafe .5s ease 12s forwards;
+}
+
+@keyframes ocultar-loader-failsafe {
+  to { opacity: 0; visibility: hidden; }
+}
+
+#page-loader .page-loader-brand {
+  visibility: hidden;
+}
+
 /* DATOS ACTUALES > DATOS ANTIGUOS: el nombre del loader permanece invisible
    hasta que llega el nombre REAL de la BD (clase marca-confirmada). Así nunca
    se ve el nombre por defecto cambiar a mitad de la carga. */
 .page-loader-brand:not(.marca-confirmada) {
   opacity: 0;
   animation: none;
+}
+
+#page-loader .page-loader-brand.marca-confirmada {
+  visibility: visible;
 }
 
 .page-loader-brand span {
