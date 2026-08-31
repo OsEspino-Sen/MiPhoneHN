@@ -219,7 +219,61 @@ body {
      manteniendo su diseño interno intacto. En >= 641px siguen lado a lado
      con su comportamiento actual. */
   .mnt-btn-wa, .mnt-btn-refrescar { width: 100%; justify-content: center; }
+  .mnt-producto { grid-template-columns: 1fr; text-align: center; }
+  .mnt-producto-colores, .mnt-producto-nota { justify-content: center; }
 }
+/* --- Producto compartido (enlace ?producto= durante el mantenimiento) --- */
+.mnt-producto {
+  width: min(660px, 100%);
+  margin: 34px auto 0;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 210px) minmax(0, 1fr);
+  gap: 18px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--mnt-text) 14%, transparent);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(2, 12, 26, .10);
+  animation: mntProductoIn .35s cubic-bezier(.16, 1, .3, 1);
+}
+@keyframes mntProductoIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.mnt-producto-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 15px;
+  background: var(--mnt-muted);
+  display: block;
+}
+.mnt-producto-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mnt-producto-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mnt-producto-badge {
+  display: inline-flex; align-items: center;
+  font-size: .64rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  border-radius: 999px; padding: 3px 10px;
+  color: #116e51; background: #e8f7f0; border: 1px solid #bce4d3;
+}
+.mnt-producto-badge.is-used { color: #85540f; background: #fff3df; border-color: #efd4ab; }
+.mnt-producto-nombre { font-family: var(--mnt-font-heading); font-size: 1.05rem; font-weight: 800; color: var(--mnt-text); line-height: 1.25; }
+.mnt-producto-marca { font-size: .72rem; font-weight: 600; color: var(--mnt-muted); }
+.mnt-producto-precio { font-family: var(--mnt-font-heading); font-size: 1.15rem; font-weight: 800; color: var(--mnt-accent); }
+.mnt-producto-desc { font-size: .78rem; color: var(--mnt-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mnt-producto-colores { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mnt-producto-color {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: .68rem; font-weight: 700; color: var(--mnt-text);
+  border: 1px solid color-mix(in srgb, var(--mnt-text) 16%, transparent);
+  border-radius: 999px; padding: 3px 9px 3px 4px;
+}
+.mnt-producto-color i { width: 14px; height: 14px; border-radius: 50%; background: var(--swatch, #ccc); border: 1px solid rgba(0,0,0,.14); }
+.mnt-producto-nota {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 4px; padding: 8px 12px; border-radius: 10px;
+  background: color-mix(in srgb, var(--mnt-accent) 8%, transparent);
+  font-size: .72rem; font-weight: 600; color: var(--mnt-text);
+}
+.mnt-producto-nota i { flex-shrink: 0; color: var(--mnt-accent); }
 `.trim();
 
 /* ---- Ícono WhatsApp (SVG inline) ---- */
