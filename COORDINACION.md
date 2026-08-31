@@ -11,10 +11,12 @@ cada uno, en qué rama trabaja, y cómo integrar el trabajo SIN pisarse.
 
 ## Ramas actuales (línea base)
 
+> **Estado verificado 2026-08-31 (sesión "carga sin datos obsoletos").**
+
 | Rama | Último commit | Contenido |
 |---|---|---|
-| `master` | `ebf76e6` | **Base de integración oficial.** Tiene todo: variantes, mantenimiento, módulo de backup/importación, y el badge de entorno dentro del bloque de marca. |
-| `feature/variantes-ficha-completa` | `2049eb8` | Trabajo histórico de variantes + ficha completa. **Ya integrado en `master`** (por cherry-pick). |
+| `master` | `60ec207` | **Base de integración oficial.** Tiene todo lo anterior MÁS la sesión de carga sin datos obsoletos: guard anti-carrera en `onSnapshot` (ambas capas), skeletons (cliente + admin), login sin flash de imagen/marca, admin sin flash de imágenes estáticas, guard de guardado de DEFAULTS, carrito revalidado, modal sincronizado, detección offline. |
+| `feature/variantes-ficha-completa` | `9a5f23e` | Espejo del trabajo hasta `8ab6878` (mismos mensajes, otros hashes). **NO contiene** los fixes de carga de la sesión 2026-08-31. **NO hacer merge de esta rama hacia `master`**: revertiría esos fixes (verificado por diff: solo contiene código viejo ya reemplazado). |
 | `respaldo/copia-documents-20260829` | `0a75b9b` | Respaldo de una copia vieja del proyecto (Documents). No tocar. |
 
 ## ⚠️ Reglas de oro
