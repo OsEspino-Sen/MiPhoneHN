@@ -191,7 +191,7 @@ async function traerProductoPublico(id) {
   return data || null;
 }
 
-async function mostrarProductoCompartidoEnMantenimiento() {
+export async function mostrarProductoCompartidoEnMantenimiento() {
   if (productoCompartidoAtendido) return;
   const params = new URLSearchParams(window.location.search);
   let id = params.get('producto');
