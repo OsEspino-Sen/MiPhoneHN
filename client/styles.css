@@ -2302,6 +2302,15 @@ select:focus-visible {
 }
 
 /* ==========================================================================
+   ENTRADA DIRECTA POR ENLACE DE PRODUCTO
+   La barra de anuncios es exclusiva de Home: oculta desde el primer render
+   (la clase la pone un script inline en el <head>, sin flash).
+   ========================================================================== */
+html.entrada-producto-directa #announcement-bar {
+  display: none !important;
+}
+
+/* ==========================================================================
    BARRA SUPERIOR DEL PRODUCTO — Volver a la tienda + buscador integrado.
    Presente en todos los dispositivos: sticky dentro de la vista, permite
    buscar y cambiar de producto sin salir del detalle.

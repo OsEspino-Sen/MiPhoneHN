@@ -10,6 +10,15 @@
     document.documentElement.classList.add("mnt-boot");
     setTimeout(function () { document.documentElement.classList.remove("mnt-boot"); }, 3000);
   </script>
+  <script>
+    /* Deep link de producto: detectado ANTES del primer render. Oculta la
+       barra de anuncios (exclusiva de Home) desde el inicio, sin flash. */
+    try {
+      if (new URLSearchParams(location.search).has("producto")) {
+        document.documentElement.classList.add("entrada-producto-directa");
+      }
+    } catch (e) {}
+  </script>
 <title>Mi Phone HN | Celulares Nuevos y Seminuevos en Honduras</title>
 
   <link rel="stylesheet" href="fonts.css">
