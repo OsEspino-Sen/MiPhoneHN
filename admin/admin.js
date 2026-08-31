@@ -4357,6 +4357,11 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     if (!card) return;
     const campos = camposDeCard(card, docId);
     if (!campos) return;
+    // Instantánea perezosa: si la tarjeta aún no tiene, capturar el estado
+    // actual como original (así el primer evaluación no marca cambios).
+    if (card.dataset.snapOriginal === undefined) {
+      card.dataset.snapOriginal = JSON.stringify(campos);
+    }
     const original = card.dataset.snapOriginal;
     const changed = original !== undefined && JSON.stringify(campos) !== original;
     card.dataset.snapCambiada = changed ? '1' : '0';
