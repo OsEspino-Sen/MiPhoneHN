@@ -1709,7 +1709,7 @@ function renderModalContent() {
       resultadosProducto.hidden = false;
       resultadosProducto.innerHTML = coincidencias.length
         ? `<span class="producto-resultados-titulo">Resultados de búsqueda</span>` + coincidencias.map((item) => {
-            const imagen = getProductImageUrls(item)[0] || FALLBACK_IMAGE;
+            const imagen = getProductImages(item)[0] || FALLBACK_IMAGE;
             const precio = Number(item.price) || 0;
             return `
             <button type="button" class="producto-resultado" data-resultado-id="${escapeHTML(String(item.id))}">
