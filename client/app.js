@@ -1473,17 +1473,17 @@ function renderModalContent() {
     : "";
 
   productModalBody.innerHTML = `
-    <div class="modal-product-shell">
-      <div class="producto-topbar">
-        <button type="button" class="producto-topbar-btn" data-producto-volver-tienda aria-label="Volver a la tienda">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
-        </button>
-        <div class="producto-topbar-buscador">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
-          <input type="search" id="producto-buscador" placeholder="Buscar productos" autocomplete="off" aria-label="Buscar productos">
-        </div>
+    <div class="producto-topbar">
+      <button type="button" class="producto-topbar-btn" data-producto-volver-tienda aria-label="Volver a la tienda">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+      </button>
+      <div class="producto-topbar-buscador">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
+        <input type="search" id="producto-buscador" placeholder="Buscar productos" autocomplete="off" aria-label="Buscar productos">
       </div>
-      <div class="producto-buscador-resultados" id="producto-buscador-resultados" hidden></div>
+    </div>
+    <div class="producto-buscador-resultados" id="producto-buscador-resultados" hidden></div>
+    <div class="modal-product-shell">
       <div class="modal-grid">
         <section class="modal-gallery" aria-label="Galería de ${escapeHTML(product.title)}">
           <div class="modal-gallery-stage" tabindex="0">
@@ -1636,9 +1636,11 @@ function renderModalContent() {
   }, { passive: true });
 
   // Buscador integrado: filtra el catálogo SIN salir de la vista del producto.
+  // Oculta SOLO la ficha (shell): la barra y los resultados permanecen visibles.
   const buscadorProducto = productModalBody.querySelector("#producto-buscador");
   const resultadosProducto = productModalBody.querySelector("#producto-buscador-resultados");
   const shellProducto = productModalBody.querySelector(".modal-product-shell");
+  const scrollProductoVista = productModalBody.closest(".product-modal-scroll");
   let buscadorProductoTimer = null;
   buscadorProducto?.addEventListener("input", () => {
     clearTimeout(buscadorProductoTimer);
@@ -1668,6 +1670,8 @@ function renderModalContent() {
             </button>`;
           }).join("")
         : `<div class="producto-resultado-vacio">Sin coincidencias para "${escapeHTML(buscadorProducto.value.trim())}"</div>`;
+      // Los resultados deben verse desde el inicio del panel.
+      scrollProductoVista?.scrollTo({ top: 0, behavior: "auto" });
     }, 200);
   });
   buscadorProducto?.addEventListener("keydown", (event) => {
