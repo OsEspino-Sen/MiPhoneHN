@@ -4745,6 +4745,14 @@ html.entrada-producto-directa #announcement-bar {
   animation: page-loader-pulse 1.8s ease-in-out infinite;
 }
 
+/* DATOS ACTUALES > DATOS ANTIGUOS: el nombre del loader permanece invisible
+   hasta que llega el nombre REAL de la BD (clase marca-confirmada). Así nunca
+   se ve el nombre por defecto cambiar a mitad de la carga. */
+.page-loader-brand:not(.marca-confirmada) {
+  opacity: 0;
+  animation: none;
+}
+
 .page-loader-brand span {
   color: var(--accent);
 }
@@ -4910,4 +4918,14 @@ body.page-ready > *:not(.page-loader) {
   .result-label {
     font-size: 0.72rem;
   }
+}
+
+/* ---- Identidad: fade-in del logo de marca y de la marca confirmada ---- */
+.brand-logo-img {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.brand-logo-img.logo-cargada {
+  opacity: 1;
 }

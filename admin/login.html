@@ -176,7 +176,14 @@
             if (v && v.includes(MARCA_LOGIN)) el.setAttribute('aria-label', v.split(MARCA_LOGIN).join(nombre));
           });
         }
-      } catch (_) {}
+        // Nombre confirmado (real de la BD, o el por defecto si la red falló):
+        // recién aquí se hace visible la marca, sin swap a mitad de pantalla.
+        const marcaVisible = document.querySelector('.login-brand-text');
+        if (marcaVisible) marcaVisible.classList.add('marca-confirmada');
+      } catch (_) {
+        const marcaVisible = document.querySelector('.login-brand-text');
+        if (marcaVisible) marcaVisible.classList.add('marca-confirmada');
+      }
       try {
         const snap = await getDoc(doc(db, 'imagenes', 'logo'));
         const data = snap.exists() ? snap.data() : null;
