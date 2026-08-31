@@ -2396,22 +2396,15 @@ html.entrada-producto-directa #announcement-bar {
 }
 
 .producto-buscador-resultados {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 10px;
-  right: 10px;
-  z-index: 30;
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 8px;
+  margin: -6px 0 14px;
   border: 1px solid var(--border-light);
   border-radius: 16px;
   background: var(--bg-primary);
-  box-shadow: 0 18px 44px rgba(2, 12, 26, .16);
-  max-height: min(320px, 46vh);
-  overflow-y: auto;
-  animation: dupFade .22s ease;
+  box-shadow: 0 12px 30px rgba(2, 12, 26, .10);
 }
 
 /* El atributo hidden debe ganar siempre: sin esta regla, el display:flex de
