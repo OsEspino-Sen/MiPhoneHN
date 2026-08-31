@@ -5728,3 +5728,37 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 body[data-rol="editor"] #restore-backup-btn,
 body[data-rol="editor"] #backup-history-section{display:none}
 
+
+/* ==========================================================================
+   TRANSICIONES DE CARGA (Login + Panel Admin)
+   DATOS ACTUALES > DATOS ANTIGUOS: la marca del login permanece invisible
+   hasta confirmar el nombre real de la BD; la entrada de pantallas y
+   secciones es suave, sin datos viejos visibles.
+   ========================================================================== */
+.login-card {
+  animation: login-entrada 0.45s ease-out both;
+}
+
+@keyframes login-entrada {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.login-brand-text {
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.login-brand-text.marca-confirmada {
+  opacity: 1;
+}
+
+/* Entrada suave de secciones del panel al cambiar de pestaña */
+section:not([hidden]) {
+  animation: seccion-entrada 0.3s ease-out;
+}
+
+@keyframes seccion-entrada {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

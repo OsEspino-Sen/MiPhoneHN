@@ -57,6 +57,9 @@ function aplicarMarcaEnSitio() {
   });
   document.querySelectorAll(".brand-logo-text, .page-loader-brand").forEach((el) => {
     el.innerHTML = marcaHTML(nombreEmpresa);
+    // Nombre REAL confirmado: recién aquí se hace visible (sin swap del
+    // nombre por defecto a mitad de la carga).
+    el.classList.add("marca-confirmada");
   });
 }
 
@@ -483,6 +486,9 @@ document.addEventListener("DOMContentLoaded", () => {
   Promise.allSettled([loadProducts(), loadCategories(), loadSiteSettings()])
     .then(() => document.fonts.ready)
     .then(async () => {
+      // Imágenes críticas de identidad (logo, hero) listas antes de revelar:
+      // la página aparece completa, sin pops de imágenes a mitad de vista.
+      await esperarImagenesCriticas();
       // Deep link de producto: el loader (logo animado) permanece visible
       // hasta resolver el producto; el Home nunca llega a verse.
       await abrirProductoDesdeEnlaceCompartido();
@@ -3061,20 +3067,68 @@ function setBrandLogo(dataUrl) {
   if (!dataUrl) return;
   const src = optimizeCloudinaryUrl(dataUrl, 400);
   // Identidad visual: el logotipo acompaña al nombre de la empresa.
-  // [ LOGO ] Mi Phone HN — el logo nunca sustituye el texto.
+  // [ LOGO ] el logo nunca sustituye el texto.
   const brandHtml =
     `<img src="${escapeHTML(src)}" alt="${escapeHTML(nombreEmpresa)}" class="brand-logo-img">` +
     `<span class="brand-logo-text">${marcaHTML(nombreEmpresa)}</span>`;
   document.querySelectorAll(".logo, .footer-logo").forEach((el) => {
     el.innerHTML = brandHtml;
+    const img = el.querySelector(".brand-logo-img");
+    if (img) {
+      // Fade-in del logo: aparece cuando el archivo terminó de cargar
+      // (sin pop-in ni hueco). Con caché, `complete` evita perder el evento.
+      const revelar = () => img.classList.add("logo-cargada");
+      if (img.complete && img.naturalWidth > 0) revelar();
+      else { img.addEventListener("load", revelar, { once: true }); img.addEventListener("error", revelar, { once: true }); }
+    }
   });
+}
+
+/* Espera (con tope) a que las imágenes críticas de identidad estén listas:
+   logo de marca y fondo del hero. La revelación de la página no muestra
+   huecos ni "pops" de imágenes que aún están descargando. */
+let promesaHeroPrecargado = null;
+
+function precargarImagen(url, topeMs = 3000) {
+  return new Promise((resolve) => {
+    if (!url) return resolve();
+    const img = new Image();
+    const fin = () => resolve();
+    img.onload = fin;
+    img.onerror = fin;
+    img.src = url;
+    setTimeout(fin, topeMs);
+  });
+}
+
+function imagenLista(img, topeMs = 3000) {
+  return new Promise((resolve) => {
+    if (!img) return resolve();
+    if (img.complete && img.naturalWidth > 0) return resolve();
+    const fin = () => { img.removeEventListener("load", fin); img.removeEventListener("error", fin); resolve(); };
+    img.addEventListener("load", fin);
+    img.addEventListener("error", fin);
+    setTimeout(fin, topeMs);
+  });
+}
+
+async function esperarImagenesCriticas() {
+  const tareas = [];
+  if (promesaHeroPrecargado) tareas.push(promesaHeroPrecargado);
+  document.querySelectorAll(".brand-logo-img, .page-loader-brand img").forEach((img) => {
+    tareas.push(imagenLista(img));
+  });
+  await Promise.all(tareas);
 }
 
 function applyHeroImage(dataUrl) {
   if (!dataUrl) return;
   const hero = document.getElementById("hero");
   if (!hero) return;
-  hero.style.setProperty("--hero-img", `url('${optimizeCloudinaryUrl(dataUrl, 1920)}')`);
+  const finalUrl = optimizeCloudinaryUrl(dataUrl, 1920);
+  hero.style.setProperty("--hero-img", `url('${finalUrl}')`);
+  // Precarga rastreada: la revelación de la página espera el fondo del hero.
+  promesaHeroPrecargado = precargarImagen(finalUrl);
   hero.classList.add("has-hero-img");
 }
 
