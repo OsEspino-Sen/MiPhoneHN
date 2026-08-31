@@ -3,7 +3,7 @@
    Los productos se cargan desde Supabase en tiempo real
    ========================================================================== */
 
-import { iniciarMantenimientoCliente } from "./mantenimiento-cliente.js";
+import { iniciarMantenimientoCliente, mostrarProductoCompartidoEnMantenimiento } from "./mantenimiento-cliente.js";
 
 const WHATSAPP_DEFAULTS = {
   phone: "50488878066",
@@ -96,6 +96,10 @@ let vistaProductoConHistoria = false;
    catálogo (Catálogo → A → B → C = 3). Permite que "clic fuera" regrese al
    catálogo de un solo salto, sin recorrer producto por producto. */
 let profundidadHistorialProducto = 0;
+/* Deep link de producto presente en la URL al cargar: mientras se resuelve,
+   el loader (logo animado) permanece y el Home no debe asomar jamás. */
+const ENLACE_PRODUCTO_EN_URL = new URLSearchParams(window.location.search).has("producto");
+let productoEnlaceResuelto = false;
 let modalSelectedStorage = "";
 let modalActiveImageIndex = 0;
 let modalActiveTab = "description";
@@ -279,15 +283,25 @@ async function abrirProductoDesdeEnlaceCompartido() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("producto");
   if (!id) return;
-  if (document.getElementById("mantenimiento-overlay")) return; // la ficha la pinta el gate
   enlaceProductoAtendido = true;
   const color = params.get("color") || "";
+
+  // Mantenimiento activo: el gate de mantenimiento muestra la ficha del
+  // producto por su cuenta (vía producto_publico). Aquí solo liberamos el
+  // loader para que la página de cierre + ficha queden visibles.
+  if (document.getElementById("mantenimiento-overlay")) {
+    productoEnlaceResuelto = true;
+    finishPageLoader();
+    return;
+  }
 
   // 1) Esperar el catálogo (realtime)
   for (let intento = 0; intento < 7; intento++) {
     const producto = resolverProductoDelEnlace(id);
     if (producto) {
       openProductModal(producto.id, color, { cargaDirecta: true });
+      productoEnlaceResuelto = true;
+      finishPageLoader();
       return;
     }
     await new Promise((r) => setTimeout(r, 500));
@@ -297,12 +311,11 @@ async function abrirProductoDesdeEnlaceCompartido() {
   //    mantenimiento activo o realtime caído).
   try {
     const { supabase } = await import("./supabase-config.js");
-    let idBuscado = id;
     let data = null;
-    const directa = await supabase.rpc("producto_publico", { p_id: String(idBuscado) });
+    const directa = await supabase.rpc("producto_publico", { p_id: String(id) });
     data = directa?.data || null;
     if (!data) {
-      const legado = resolverIdProductoLegado(idBuscado);
+      const legado = resolverIdProductoLegado(id);
       if (legado) {
         const resp = await supabase.rpc("producto_publico", { p_id: legado });
         data = resp?.data || null;
@@ -314,12 +327,17 @@ async function abrirProductoDesdeEnlaceCompartido() {
         products.push(producto); // queda disponible para la vista y el carrito
       }
       openProductModal(producto.id, color, { cargaDirecta: true });
+      productoEnlaceResuelto = true;
+      finishPageLoader();
       return;
     }
   } catch (err) {
     console.warn("[compartir] No se pudo cargar el producto por RPC:", err);
   }
 
+  // No se encontró: entrada normal al Home.
+  productoEnlaceResuelto = true;
+  finishPageLoader();
   notify("El producto compartido ya no está disponible", "error");
 }
 
@@ -337,6 +355,10 @@ const pageLoadStart = performance.now();
 function finishPageLoader() {
   const loader = document.getElementById("page-loader");
   if (!loader || loader.dataset.done) return;
+  // Deep link de producto: el loader (logo animado) permanece hasta que la
+  // vista del producto esté abierta; el Home no debe asomar durante la
+  // resolución del enlace compartido.
+  if (ENLACE_PRODUCTO_EN_URL && !productoEnlaceResuelto) return;
   const elapsed = performance.now() - pageLoadStart;
   if (elapsed < 900) {
     setTimeout(finishPageLoader, 900 - elapsed);
@@ -725,9 +747,9 @@ function setupEventListeners() {
   checkoutBtn?.addEventListener("click", checkoutCartWhatsApp);
 
   productModalOverlay?.addEventListener("click", cerrarDetalleCompleto);
-  // Boton "Compartir" del detalle: delegacion porque el cuerpo del modal se
-  // re-renderiza al cambiar de color/capacidad (un solo listener para todos).
-  productModalBody?.addEventListener("click", async (event) => {
+  // Boton "Compartir" + navegación del detalle: delegacion porque el cuerpo
+  // del modal se re-renderiza al cambiar de color/capacidad/resultado.
+  productModalBody?.addEventListener("click", (event) => {
     if (event.target.closest("[data-share-product]")) {
       compartirProductoActual();
       return;
@@ -735,16 +757,6 @@ function setupEventListeners() {
     if (event.target.closest("[data-producto-volver-tienda]")) {
       cerrarDetalleCompleto();
       return;
-    }
-    if (event.target.closest("[data-producto-buscar]")) {
-      // Buscar otro producto: cierra el detalle y deja al usuario en el
-      // buscador del catálogo, sin recorrer el historial de productos.
-      cerrarDetalleCompleto();
-      setTimeout(() => {
-        const buscador = document.getElementById("search-input");
-        buscador?.scrollIntoView({ behavior: "smooth", block: "center" });
-        buscador?.focus({ preventScroll: true });
-      }, 480);
     }
   });
   // Scrollbar elegante: visible solo mientras el usuario se desplaza y con
@@ -1462,16 +1474,16 @@ function renderModalContent() {
 
   productModalBody.innerHTML = `
     <div class="modal-product-shell">
-      <div class="producto-topbar-movil">
+      <div class="producto-topbar">
         <button type="button" class="producto-topbar-btn" data-producto-volver-tienda aria-label="Volver a la tienda">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
-          <span>Tienda</span>
         </button>
-        <span class="producto-topbar-titulo">${escapeHTML(product.title || "Producto")}</span>
-        <button type="button" class="producto-topbar-btn" data-producto-buscar aria-label="Buscar otro producto">
+        <div class="producto-topbar-buscador">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
-        </button>
+          <input type="search" id="producto-buscador" placeholder="Buscar productos" autocomplete="off" aria-label="Buscar productos">
+        </div>
       </div>
+      <div class="producto-buscador-resultados" id="producto-buscador-resultados" hidden></div>
       <div class="modal-grid">
         <section class="modal-gallery" aria-label="Galería de ${escapeHTML(product.title)}">
           <div class="modal-gallery-stage" tabindex="0">
@@ -1622,6 +1634,58 @@ function renderModalContent() {
     setModalGalleryImage(modalActiveImageIndex + (deltaX < 0 ? 1 : -1));
     resetModalGalleryAuto();
   }, { passive: true });
+
+  // Buscador integrado: filtra el catálogo SIN salir de la vista del producto.
+  const buscadorProducto = productModalBody.querySelector("#producto-buscador");
+  const resultadosProducto = productModalBody.querySelector("#producto-buscador-resultados");
+  const shellProducto = productModalBody.querySelector(".modal-product-shell");
+  let buscadorProductoTimer = null;
+  buscadorProducto?.addEventListener("input", () => {
+    clearTimeout(buscadorProductoTimer);
+    buscadorProductoTimer = setTimeout(() => {
+      const consulta = buscadorProducto.value.toLowerCase().trim();
+      if (!consulta) {
+        resultadosProducto.hidden = true;
+        resultadosProducto.innerHTML = "";
+        shellProducto?.classList.remove("oculto-por-busqueda");
+        return;
+      }
+      const coincidencias = products
+        .filter((item) => String(item.id) !== String(currentBaseProduct?.id || ""))
+        .filter((item) => `${item.title || ""} ${item.brand || ""}`.toLowerCase().includes(consulta))
+        .slice(0, 12);
+      shellProducto?.classList.add("oculto-por-busqueda");
+      resultadosProducto.hidden = false;
+      resultadosProducto.innerHTML = coincidencias.length
+        ? coincidencias.map((item) => {
+            const imagen = getProductImageUrls(item)[0] || FALLBACK_IMAGE;
+            const precio = Number(item.price) || 0;
+            return `
+            <button type="button" class="producto-resultado" data-resultado-id="${escapeHTML(String(item.id))}">
+              <img src="${escapeHTML(imagen)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+              <span class="producto-resultado-info"><strong>${escapeHTML(item.title || "Producto")}</strong><small>${escapeHTML(item.brand || "")}</small></span>
+              <span class="producto-resultado-precio">${formatCurrency(precio)}</span>
+            </button>`;
+          }).join("")
+        : `<div class="producto-resultado-vacio">Sin coincidencias para "${escapeHTML(buscadorProducto.value.trim())}"</div>`;
+    }, 200);
+  });
+  buscadorProducto?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      buscadorProducto.value = "";
+      buscadorProducto.dispatchEvent(new Event("input"));
+      buscadorProducto.blur();
+    }
+  });
+  resultadosProducto?.addEventListener("click", (event) => {
+    const boton = event.target.closest("[data-resultado-id]");
+    if (!boton) return;
+    resultadosProducto.hidden = true;
+    resultadosProducto.innerHTML = "";
+    buscadorProducto.value = "";
+    shellProducto?.classList.remove("oculto-por-busqueda");
+    openProductModal(boton.dataset.resultadoId);
+  });
 
   productModalBody.querySelectorAll(".color-dot-btn").forEach((button) => {
     button.addEventListener("click", () => {
