@@ -357,8 +357,10 @@ document.addEventListener("DOMContentLoaded", () => {
   initFinancingCalculator();
   Promise.allSettled([loadProducts(), loadCategories(), loadSiteSettings()])
     .then(() => document.fonts.ready)
-    .then(() => {
-      abrirProductoDesdeEnlaceCompartido();
+    .then(async () => {
+      // Deep link de producto: el loader (logo animado) permanece visible
+      // hasta resolver el producto; el Home nunca llega a verse.
+      await abrirProductoDesdeEnlaceCompartido();
       finishPageLoader();
     });
   window.addEventListener("load", finishPageLoader);
@@ -725,8 +727,25 @@ function setupEventListeners() {
   productModalOverlay?.addEventListener("click", cerrarDetalleCompleto);
   // Boton "Compartir" del detalle: delegacion porque el cuerpo del modal se
   // re-renderiza al cambiar de color/capacidad (un solo listener para todos).
-  productModalBody?.addEventListener("click", (event) => {
-    if (event.target.closest("[data-share-product]")) compartirProductoActual();
+  productModalBody?.addEventListener("click", async (event) => {
+    if (event.target.closest("[data-share-product]")) {
+      compartirProductoActual();
+      return;
+    }
+    if (event.target.closest("[data-producto-volver-tienda]")) {
+      cerrarDetalleCompleto();
+      return;
+    }
+    if (event.target.closest("[data-producto-buscar]")) {
+      // Buscar otro producto: cierra el detalle y deja al usuario en el
+      // buscador del catálogo, sin recorrer el historial de productos.
+      cerrarDetalleCompleto();
+      setTimeout(() => {
+        const buscador = document.getElementById("search-input");
+        buscador?.scrollIntoView({ behavior: "smooth", block: "center" });
+        buscador?.focus({ preventScroll: true });
+      }, 480);
+    }
   });
   // Scrollbar elegante: visible solo mientras el usuario se desplaza y con
   // desvanecimiento suave al soltar (en navegadores con ::-webkit-scrollbar).
@@ -1256,9 +1275,24 @@ function openProductModal(productId, colorName = "", opciones = {}) {
     // entrada en el historial para que Atrás regrese al catálogo (móvil y
     // escritorio) y Adelante la reabra. La URL queda compartible.
     if (opciones.cargaDirecta) {
-      // Enlace compartido abierto directo: Atrás sale del sitio (como toda página web).
+      // Enlace compartido abierto directo: sembrar el catálogo en el historial
+      // para que Atrás deje al usuario DENTRO de la tienda (catálogo limpio,
+      // navegable) en lugar de sacarlo del sitio. El header queda disponible.
       vistaProductoConHistoria = false;
       profundidadHistorialProducto = 0;
+      try {
+        const urlCatalogo = new URL(window.location.href);
+        urlCatalogo.searchParams.delete("producto");
+        urlCatalogo.searchParams.delete("color");
+        history.replaceState({ tienda: true }, "", urlCatalogo.toString());
+        history.pushState(
+          { vistaProducto: { id: String(productId), color: modalSelectedColor }, profundidad: 1 },
+          "",
+          obtenerUrlCompartirProducto(productId, modalSelectedColor)
+        );
+        vistaProductoConHistoria = true;
+        profundidadHistorialProducto = 1;
+      } catch { /* sin historial interno: el header cubre la navegación */ }
     } else if (opciones.desdeHistorial) {
       // La entrada ya existe en el historial (navegación Atrás/Adelante).
       vistaProductoConHistoria = true;
@@ -1428,6 +1462,16 @@ function renderModalContent() {
 
   productModalBody.innerHTML = `
     <div class="modal-product-shell">
+      <div class="producto-topbar-movil">
+        <button type="button" class="producto-topbar-btn" data-producto-volver-tienda aria-label="Volver a la tienda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+          <span>Tienda</span>
+        </button>
+        <span class="producto-topbar-titulo">${escapeHTML(product.title || "Producto")}</span>
+        <button type="button" class="producto-topbar-btn" data-producto-buscar aria-label="Buscar otro producto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
+        </button>
+      </div>
       <div class="modal-grid">
         <section class="modal-gallery" aria-label="Galería de ${escapeHTML(product.title)}">
           <div class="modal-gallery-stage" tabindex="0">
