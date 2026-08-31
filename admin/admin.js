@@ -4704,16 +4704,21 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     btn.addEventListener('click', () => doCancelDoc(btn.dataset.cancelDoc, btn.closest('.settings-form-card')));
   });
 
-  // ---- Inputs marcan cambio POR TARJETA (y preview WhatsApp) ----
-  TEXT_DOCS.forEach(docId => {
-    const prefix = FIELD_PREFIX[docId];
-    if (!prefix) return;
-    document.querySelectorAll(`[data-${prefix}]`).forEach(el => {
-      el.addEventListener('input', () => {
-        evaluarCambiosCard(el.closest('.settings-form-card'), docId);
-        if (docId === 'whatsapp') renderWaPreview();
-      });
-    });
+  // ---- Cambios POR TARJETA vía delegación (robusto a re-renderizados) ----
+  // Un solo listener en document: cualquier campo data-<prefix> evalúa la
+  // tarjeta que lo contiene. Funciona incluso si los campos se vuelven a
+  // renderizar después de la carga.
+  const DOC_FIELD_PREFIXES = { cmp: 'empresa', home: 'inicio', ftr: 'pie-de-pagina', wa: 'whatsapp' };
+  document.addEventListener('input', (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLElement)) return;
+    for (const prefix in DOC_FIELD_PREFIXES) {
+      if (el.hasAttribute(`data-${prefix}`)) {
+        evaluarCambiosCard(el.closest('.settings-form-card'), DOC_FIELD_PREFIXES[prefix]);
+        if (DOC_FIELD_PREFIXES[prefix] === 'whatsapp') renderWaPreview();
+        return;
+      }
+    }
   });
 
   // ---- Preview de WhatsApp ----
@@ -5341,6 +5346,10 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     applyDocValues(docId, data);
     LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => renderList(cfg, data[cfg.listKey]));
     syncRichFields();
+    // Instantáneas POR TARJETA desde los valores cargados: cada tarjeta
+    // arranca limpia y compara contra ESTA referencia (no contra la
+    // primera tecla, que capturaría el estado ya editado).
+    marcarOriginalesDoc(docId);
     // Instantánea original del documento: la referencia para detectar cambios reales.
     marcarOriginalDoc(docId);
     updateDocButtons(docId);
