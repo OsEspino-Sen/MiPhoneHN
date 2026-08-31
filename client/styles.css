@@ -2297,7 +2297,6 @@ select:focus-visible {
   transform: translateY(12px);
   pointer-events: none;
 }
-}
 
 .modal-product-shell {
   display: flex;
