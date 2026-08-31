@@ -4307,6 +4307,21 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     updateDocButtons(docId);
   }
 
+  /* Re-evalúa TODOS los documentos en cada interacción: garantiza que solo
+     los formularios realmente editados tengan botones habilitados y que
+     ningún falso positivo sobreviva entre pestañas. */
+  function evaluarCambiosTodosLosDocs() {
+    TEXT_DOCS.forEach(docId => evaluarCambiosDoc(docId));
+  }
+
+  /* Marca del negocio en el propio panel Admin: sidebar y título. */
+  function aplicarMarcaEnAdmin(nombre) {
+    if (!nombre) return;
+    document.title = `${nombre} — Panel de administración`;
+    const brandCopy = document.querySelector('.sidebar-brand-copy strong');
+    if (brandCopy) brandCopy.textContent = nombre;
+  }
+
   function marcarOriginalDoc(docId) {
     const estado = docsState[docId];
     if (!estado) return;
@@ -4379,7 +4394,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       ed.addEventListener('input', () => {
         const hidden = richHidden(ed);
         if (hidden) hidden.value = sanitizeRichHTML(ed.innerHTML);
-        evaluarCambiosDoc(docId);
+        evaluarCambiosTodosLosDocs();
       });
     });
   }
@@ -4530,7 +4545,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   function bindList(cfg) {
     const container = document.getElementById(cfg.container);
     if (!container) return;
-    container.addEventListener('input', () => evaluarCambiosDoc(cfg.doc));
+    container.addEventListener('input', () => evaluarCambiosTodosLosDocs());
     container.addEventListener('click', (e) => {
       const btn = e.target.closest('.settings-list-btn');
       if (!btn) return;
@@ -4547,7 +4562,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       } else {
         return;
       }
-      evaluarCambiosDoc(cfg.doc);
+      evaluarCambiosTodosLosDocs();
     });
   }
 
@@ -4558,7 +4573,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       const container = document.getElementById(cfg.container);
       if (!container) return;
       container.insertAdjacentHTML('beforeend', listRowHTML(cfg, null));
-      evaluarCambiosDoc(cfg.doc);
+      evaluarCambiosTodosLosDocs();
     });
   });
 
@@ -4579,6 +4594,8 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       marcarOriginalDoc(docId);
       docsState[docId].changed = false;
       updateDocButtons(docId);
+      // La marca del negocio se refleja en el propio panel al guardar.
+      if (docId === 'empresa') aplicarMarcaEnAdmin(values?.name);
       cardStatus(card, 'success', 'Cambios guardados');
       showAlert('Configuración guardada correctamente', 'success');
       setTimeout(() => cardStatus(card, '', ''), 3000);
@@ -4614,7 +4631,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     if (!prefix) return;
     document.querySelectorAll(`[data-${prefix}]`).forEach(el => {
       el.addEventListener('input', () => {
-        evaluarCambiosDoc(docId);
+        evaluarCambiosTodosLosDocs();
         if (docId === 'whatsapp') renderWaPreview();
       });
     });
@@ -5248,6 +5265,8 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     // Instantánea original del documento: la referencia para detectar cambios reales.
     marcarOriginalDoc(docId);
     updateDocButtons(docId);
+    // La marca del negocio se refleja en el propio panel al cargar.
+    if (docId === 'empresa') aplicarMarcaEnAdmin(data?.name);
     if (docId === 'whatsapp') renderWaPreview();
   }
 
@@ -7538,5 +7557,6 @@ initBackupSystem();
     : `Panel conectado a PRODUCCIÓN (${import.meta.env.VITE_SUPABASE_URL || "?"}). Las acciones aquí afectan a la tienda publicada.`;
   badge.hidden = false;
 })();
+
 
 
