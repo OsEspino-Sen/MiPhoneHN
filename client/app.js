@@ -241,6 +241,30 @@ function copiarEnlaceConTextarea(url) {
   area.remove();
 }
 
+/* "Ver más" / Enter en el buscador del producto: lleva a la TIENDA con el
+   término aplicado (la tienda lo lee de ?busqueda= al cargar). */
+function irATiendaConBusqueda(termino) {
+  const terminoLimpio = String(termino || "").trim();
+  if (!terminoLimpio) {
+    notify("Escribe algo para buscar en la Tienda", "info");
+    return;
+  }
+  const url = new URL("tienda.html", window.location.href);
+  url.searchParams.set("busqueda", terminoLimpio);
+  window.location.href = url.toString();
+}
+
+/* La Tienda aplica el término recibido por ?busqueda= al cargar. */
+function aplicarBusquedaDesdeURL() {
+  const params = new URLSearchParams(window.location.search);
+  const termino = (params.get("busqueda") || "").trim();
+  if (!termino || !searchInput) return;
+  searchInput.value = termino;
+  searchQuery = termino.toLowerCase().trim();
+  renderProducts();
+  document.querySelector(".catalog-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 let enlaceProductoAtendido = false;
 
 /* Mapa de IDs legados → IDs actuales (tras la renumeración del catálogo).
@@ -398,6 +422,8 @@ document.addEventListener("DOMContentLoaded", () => {
       // Deep link de producto: el loader (logo animado) permanece visible
       // hasta resolver el producto; el Home nunca llega a verse.
       await abrirProductoDesdeEnlaceCompartido();
+      // Búsqueda llegada por enlace (?busqueda=): aplicarla en la Tienda.
+      aplicarBusquedaDesdeURL();
       finishPageLoader();
     });
   window.addEventListener("load", finishPageLoader);
@@ -1718,10 +1744,19 @@ function renderModalContent() {
               <span class="producto-resultado-precio">${formatCurrency(precio)}</span>
             </button>`;
           }).join("")
+          + `<button type="button" class="producto-ver-mas" data-ver-mas-tienda>
+              Ver más resultados en la Tienda
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"></path></svg>
+            </button>`
         : `<div class="producto-resultado-vacio">No encontramos productos que coincidan con tu búsqueda.</div>`;
     }, 180);
   });
   buscadorProducto?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      irATiendaConBusqueda(buscadorProducto.value);
+      return;
+    }
     if (event.key === "Escape") {
       buscadorProducto.value = "";
       resultadosProducto.hidden = true;
@@ -1730,6 +1765,10 @@ function renderModalContent() {
     }
   });
   resultadosProducto?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-ver-mas-tienda]")) {
+      irATiendaConBusqueda(buscadorProducto.value);
+      return;
+    }
     const boton = event.target.closest("[data-resultado-id]");
     if (!boton) return;
     resultadosProducto.hidden = true;
@@ -2764,6 +2803,10 @@ function applyCompanySettings(company) {
 
   if (company.name) {
     document.title = `${company.name} | Celulares Nuevos y Seminuevos en Honduras`;
+    // Marca visible en TODOS los lugares: header y footer de cada página.
+    document.querySelectorAll(".brand-logo-text").forEach((el) => {
+      el.textContent = company.name;
+    });
   }
 
   const metaDescription = document.querySelector('meta[name="description"]');

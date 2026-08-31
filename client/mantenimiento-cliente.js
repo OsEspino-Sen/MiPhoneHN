@@ -40,21 +40,25 @@ export function artworkUrl() {
 
 async function leerEstado() {
   const { db, doc, getDoc } = await import('./supabase-config.js');
-  const [snap, imgSnap, waSnap] = await Promise.all([
+  const [snap, imgSnap, waSnap, empSnap] = await Promise.all([
     getDoc(doc(db, 'configuracion', resolveFlagKey())),
     // Imagen de mantenimiento subida desde el panel (Imágenes).
     getDoc(doc(db, 'imagenes', 'mantenimiento')),
     // Número de WhatsApp del negocio (única fuente de verdad).
-    getDoc(doc(db, 'configuracion', 'whatsapp'))
+    getDoc(doc(db, 'configuracion', 'whatsapp')),
+    // Nombre del negocio (configuración de empresa).
+    getDoc(doc(db, 'configuracion', 'empresa'))
   ]);
   const data = snap.exists() ? (snap.data() || {}) : {};
   const imgData = imgSnap.exists() ? (imgSnap.data() || {}) : {};
   const waData = waSnap.exists() ? (waSnap.data() || {}) : {};
+  const empData = empSnap.exists() ? (empSnap.data() || {}) : {};
   return {
     activo: Boolean(data.activo),
     mensaje: data.mensaje || '',
     artwork: imgData.url || imgData.data || artworkUrl(),
-    whatsapp: waData.phone || ''
+    whatsapp: waData.phone || '',
+    marca: empData.name || ''
   };
 }
 
@@ -74,6 +78,7 @@ function crearOverlay(estado) {
   overlay.innerHTML = `<main class="mnt-page">${buildMantenimientoMarkup({
     artworkUrl: estado.artwork,
     whatsapp: estado.whatsapp,
+    ...(estado.marca ? { marca: estado.marca } : {}),
     ...(estado.mensaje ? { mensaje: estado.mensaje } : {})
   })}</main>`;
   overlay.style.cssText =
