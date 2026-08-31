@@ -1500,10 +1500,9 @@ function renderModalContent() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
         <input type="search" id="producto-buscador" placeholder="Buscar productos" autocomplete="off" aria-label="Buscar productos">
       </div>
+      <div class="producto-buscador-resultados" id="producto-buscador-resultados" hidden></div>
     </div>
-    <div class="producto-buscador-resultados" id="producto-buscador-resultados" hidden></div>
-    <div class="modal-product-shell">
-      <div class="modal-grid">
+    <div class="modal-grid">
         <section class="modal-gallery" aria-label="Galería de ${escapeHTML(product.title)}">
           <div class="modal-gallery-stage" tabindex="0">
             <div class="gallery-ambient" aria-hidden="true"></div>
