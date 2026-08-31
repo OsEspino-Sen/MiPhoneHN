@@ -556,6 +556,33 @@ const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
 
 /* DOM elements */
 const adminApp = document.getElementById("admin-app");
+
+/* Oculta el loader de entrada cuando la sesión y las imágenes de la BD
+   están listas (con tope de seguridad). Nunca antes: la entrada se ve
+   completa, sin imágenes que aparecen de golpe después. */
+function ocultarAdminLoaderCuandoListo() {
+  const loader = document.getElementById('admin-loader');
+  if (!loader || loader.dataset.done) return;
+  const fin = () => {
+    if (loader.dataset.done) return;
+    loader.dataset.done = '1';
+    loader.classList.add('admin-loader--done');
+    setTimeout(() => loader.remove(), 600);
+  };
+  const t0 = performance.now();
+  const esperar = async () => {
+    try {
+      await Promise.race([
+        window.__imagenesDbListas || Promise.resolve(),
+        new Promise((r) => setTimeout(r, 2500))
+      ]);
+    } catch {}
+    const restante = Math.max(0, 600 - (performance.now() - t0));
+    setTimeout(fin, restante);
+  };
+  esperar();
+}
+
 const logoutBtn = document.getElementById("logout-btn");
 const adminAlert = document.getElementById("admin-alert");
 const productsTableBody = document.getElementById("products-table-body");
@@ -4366,31 +4393,8 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     }
   }
 
-  /* Oculta el loader de entrada cuando la sesión y las imágenes de la BD
-     están listas (con tope de seguridad). Nunca antes: la entrada se ve
-     completa, sin imágenes que aparecen de golpe después. */
-  function ocultarAdminLoaderCuandoListo() {
-    const loader = document.getElementById('admin-loader');
-    if (!loader || loader.dataset.done) return;
-    const fin = () => {
-      if (loader.dataset.done) return;
-      loader.dataset.done = '1';
-      loader.classList.add('admin-loader--done');
-      setTimeout(() => loader.remove(), 600);
-    };
-    const t0 = performance.now();
-    const esperar = async () => {
-      try {
-        await Promise.race([
-          window.__imagenesDbListas || Promise.resolve(),
-          new Promise((r) => setTimeout(r, 2500))
-        ]);
-      } catch {}
-      const restante = Math.max(0, 600 - (performance.now() - t0));
-      setTimeout(fin, restante);
-    };
-    esperar();
-  }
+  /* Ocultación del loader de entrada: definida a nivel de módulo (la usa
+     init()). Ver la función pública del mismo nombre más arriba. */
 
   /* Marca TEMPRANA: lee el nombre real del negocio al arrancar el panel,
      sin esperar a la carga completa de secciones (evita el flash del nombre
