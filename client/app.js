@@ -3041,7 +3041,7 @@ function setBrandLogo(dataUrl) {
   // [ LOGO ] Mi Phone HN — el logo nunca sustituye el texto.
   const brandHtml =
     `<img src="${escapeHTML(src)}" alt="${escapeHTML(nombreEmpresa)}" class="brand-logo-img">` +
-    `<span class="brand-logo-text">Mi Phone <span>HN</span></span>`;
+    `<span class="brand-logo-text">${marcaHTML(nombreEmpresa)}</span>`;
   document.querySelectorAll(".logo, .footer-logo").forEach((el) => {
     el.innerHTML = brandHtml;
   });
