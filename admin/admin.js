@@ -3755,18 +3755,28 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   const exts = ['jpg','jpeg','png','webp','gif','svg','JPG','JPEG','PNG','WEBP'];
   let i = 0;
   const fromSupabase = () => window.__imagenesSupabase && (window.__imagenesSupabase.imagen_barra_principal || window.__imagenesSupabase.barra);
-  const tryNext = () => {
+  /* DATOS ACTUALES > DATOS ANTIGUOS: los archivos estáticos del repo son SOLO
+     un último recurso. Se prueban DESPUÉS de que la carga de la BD terminó sin
+     imagen para esa clave; nunca antes (mostraban la imagen vieja como si
+     fuera válida y luego la de la BD la reemplazaba con un salto). */
+  const probarEstaticos = () => {
     if (fromSupabase()) return;
     if (i >= exts.length) { img.style.display = 'none'; return; }
     const src = 'imagen_barra.' + exts[i++];
     const test = new Image();
-    test.onload = () => { img.src = src; img.style.display = 'block'; };
-    test.onerror = tryNext;
+    test.onload = () => { if (!fromSupabase()) { img.src = src; img.style.display = 'block'; } };
+    test.onerror = probarEstaticos;
     test.src = src + '?t=' + Date.now();
   };
-  tryNext();
+  const esperarDbYProbar = async () => {
+    let intentos = 0;
+    while (!window.__imagenesDbListas && intentos < 40) { await new Promise(r => setTimeout(r, 100)); intentos++; }
+    try { await window.__imagenesDbListas; } catch {}
+    probarEstaticos();
+  };
+  esperarDbYProbar();
   // Re-check when page becomes visible (e.g. after upload)
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) tryNext(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) probarEstaticos(); });
 })();
 
 // ==========================================================================
@@ -3874,27 +3884,33 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   }
 
   async function loadImagesFromSupabase() {
-    try {
-      const snapshot = await getDocs(collection(db, IMAGENES_COLLECTION));
-      snapshot.forEach(docSnap => {
-        const rawKey = docSnap.id;
-        const docData = docSnap.data();
-        // Resolver key: si es legacy, mapear a la nueva; si ya es nueva, usarla directa.
-        const key = LEGACY_KEY_MAP[rawKey] || (IMAGE_KEYS.includes(rawKey) ? rawKey : null);
-        if (!key) return;
-        // Priorizar la URL (Cloudinary) sobre el base64 legado que puede seguir en la BD.
-        const imageData = docData.url || docData.data;
-        if (imageData) {
-          state[key].url = imageData;
-          setPreview(key, imageData);
-          applySitePreview(key, imageData);
-          const urlInput = document.querySelector(`.settings-image-card[data-key="${key}"] .settings-url-input`);
-          if (urlInput && !imageData.startsWith('data:')) urlInput.value = imageData;
-        }
-      });
-    } catch (err) {
-      console.warn('[Settings] Supabase no disponible.');
-    }
+    /* Bandera de carga terminada: los fallbacks estáticos (imagen_barra.*)
+       deben esperar a ESTA resolución antes de mostrarse. Sin ella, la imagen
+       vieja del repo aparecía primero y la de la BD la reemplazaba (flash). */
+    window.__imagenesDbListas = (async () => {
+      try {
+        const snapshot = await getDocs(collection(db, IMAGENES_COLLECTION));
+        snapshot.forEach(docSnap => {
+          const rawKey = docSnap.id;
+          const docData = docSnap.data();
+          // Resolver key: si es legacy, mapear a la nueva; si ya es nueva, usarla directa.
+          const key = LEGACY_KEY_MAP[rawKey] || (IMAGE_KEYS.includes(rawKey) ? rawKey : null);
+          if (!key) return;
+          // Priorizar la URL (Cloudinary) sobre el base64 legado que puede seguir en la BD.
+          const imageData = docData.url || docData.data;
+          if (imageData) {
+            state[key].url = imageData;
+            setPreview(key, imageData);
+            applySitePreview(key, imageData);
+            const urlInput = document.querySelector(`.settings-image-card[data-key="${key}"] .settings-url-input`);
+            if (urlInput && !imageData.startsWith('data:')) urlInput.value = imageData;
+          }
+        });
+      } catch (err) {
+        console.warn('[Settings] Supabase no disponible.');
+      }
+    })();
+    await window.__imagenesDbListas;
   }
 
   // ---- Aplicar preview en todo el sitio ----
@@ -4317,10 +4333,20 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   /* Marca del negocio en el propio panel Admin: sidebar y título. */
   function aplicarMarcaEnAdmin(nombre) {
     if (!nombre) return;
-    document.title = `${nombre} — Panel de administración`;
+    document.title = `${nombre} - Panel de administración`;
     const brandCopy = document.querySelector('.sidebar-brand-copy strong');
     if (brandCopy) brandCopy.textContent = nombre;
   }
+
+  /* Marca TEMPRANA: lee el nombre real del negocio al arrancar el panel,
+     sin esperar a la carga completa de secciones (evita el flash del nombre
+     fijado en el HTML). Única fuente de verdad: configuracion/empresa. */
+  (async () => {
+    try {
+      const snap = await getDoc(doc(db, SETTINGS_COLLECTION, 'empresa'));
+      if (snap.exists()) aplicarMarcaEnAdmin(snap.data()?.name);
+    } catch { /* silencioso: loadDoc aplicará la marca en su flujo normal */ }
+  })();
 
   function marcarOriginalDoc(docId) {
     const estado = docsState[docId];

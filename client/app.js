@@ -490,7 +490,9 @@ document.addEventListener("DOMContentLoaded", () => {
       aplicarBusquedaDesdeURL();
       finishPageLoader();
     });
-  window.addEventListener("load", finishPageLoader);
+  /* Red de seguridad: si la base no responde, revelar como máximo a los 4s.
+     Ya NO existe la vía window.load: revelaba la página aunque los datos
+     actuales no hubieran llegado (flash de contenido viejo/por defecto). */
   setTimeout(finishPageLoader, 4000);
 
   // Navegación entre páginas: al llegar desde otra página (p. ej. Tienda/Soporte)
@@ -548,6 +550,13 @@ document.addEventListener("DOMContentLoaded", () => {
 async function loadProducts() {
   showCatalogLoading();
 
+  /* La promesa SOLO se resuelve cuando el primer snapshot real fue aplicado.
+     Así el loader permanece hasta que hay datos confirmados: nunca se revela
+     la página con el contenido estático/desactualizado (sin flash). */
+  let resolverPrimera = null;
+  const primerCatalogo = new Promise((resolve) => { resolverPrimera = resolve; });
+  const cerrarPrimera = () => { if (resolverPrimera) { resolverPrimera(); resolverPrimera = null; } };
+
   try {
     const { db, collection, onSnapshot, getDocs } = await import("./supabase-config.js");
     const productsRef = collection(db, "productos");
@@ -559,8 +568,9 @@ async function loadProducts() {
       }));
       renderProducts();
       renderFeaturedCarousel();
+      cerrarPrimera();
     }, async (error) => {
-      console.warn("⚠️ Streaming en tiempo real bloqueado, intentando lectura única getDocs:", error);
+      console.warn("?? Streaming en tiempo real bloqueado, intentando lectura única getDocs:", error);
       try {
         const snapshot = await getDocs(productsRef);
         products = snapshot.docs.map((docSnap) => normalizeProductRecord({
@@ -573,12 +583,17 @@ async function loadProducts() {
         console.error("Error al obtener catálogo desde Supabase:", getErr);
         showCatalogError();
       }
+      cerrarPrimera();
     });
   } catch (error) {
     console.error("No se pudo conectar a Supabase:", error);
     showCatalogError();
+    cerrarPrimera();
   }
+
+  return primerCatalogo;
 }
+
 
 /* ========================================================================== 
    CARGAR CATEGORÍAS
@@ -589,6 +604,10 @@ let categoryParamHandled = false; // el ?categoria= se aplica una sola vez
 
 async function loadCategories() {
   categoryChipsContainer = document.getElementById("category-chips");
+  /* Igual que el catálogo: resuelve solo tras aplicar la primera carga real. */
+  let resolverPrimera = null;
+  const primeraCarga = new Promise((resolve) => { resolverPrimera = resolve; });
+  const cerrarPrimera = () => { if (resolverPrimera) { resolverPrimera(); resolverPrimera = null; } };
   try {
     const { db, collection, query, orderBy, onSnapshot, getDocs } = await import("./supabase-config.js");
     const categoriesRef = query(collection(db, "categorias"), orderBy("id"));
@@ -597,6 +616,7 @@ async function loadCategories() {
       renderCategoriesSection();
       renderCategoryChips();
       applyCategoryParamFilter();
+      cerrarPrimera();
     };
     onSnapshot(categoriesRef, apply, async () => {
       try {
@@ -604,11 +624,14 @@ async function loadCategories() {
         apply(snapshot);
       } catch (err) {
         console.warn("No se pudieron cargar las categorías:", err);
+        cerrarPrimera();
       }
     });
   } catch (error) {
     console.warn("No se pudo conectar para cargar las categorías:", error);
+    cerrarPrimera();
   }
+  return primeraCarga;
 }
 
 function renderCategoriesSection() {
@@ -3301,17 +3324,31 @@ function applySiteSettings(documents) {
 }
 
 async function loadSiteSettings() {
+  /* Resuelve solo cuando la PRIMERA aplicación de configuración real terminó:
+     el loader no se retira con la configuración pendiente. */
+  let resolverPrimera = null;
+  const primeraAplicacion = new Promise((resolve) => { resolverPrimera = resolve; });
+  let primeraAplicada = false;
+  const cerrarPrimera = () => { if (!primeraAplicada) { primeraAplicada = true; resolverPrimera?.(); } };
   try {
     const { db, collection, onSnapshot, getDocs } = await import("./supabase-config.js");
     const settingsRef = collection(db, "configuracion");
     const imagesRef = collection(db, "imagenes");
 
+    /* Guarda anti-carrera: cada evento dispara un applyAll asíncrono. Si una
+       petición antigua resuelve DESPUÉS de una reciente, se descarta (solo la
+       más reciente escribe estado). Nunca datos viejos sobre datos nuevos. */
+    let applySeq = 0;
     const applyAll = async () => {
+      const seq = ++applySeq;
       try {
         const [snapA, snapB] = await Promise.all([getDocs(settingsRef), getDocs(imagesRef)]);
+        if (seq !== applySeq) return;
         applySiteSettings([...snapA.docs, ...snapB.docs]);
+        cerrarPrimera();
       } catch (err) {
         console.warn("No se pudo cargar la configuración del sitio:", err);
+        cerrarPrimera();
       }
     };
 
@@ -3319,6 +3356,8 @@ async function loadSiteSettings() {
     onSnapshot(imagesRef, () => { applyAll(); }, applyAll);
   } catch (error) {
     console.warn("No se pudo conectar para cargar la configuración del sitio:", error);
+    cerrarPrimera();
   }
+  return primeraAplicacion;
 }
 

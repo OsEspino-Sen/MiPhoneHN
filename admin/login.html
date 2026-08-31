@@ -151,8 +151,32 @@
   <script type="module">
     import { auth, signInWithEmailAndPassword, syncUserToSupabase, db, doc, getDoc } from './supabase-config.js';
 
-    // Logotipo oficial junto al nombre de la empresa en la pantalla de acceso.
+    // Logotipo oficial y NOMBRE DE LA EMPRESA en la pantalla de acceso.
+    // Única fuente de verdad: la BD (configuracion/empresa), igual que el
+    // panel y el sitio público. Sin valores fijos ni separados.
     (async () => {
+      const MARCA_LOGIN = 'Mi Phone HN';
+      const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const marcaHTML = (nombre) => {
+        const palabras = String(nombre).trim().split(/\s+/).filter(Boolean);
+        if (!palabras.length) return '';
+        const ultima = palabras.pop();
+        const resto = palabras.join(' ');
+        return resto ? `${esc(resto)} <b>${esc(ultima)}</b>` : `<b>${esc(ultima)}</b>`;
+      };
+      try {
+        const snap = await getDoc(doc(db, 'configuracion', 'empresa'));
+        const nombre = snap.exists() ? String(snap.data()?.name || '').trim() : '';
+        if (nombre && nombre !== MARCA_LOGIN) {
+          document.title = document.title.split(MARCA_LOGIN).join(nombre);
+          const texto = document.querySelector('.login-brand-text');
+          if (texto) texto.innerHTML = marcaHTML(nombre);
+          document.querySelectorAll('[aria-label]').forEach((el) => {
+            const v = el.getAttribute('aria-label');
+            if (v && v.includes(MARCA_LOGIN)) el.setAttribute('aria-label', v.split(MARCA_LOGIN).join(nombre));
+          });
+        }
+      } catch (_) {}
       try {
         const snap = await getDoc(doc(db, 'imagenes', 'logo'));
         const data = snap.exists() ? snap.data() : null;
@@ -161,7 +185,9 @@
         const src = url.startsWith('data:') ? url : url + '?t=' + Date.now();
         const mark = document.querySelector('.login-brand-mark');
         if (mark) {
-          mark.innerHTML = `<img src="${src}" alt="Mi Phone HN" class="brand-logo-img">`;
+          const texto = document.querySelector('.login-brand-text');
+          const nombreActual = (texto?.textContent || MARCA_LOGIN).trim();
+          mark.innerHTML = `<img src="${src}" alt="${esc(nombreActual)}" class="brand-logo-img">`;
           mark.classList.add('has-logo');
         }
       } catch (_) {}
