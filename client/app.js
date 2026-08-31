@@ -5,6 +5,61 @@
 
 import { iniciarMantenimientoCliente, mostrarProductoCompartidoEnMantenimiento } from "./mantenimiento-cliente.js";
 
+/* ==========================================================================
+   MARCA DE LA EMPRESA (configurable desde el panel Admin)
+   Nombre único propagado a TODOS los textos del sitio: título, logos,
+   loader, copyright, aria-labels, mensajes de WhatsApp y modales.
+   ========================================================================== */
+const MARCA_DEFAULT = "Mi Phone HN";
+let nombreEmpresa = MARCA_DEFAULT;
+const TITULO_PARTES = document.title.split(MARCA_DEFAULT);
+const NODOS_MARCA = [];
+
+/* Logo de dos tonos: última palabra acentuada (patrón "Mi Phone <span>HN</span>"). */
+function marcaHTML(nombre) {
+  const palabras = String(nombre).trim().split(/\s+/).filter(Boolean);
+  if (!palabras.length) return "";
+  const ultima = palabras.pop();
+  const resto = palabras.join(" ");
+  return resto
+    ? `${escapeHTML(resto)} <span>${escapeHTML(ultima)}</span>`
+    : `<span>${escapeHTML(ultima)}</span>`;
+}
+
+/* Registra (una sola vez) cada nodo de texto y atributo que menciona la
+   marca por defecto, para reemplazarla cuando llegue el nombre real. */
+function registrarNodosMarca() {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const nodo = walker.currentNode;
+    if (nodo.nodeValue && nodo.nodeValue.includes(MARCA_DEFAULT)) {
+      NODOS_MARCA.push({ tipo: "texto", nodo, original: nodo.nodeValue });
+    }
+  }
+  document.querySelectorAll("[aria-label], [alt], [title], [placeholder]").forEach((el) => {
+    for (const attr of ["aria-label", "alt", "title", "placeholder"]) {
+      const valor = el.getAttribute(attr);
+      if (valor && valor.includes(MARCA_DEFAULT)) {
+        NODOS_MARCA.push({ tipo: "attr", nodo: el, attr, original: valor });
+      }
+    }
+  });
+}
+
+/* Propaga el nombre actual a todos los lugares registrados + logos. */
+function aplicarMarcaEnSitio() {
+  NODOS_MARCA.forEach((registro) => {
+    if (registro.tipo === "texto") {
+      registro.nodo.nodeValue = registro.original.split(MARCA_DEFAULT).join(nombreEmpresa);
+    } else {
+      registro.nodo.setAttribute(registro.attr, registro.original.split(MARCA_DEFAULT).join(nombreEmpresa));
+    }
+  });
+  document.querySelectorAll(".brand-logo-text, .page-loader-brand").forEach((el) => {
+    el.innerHTML = marcaHTML(nombreEmpresa);
+  });
+}
+
 const WHATSAPP_DEFAULTS = {
   phone: "50488878066",
   title: "NUEVO PEDIDO — MI PHONE HN",
@@ -56,7 +111,7 @@ function aplicarWhatsAppEnlaces() {
   if (heroBtn) {
     heroBtn.setAttribute(
       "href",
-      enlaceWhatsApp(phone, "Hola Mi Phone HN, me gustaría solicitar información sobre el extrafinanciamiento.")
+      enlaceWhatsApp(phone, `Hola ${nombreEmpresa}, me gustaría solicitar información sobre el extrafinanciamiento.`)
     );
   }
   const footerWaLink = document.getElementById("footer-wa-link");
@@ -200,7 +255,7 @@ function compartirProductoActual() {
   const producto = currentBaseProduct;
   if (!producto) return;
   const url = obtenerUrlCompartirProducto(producto.id, modalSelectedColor);
-  const titulo = `${producto.title || "Producto"} — Mi Phone HN`;
+  const titulo = `${producto.title || "Producto"} — ${nombreEmpresa}`;
   // Menu nativo de compartir (ideal en movil: WhatsApp, Instagram, etc.)
   if (typeof navigator.share === "function") {
     navigator.share({ title: titulo, text: titulo, url })
@@ -419,6 +474,7 @@ function finishPageLoader() {
 
 document.addEventListener("DOMContentLoaded", () => {
   iniciarMantenimientoCliente();
+  registrarNodosMarca();
   aplicarWhatsAppEnlaces();
   initTheme();
   updateCartUI();
@@ -1558,7 +1614,7 @@ function renderModalContent() {
           </div>
           <span class="product-brand">${escapeHTML(product.brand || "")}</span>
           <h1 class="modal-title">${escapeHTML(product.title || "Producto")}</h1>
-          <p class="modal-lead">${escapeHTML(product.description || "Tecnología seleccionada y respaldada por Mi Phone HN.")}</p>
+          <p class="modal-lead">${escapeHTML(product.description || `Tecnología seleccionada y respaldada por ${nombreEmpresa}.`)}</p>
 
           <div class="modal-price-row">
             <div class="modal-price-main">
@@ -1620,7 +1676,7 @@ function renderModalContent() {
           <div class="modal-tab-panel ${modalActiveTab === "description" ? "active" : ""}" role="tabpanel" data-modal-panel="description" ${modalActiveTab === "description" ? "" : "hidden"}>
             <span class="tab-content-eyebrow">Acerca de este equipo</span>
             <h3>Diseñado para acompañar tu día</h3>
-            <p>${escapeHTML(product.description || "Producto disponible en Mi Phone HN.")}</p>
+            <p>${escapeHTML(product.description || `Producto disponible en ${nombreEmpresa}.`)}</p>
           </div>
           <div class="modal-tab-panel ${modalActiveTab === "specifications" ? "active" : ""}" role="tabpanel" data-modal-panel="specifications" ${modalActiveTab === "specifications" ? "" : "hidden"}>
             <span class="tab-content-eyebrow">Ficha técnica</span>
@@ -2077,14 +2133,30 @@ function clearFieldError(field) {
   if (group) group.classList.remove("is-invalid");
 }
 
+/* Mensaje de campos obligatorios: TEMPORAL. Solo aparece cuando el
+   formulario se envía incompleto, dura ~5s y se oculta solo con una
+   transición suave (gana espacio visual en el carrito). */
+const CHECKOUT_ERROR_DURACION_MS = 5000;
+let checkoutErrorTimer = null;
+
 function showCheckoutError() {
   const error = document.getElementById("checkout-form-error");
-  if (error) error.hidden = false;
+  if (!error) return;
+  error.hidden = false;
+  clearTimeout(checkoutErrorTimer);
+  // Doble rAF: garantiza que la transición corra tras quitar `hidden`.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => error.classList.add("is-visible"));
+  });
+  checkoutErrorTimer = setTimeout(() => hideCheckoutError(), CHECKOUT_ERROR_DURACION_MS);
 }
 
 function hideCheckoutError() {
+  clearTimeout(checkoutErrorTimer);
+  checkoutErrorTimer = null;
   const error = document.getElementById("checkout-form-error");
-  if (error) error.hidden = true;
+  if (!error) return;
+  error.classList.remove("is-visible");
 }
 
 function validateCheckoutForm() {
@@ -2333,7 +2405,7 @@ function calculateFinancing() {
   }
 
   const message = [
-    "Hola Mi Phone HN, me gustaría consultar por Extrafinanciamiento:",
+    `Hola ${nombreEmpresa}, me gustaría consultar por Extrafinanciamiento:`,
     `Banco: ${banco.nombre}`,
     `Producto: ${formatCurrency(amount)}`,
     `Plazo: ${plan.meses} meses (tasa ${plan.interes}%)`,
@@ -2810,11 +2882,13 @@ function applyCompanySettings(company) {
   if (!company) return;
 
   if (company.name) {
-    document.title = `${company.name} | Celulares Nuevos y Seminuevos en Honduras`;
-    // Marca visible en TODOS los lugares: header y footer de cada página.
-    document.querySelectorAll(".brand-logo-text").forEach((el) => {
-      el.textContent = company.name;
-    });
+    nombreEmpresa = String(company.name).trim() || nombreEmpresa;
+    // Título conservando el formato propio de cada página
+    // ("Tienda | X", "Soporte y FAQ | X", "X | Celulares...").
+    document.title = TITULO_PARTES.join(nombreEmpresa);
+    // Marca visible en TODOS los lugares del sitio (texto, atributos,
+    // header, footer y loader de carga).
+    aplicarMarcaEnSitio();
   }
 
   const metaDescription = document.querySelector('meta[name="description"]');
@@ -2966,7 +3040,7 @@ function setBrandLogo(dataUrl) {
   // Identidad visual: el logotipo acompaña al nombre de la empresa.
   // [ LOGO ] Mi Phone HN — el logo nunca sustituye el texto.
   const brandHtml =
-    `<img src="${escapeHTML(src)}" alt="Mi Phone HN" class="brand-logo-img">` +
+    `<img src="${escapeHTML(src)}" alt="${escapeHTML(nombreEmpresa)}" class="brand-logo-img">` +
     `<span class="brand-logo-text">Mi Phone <span>HN</span></span>`;
   document.querySelectorAll(".logo, .footer-logo").forEach((el) => {
     el.innerHTML = brandHtml;
