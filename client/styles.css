@@ -2073,34 +2073,58 @@ select:focus-visible {
   font-weight: 700;
 }
 
+/* Mensaje de obligatorios: colapsado por defecto (0fr / opacity 0).
+   Al mostrarse se expande suavemente ocupando su espacio real; al
+   ocultarse se contrae sin saltos ni huecos. */
 .checkout-form-error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-bottom: 0;
+  padding: 0 12px;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  background: var(--error-bg);
+  background: transparent;
   color: var(--error);
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.4;
-  animation: checkout-error-in 0.2s ease-out;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    grid-template-rows 0.35s ease,
+    opacity 0.3s ease,
+    margin-bottom 0.35s ease,
+    padding 0.35s ease,
+    background-color 0.35s ease,
+    border-color 0.35s ease;
 }
 
-.checkout-form-error::before {
+.checkout-form-error.is-visible {
+  grid-template-rows: 1fr;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-color: color-mix(in srgb, var(--error) 30%, transparent);
+  background: var(--error-bg);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.checkout-form-error > span {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkout-form-error > span::before {
   content: "";
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: currentColor;
   flex-shrink: 0;
-}
-
-@keyframes checkout-error-in {
-  from { opacity: 0; transform: translateY(-3px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .checkout-btn {
