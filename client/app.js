@@ -130,7 +130,7 @@ const FALLBACK_IMAGE =
     `<circle cx="300" cy="412" r="8" fill="#c9d4e2"/>` +
     `<rect x="262" y="180" width="76" height="10" rx="5" fill="#d8e2ee"/>` +
     `<rect x="262" y="202" width="56" height="8" rx="4" fill="#e4ebf3"/>` +
-    `<text x="300" y="520" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="600" fill="#8a94a6" text-anchor="middle">Mi Phone HN</text>` +
+    `<text x="300" y="520" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="600" fill="#8a94a6" text-anchor="middle">${escapeHTML(nombreEmpresa)}</text>` +
     `</svg>`
   );
 
