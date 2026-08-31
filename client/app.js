@@ -312,8 +312,8 @@ async function abrirProductoDesdeEnlaceCompartido() {
   const color = params.get("color") || "";
 
   // Mantenimiento activo: el gate de mantenimiento muestra la ficha del
-  // producto por su cuenta (vía producto_publico). Aquí solo liberamos el
-  // loader para que la página de cierre + ficha queden visibles.
+  // producto por su cuenta (vía producto_publico). Aquí liberamos el loader
+  // para que la página de cierre + ficha queden visibles (nunca atascado).
   if (document.getElementById("mantenimiento-overlay")) {
     productoEnlaceResuelto = true;
     finishPageLoader();
@@ -333,16 +333,24 @@ async function abrirProductoDesdeEnlaceCompartido() {
   }
 
   // 2) Fallback: lectura directa por RPC (funciona siempre, incluso con
-  //    mantenimiento activo o realtime caído).
+  //    mantenimiento activo o realtime caído) — con tope de tiempo para que
+  //    el loader NUNCA quede atascado.
   try {
     const { supabase } = await import("./supabase-config.js");
+    const rpcConTope = Promise.race([
+      supabase.rpc("producto_publico", { p_id: String(id) }),
+      new Promise((resolve) => setTimeout(() => resolve({ data: null }), 8000))
+    ]);
     let data = null;
-    const directa = await supabase.rpc("producto_publico", { p_id: String(id) });
+    const directa = await rpcConTope;
     data = directa?.data || null;
     if (!data) {
       const legado = resolverIdProductoLegado(id);
       if (legado) {
-        const resp = await supabase.rpc("producto_publico", { p_id: legado });
+        const resp = await Promise.race([
+          supabase.rpc("producto_publico", { p_id: legado }),
+          new Promise((resolve) => setTimeout(() => resolve({ data: null }), 8000))
+        ]);
         data = resp?.data || null;
       }
     }

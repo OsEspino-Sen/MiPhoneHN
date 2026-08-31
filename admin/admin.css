@@ -5702,6 +5702,8 @@ body[data-rol="editor"] .settings-file-btn{display:none}
 .import-log-items li.is-ok i,.import-log-items li.is-ok{color:var(--accent)}
 .import-log-items li.is-review i,.import-log-items li.is-review{color:var(--warning)}
 .import-log-items li span{color:var(--ink-3)}
+.export-log-toggle{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:5px 12px;border:1px solid var(--border-light);border-radius:999px;background:transparent;color:var(--accent);font-size:.75rem;font-weight:700;cursor:pointer;transition:background-color .2s ease,border-color .2s ease}
+.export-log-toggle:hover{background:var(--accent-light);border-color:var(--accent)}
 .backup-history-footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
 .backup-history-scope{display:inline-flex;align-items:center;gap:6px;font-size:.71875rem;color:var(--ink-3);line-height:1.4;min-width:0}
 .backup-history-scope i{flex-shrink:0;color:var(--warning)}

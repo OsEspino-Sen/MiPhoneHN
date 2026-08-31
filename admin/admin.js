@@ -4287,6 +4287,32 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     btns.cancel.forEach(b => { b.disabled = !changed; });
   }
 
+  /* Estado COMPLETO de un documento: campos + listas. Base para comparar
+     el estado actual contra el original (detección real de cambios). */
+  function coleccionDoc(docId) {
+    const estado = { campos: collectDocValues(docId) };
+    LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => {
+      estado[cfg.listKey] = collectList(cfg);
+    });
+    return estado;
+  }
+
+  /* Detección REAL de cambios: compara el estado actual del documento contra
+     su instantánea original. Revertir un campo a su valor original vuelve a
+     marcar el formulario como sin cambios. Solo afecta a ESE documento. */
+  function evaluarCambiosDoc(docId) {
+    const estado = docsState[docId];
+    if (!estado || estado.original === undefined) return;
+    estado.changed = JSON.stringify(coleccionDoc(docId)) !== estado.original;
+    updateDocButtons(docId);
+  }
+
+  function marcarOriginalDoc(docId) {
+    const estado = docsState[docId];
+    if (!estado) return;
+    estado.original = JSON.stringify(coleccionDoc(docId));
+  }
+
   function markDocChanged(docId) {
     docsState[docId].changed = true;
     updateDocButtons(docId);
@@ -4353,7 +4379,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       ed.addEventListener('input', () => {
         const hidden = richHidden(ed);
         if (hidden) hidden.value = sanitizeRichHTML(ed.innerHTML);
-        markDocChanged(docId);
+        evaluarCambiosDoc(docId);
       });
     });
   }
@@ -4504,7 +4530,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   function bindList(cfg) {
     const container = document.getElementById(cfg.container);
     if (!container) return;
-    container.addEventListener('input', () => markDocChanged(cfg.doc));
+    container.addEventListener('input', () => evaluarCambiosDoc(cfg.doc));
     container.addEventListener('click', (e) => {
       const btn = e.target.closest('.settings-list-btn');
       if (!btn) return;
@@ -4521,7 +4547,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       } else {
         return;
       }
-      markDocChanged(cfg.doc);
+      evaluarCambiosDoc(cfg.doc);
     });
   }
 
@@ -4532,7 +4558,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       const container = document.getElementById(cfg.container);
       if (!container) return;
       container.insertAdjacentHTML('beforeend', listRowHTML(cfg, null));
-      markDocChanged(cfg.doc);
+      evaluarCambiosDoc(cfg.doc);
     });
   });
 
@@ -4549,6 +4575,8 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     try {
       await setDoc(doc(db, SETTINGS_COLLECTION, docId), { ...values, updatedAt: new Date().toISOString() });
       docsState[docId].loaded = JSON.parse(JSON.stringify(values));
+      // La instantánea original pasa a ser el estado recién guardado.
+      marcarOriginalDoc(docId);
       docsState[docId].changed = false;
       updateDocButtons(docId);
       cardStatus(card, 'success', 'Cambios guardados');
@@ -4566,8 +4594,8 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     applyDocValues(docId, data);
     LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => renderList(cfg, data[cfg.listKey]));
     syncRichFields();
-    docsState[docId].changed = false;
-    updateDocButtons(docId);
+    // Los valores volvieron al original: re-evaluar (deshabilita el botón).
+    evaluarCambiosDoc(docId);
     if (docId === 'whatsapp') renderWaPreview();
     cardStatus(card, '', '');
   }
@@ -4586,7 +4614,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     if (!prefix) return;
     document.querySelectorAll(`[data-${prefix}]`).forEach(el => {
       el.addEventListener('input', () => {
-        markDocChanged(docId);
+        evaluarCambiosDoc(docId);
         if (docId === 'whatsapp') renderWaPreview();
       });
     });
@@ -5217,12 +5245,18 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     applyDocValues(docId, data);
     LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => renderList(cfg, data[cfg.listKey]));
     syncRichFields();
+    // Instantánea original del documento: la referencia para detectar cambios reales.
+    marcarOriginalDoc(docId);
     updateDocButtons(docId);
     if (docId === 'whatsapp') renderWaPreview();
   }
 
   document.addEventListener('settings-applied', () => syncRichFields());
-  initRichFields(settingsSection, 'empresa');
+  // Editor enriquecido de EMPRESA: vinculado SOLO a su pestaña. El binding
+  // global anterior marcaba 'empresa' al editar cualquier otro formulario.
+  const tabEmpresaSettings = document.getElementById('settings-empresa-tab');
+  if (tabEmpresaSettings) initRichFields(tabEmpresaSettings, 'empresa');
+  else initRichFields(settingsSection, 'empresa');
 
   TEXT_DOCS.forEach(loadDoc);
   IMG_KEYS.forEach(loadImg);
@@ -6803,6 +6837,10 @@ function pushExportLog({ archivo, items = [] }) {
   renderExportLog();
 }
 
+/* Exportaciones expandidas manualmente (Ver más). El resto inicia colapsado
+   a 7 productos para que una exportación grande no ocupe toda la pestaña. */
+const exportacionesExpandidas = new Set();
+
 function renderExportLog() {
   const listEl = document.getElementById("export-log-list");
   if (!listEl) return;
@@ -6813,16 +6851,31 @@ function renderExportLog() {
   }
   listEl.innerHTML = log.map((entry) => {
     const fecha = new Date(entry.createdAt);
-    const items = (entry.items || []).map((it) => `<li><i class="ph ph-package" aria-hidden="true"></i> <strong>${escapeHTML(String(it.title || it.id))}</strong> <span>${escapeHTML(String(it.id))}</span></li>`).join("");
+    const items = entry.items || [];
+    const expandida = exportacionesExpandidas.has(entry.id);
+    const visibles = expandida ? items : items.slice(0, 7);
+    const itemsHTML = visibles.map((it) => `<li><i class="ph ph-package" aria-hidden="true"></i> <strong>${escapeHTML(String(it.title || it.id))}</strong> <span>${escapeHTML(String(it.id))}</span></li>`).join("");
+    const toggle = items.length > 7
+      ? `<button type="button" class="export-log-toggle" data-exp-toggle="${escapeHTML(entry.id)}">${expandida ? "Ver menos" : `Ver más (${items.length - 7} más)`}</button>`
+      : "";
     return `
     <div class="backup-history-item import-log-item">
       <div class="backup-history-info">
         <div class="backup-history-line"><strong>${escapeHTML(fecha.toLocaleDateString())} ${escapeHTML(fecha.toLocaleTimeString())}</strong>${entry.archivo ? `<span class="import-log-file"><i class="ph ph-file-json" aria-hidden="true"></i> ${escapeHTML(entry.archivo)}</span>` : ""}</div>
-        <div class="import-log-chips"><span class="analysis-chip is-create"><i class="ph ph-download-simple" aria-hidden="true"></i> ${entry.count ?? (entry.items || []).length} producto(s) exportado(s)</span></div>
-        <ul class="import-log-items">${items}</ul>
+        <div class="import-log-chips"><span class="analysis-chip is-create"><i class="ph ph-download-simple" aria-hidden="true"></i> ${entry.count ?? items.length} producto(s) exportado(s)</span></div>
+        <ul class="import-log-items">${itemsHTML}</ul>
+        ${toggle}
       </div>
     </div>`;
   }).join("");
+  listEl.querySelectorAll("[data-exp-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.expToggle;
+      if (exportacionesExpandidas.has(id)) exportacionesExpandidas.delete(id);
+      else exportacionesExpandidas.add(id);
+      renderExportLog();
+    });
+  });
 }
 
 const IMPORT_ACCIONES = {
@@ -7485,4 +7538,5 @@ initBackupSystem();
     : `Panel conectado a PRODUCCIÓN (${import.meta.env.VITE_SUPABASE_URL || "?"}). Las acciones aquí afectan a la tienda publicada.`;
   badge.hidden = false;
 })();
+
 
