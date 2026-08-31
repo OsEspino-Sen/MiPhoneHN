@@ -21,6 +21,7 @@
   <div id="admin-loader" class="admin-loader admin-loader--login">
     <div class="admin-loader-inner">
       <span class="admin-loader-mark"></span>
+      <span class="admin-loader-brand">Mi Phone HN</span>
       <span class="admin-loader-bar"></span>
     </div>
   </div>
@@ -202,11 +203,19 @@
         }
         // Nombre confirmado (real de la BD, o el por defecto si la red falló):
         // recién aquí se hace visible la marca, sin swap a mitad de pantalla.
+        const nombreFinal = (document.querySelector('.login-brand-text')?.textContent || MARCA_LOGIN).trim();
         const marcaVisible = document.querySelector('.login-brand-text');
         if (marcaVisible) marcaVisible.classList.add('marca-confirmada');
+        const loaderBrand = document.querySelector('.admin-loader-brand');
+        if (loaderBrand) {
+          loaderBrand.textContent = nombreFinal;
+          loaderBrand.classList.add('marca-confirmada');
+        }
       } catch (_) {
         const marcaVisible = document.querySelector('.login-brand-text');
         if (marcaVisible) marcaVisible.classList.add('marca-confirmada');
+        const loaderBrand = document.querySelector('.admin-loader-brand');
+        if (loaderBrand) loaderBrand.classList.add('marca-confirmada');
       }
       try {
         const snap = await getDoc(doc(db, 'imagenes', 'logo'));
