@@ -346,14 +346,32 @@ export function onSnapshot(queryOrRef, onNext, onError) {
   }
   const table = ref.name;
   let active = true;
+  // Control de concurrencia: solo la respuesta del fetch más reciente
+  // puede emitirse. Una respuesta obsoleta jamás sobreescribe el estado.
+  let runId = 0;
+  let inFlight = false;
+  let refetchQueued = false;
   
   const runFetch = async () => {
     if (!active) return;
+    if (inFlight) {
+      // Colapsa ráfagas de eventos en un único refetch al terminar el actual.
+      refetchQueued = true;
+      return;
+    }
+    inFlight = true;
+    const currentRun = ++runId;
     try {
       const snap = await getDocs(queryOrRef);
-      if (active) onNext(snap);
+      if (active && currentRun === runId) onNext(snap);
     } catch (err) {
-      if (active && onError) onError(err);
+      if (active && currentRun === runId && onError) onError(err);
+    } finally {
+      inFlight = false;
+      if (active && refetchQueued) {
+        refetchQueued = false;
+        runFetch();
+      }
     }
   };
   

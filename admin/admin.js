@@ -583,20 +583,30 @@ function ocultarAdminLoaderCuandoListo() {
   esperar();
 }
 
-/* Logo real para la marca del loader de entrada, lo antes posible. */
+/* Logo real para la marca del loader de entrada, lo antes posible.
+   La marca NO se muestra mientras carga: aparece con el logo ya puesto
+   (logo-lista) o como degradado si no hay logo (fallback-visible). */
 (async () => {
+  const marca = document.querySelector('#admin-loader .admin-loader-mark');
+  const revelarFallback = () => marca?.classList.add('fallback-visible');
   try {
     const snap = await getDoc(doc(db, 'imagenes', 'logo'));
     const data = snap.exists() ? snap.data() : null;
     const url = data?.url || data?.data;
-    if (!url) return;
+    if (!url) { revelarFallback(); return; }
     const src = url.startsWith('data:') ? url : url + '?t=' + Date.now();
-    const loaderMark = document.querySelector('#admin-loader .admin-loader-mark');
-    if (loaderMark && !loaderMark.classList.contains('has-logo')) {
-      loaderMark.innerHTML = `<img src="${src}" alt="" class="admin-loader-logo">`;
-      loaderMark.classList.add('has-logo');
-    }
-  } catch {}
+    const img = new Image();
+    img.onload = () => {
+      if (!marca) return;
+      marca.innerHTML = `<img src="${src}" alt="" class="admin-loader-logo">`;
+      marca.classList.add('has-logo', 'logo-lista');
+    };
+    img.onerror = revelarFallback;
+    img.src = src;
+  } catch {
+    revelarFallback();
+  }
+  setTimeout(revelarFallback, 1200);
 })();
 
 const logoutBtn = document.getElementById("logout-btn");
@@ -619,6 +629,7 @@ const formError = document.getElementById("form-error");
 const includesList = document.getElementById("includes-list");
 const specsList = document.getElementById("specs-list");
 const colorsList = document.getElementById("colors-list");
+const addColorBtn = document.getElementById("add-color-btn");
 const storageList = document.getElementById("storage-list");
 const addIncludeBtn = document.getElementById("add-include-btn");
 const addSpecBtn = document.getElementById("add-spec-btn");
@@ -771,6 +782,22 @@ function init() {
   addIncludeBtn?.addEventListener("click", () => addIncludeRow());
   addSpecBtn?.addEventListener("click", () => addSpecRow());
   addStorageBtn?.addEventListener("click", () => addStorageRow());
+  /* Agregar color: disponible SIEMPRE en modo principal — si el administrador
+     quitó todos los colores, puede agregar uno de nuevo. */
+  addColorBtn?.addEventListener("click", () => {
+    addColorRow();
+    updateVariantColorWarning();
+  });
+  /* Re-evaluación del estado del botón Guardar ante cambios ESTRUCTURALES:
+     quitar filas (color/almacenamiento/incluye/especificaciones) no dispara
+     'input', así que sin esto el botón de actualizar no se habilitaba. */
+  productForm?.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const estructural = target.closest(".remove-row-btn") ||
+      target.closest("#add-include-btn, #add-spec-btn, #add-storage-btn, #add-color-btn");
+    if (estructural) setTimeout(() => updateVariantColorWarning(), 0);
+  });
   /* Variantes de producto */
   addVariantBarBtn?.addEventListener("click", () => {
     const draft = snapshotFormToDraft();
@@ -2091,6 +2118,7 @@ function renderVariantColorMode(draft) {
   const isVariant = activeVariantIndex > 0;
   if (variantColorEditor) variantColorEditor.hidden = !isVariant;
   if (colorsList) colorsList.hidden = isVariant;
+  if (addColorBtn) addColorBtn.hidden = isVariant;
   if (isVariant) {
     variantColorNameInput.value = draft.colorName || "";
     updateVariantHexInput(draft.hex || "#cccccc", false);
@@ -6010,11 +6038,13 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
         sideMark.classList.add('has-logo');
       }
 
-      // Loader de entrada: el logo real dentro de la marca (ya no vacía)
+      // Loader de entrada: el logo real dentro de la marca (ya no vacía).
+      // La obtención temprana ya lo habrá puesto con espera de carga; este es
+      // solo respaldo (no sobreescribe lo ya visible).
       const loaderMark = document.querySelector('#admin-loader .admin-loader-mark');
-      if (loaderMark) {
+      if (loaderMark && !loaderMark.classList.contains('has-logo')) {
         loaderMark.innerHTML = `<img src="${src}" alt="" class="admin-loader-logo">`;
-        loaderMark.classList.add('has-logo');
+        loaderMark.classList.add('has-logo', 'logo-lista');
       }
 
       // Sección "Usuarios del sistema" (antes usaba iconografía genérica ph-users)
