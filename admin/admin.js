@@ -4333,6 +4333,78 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     updateDocButtons(docId);
   }
 
+  /* ==== Estado de cambios POR TARJETA ====
+     Cada .settings-form-card compara SUS campos contra su propia instantánea
+     (guardada en el elemento) y habilita únicamente SUS botones. Una tarjeta
+     nunca refleja los cambios de otra. ==== */
+
+  function camposDeCard(card, docId) {
+    const prefix = FIELD_PREFIX[docId];
+    if (!prefix) return null;
+    const campos = {};
+    card.querySelectorAll(`[data-${prefix}]`).forEach(el => {
+      campos[el.dataset[prefix]] = el.value;
+    });
+    // Filas de listas dentro de la tarjeta (home-cards, stats, pagos, faqs)
+    card.querySelectorAll('.settings-list-item').forEach((row, idx) => {
+      const vals = Array.from(row.querySelectorAll('[data-field]')).map(i => i.value);
+      campos['__fila' + idx] = vals.join('¦');
+    });
+    return campos;
+  }
+
+  function evaluarCambiosCard(card, docId) {
+    if (!card) return;
+    const campos = camposDeCard(card, docId);
+    if (!campos) return;
+    const original = card.dataset.snapOriginal;
+    const changed = original !== undefined && JSON.stringify(campos) !== original;
+    card.dataset.snapCambiada = changed ? '1' : '0';
+    card.querySelectorAll('.settings-save-btn, .settings-cancel-btn').forEach(b => {
+      b.disabled = !changed;
+    });
+  }
+
+  function marcarOriginalCard(card, docId) {
+    if (!card) return;
+    const campos = camposDeCard(card, docId);
+    if (campos) card.dataset.snapOriginal = JSON.stringify(campos);
+  }
+
+  function cardsDeDoc(docId) {
+    const prefix = FIELD_PREFIX[docId];
+    if (!prefix) return [];
+    const cards = new Set();
+    document.querySelectorAll(`[data-${prefix}]`).forEach(el => {
+      const card = el.closest('.settings-form-card');
+      if (card) cards.add(card);
+    });
+    return Array.from(cards);
+  }
+
+  function marcarOriginalesDoc(docId) {
+    cardsDeDoc(docId).forEach(card => marcarOriginalCard(card, docId));
+  }
+
+  /* Aplica SOLO los campos de una tarjeta al cancelar (revert por tarjeta). */
+  function revertirCard(card, docId, data) {
+    const prefix = FIELD_PREFIX[docId];
+    if (!prefix || !card) return;
+    card.querySelectorAll(`[data-${prefix}]`).forEach(el => {
+      el.value = getPath(data, el.dataset[prefix]) ?? '';
+    });
+    // Editor enriquecido dentro de la tarjeta: restaurar su contenido.
+    card.querySelectorAll('.settings-rich-editor').forEach(ed => {
+      const hidden = richHidden(ed);
+      if (hidden) ed.innerHTML = sanitizeRichHTML(hidden.value || '');
+    });
+    // Listas dentro de la tarjeta
+    LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => {
+      const cont = document.getElementById(cfg.container);
+      if (cont && card.contains(cont)) renderList(cfg, data[cfg.listKey]);
+    });
+  }
+
   // ---- Valores de inputs (rutas con puntos) ----
   function collectDocValues(docId) {
     const prefix = FIELD_PREFIX[docId];
@@ -4394,7 +4466,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       ed.addEventListener('input', () => {
         const hidden = richHidden(ed);
         if (hidden) hidden.value = sanitizeRichHTML(ed.innerHTML);
-        evaluarCambiosTodosLosDocs();
+        evaluarCambiosCard(ed.closest('.settings-form-card'), docId);
       });
     });
   }
@@ -4545,7 +4617,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
   function bindList(cfg) {
     const container = document.getElementById(cfg.container);
     if (!container) return;
-    container.addEventListener('input', () => evaluarCambiosTodosLosDocs());
+    container.addEventListener('input', () => evaluarCambiosCard(container.closest('.settings-form-card'), cfg.doc));
     container.addEventListener('click', (e) => {
       const btn = e.target.closest('.settings-list-btn');
       if (!btn) return;
@@ -4562,7 +4634,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       } else {
         return;
       }
-      evaluarCambiosTodosLosDocs();
+      evaluarCambiosCard(container.closest('.settings-form-card'), cfg.doc);
     });
   }
 
@@ -4573,7 +4645,7 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
       const container = document.getElementById(cfg.container);
       if (!container) return;
       container.insertAdjacentHTML('beforeend', listRowHTML(cfg, null));
-      evaluarCambiosTodosLosDocs();
+      evaluarCambiosCard(container.closest('.settings-form-card'), cfg.doc);
     });
   });
 
@@ -4590,8 +4662,9 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     try {
       await setDoc(doc(db, SETTINGS_COLLECTION, docId), { ...values, updatedAt: new Date().toISOString() });
       docsState[docId].loaded = JSON.parse(JSON.stringify(values));
-      // La instantánea original pasa a ser el estado recién guardado.
-      marcarOriginalDoc(docId);
+      // Las tarjetas del documento vuelven a estado limpio (la guarda
+      // persistió todo lo editado en cada una).
+      marcarOriginalesDoc(docId);
       docsState[docId].changed = false;
       updateDocButtons(docId);
       // La marca del negocio se refleja en el propio panel al guardar.
@@ -4608,11 +4681,12 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
 
   function doCancelDoc(docId, card) {
     const data = docsState[docId].loaded || DEFAULTS[docId];
-    applyDocValues(docId, data);
-    LISTS.filter(cfg => cfg.doc === docId).forEach(cfg => renderList(cfg, data[cfg.listKey]));
+    // Cancel POR TARJETA: revierte únicamente los campos de la tarjeta
+    // cancelada; las demás tarjetas del documento no se tocan.
+    revertirCard(card, docId, data);
     syncRichFields();
-    // Los valores volvieron al original: re-evaluar (deshabilita el botón).
-    evaluarCambiosDoc(docId);
+    marcarOriginalCard(card, docId);
+    evaluarCambiosCard(card, docId);
     if (docId === 'whatsapp') renderWaPreview();
     cardStatus(card, '', '');
   }
@@ -4625,13 +4699,13 @@ function compressAndReadImage(file, maxWidth = 800, quality = 0.7) {
     btn.addEventListener('click', () => doCancelDoc(btn.dataset.cancelDoc, btn.closest('.settings-form-card')));
   });
 
-  // ---- Inputs marcan cambio (y preview WhatsApp) ----
+  // ---- Inputs marcan cambio POR TARJETA (y preview WhatsApp) ----
   TEXT_DOCS.forEach(docId => {
     const prefix = FIELD_PREFIX[docId];
     if (!prefix) return;
     document.querySelectorAll(`[data-${prefix}]`).forEach(el => {
       el.addEventListener('input', () => {
-        evaluarCambiosTodosLosDocs();
+        evaluarCambiosCard(el.closest('.settings-form-card'), docId);
         if (docId === 'whatsapp') renderWaPreview();
       });
     });
