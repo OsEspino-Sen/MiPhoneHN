@@ -85,6 +85,35 @@ const WHATSAPP_DEFAULTS = {
 
 let whatsappSettings = { ...WHATSAPP_DEFAULTS, labels: { ...WHATSAPP_DEFAULTS.labels } };
 
+/* Resumen de confianza del modal de producto (configurable desde el panel
+   Admin > Configuración > Inicio > tarjetas). Reutiliza las 3 tarjetas de
+   la home: título + descripción. Los mini-iconos se mantienen por posición.
+   Fallback = textos anteriores fijos, por si la BD aún no responde. */
+const TRUST_SUMMARY_ICONS = ["✓", "↗", "◇"];
+let trustSummaryItems = [
+  { title: "Garantía escrita", description: "90 días de respaldo" },
+  { title: "Envíos nacionales", description: "Rápido Cargo desde Choluteca" },
+  { title: "Compra segura", description: "Equipo revisado antes del envío" }
+];
+
+function buildTrustSummaryHTML() {
+  const items = (Array.isArray(trustSummaryItems) && trustSummaryItems.length ? trustSummaryItems : []).slice(0, 3);
+  return `<div class="modal-trust-summary">${items.map((item, index) => `
+    <div class="trust-summary-item"><span class="trust-icon-mini">${TRUST_SUMMARY_ICONS[index] || "✓"}</span><span><strong>${escapeHTML(item.title || "")}</strong><small>${escapeHTML(item.description || "")}</small></span></div>
+  `).join("")}</div>`;
+}
+
+function refreshOpenModalTrustSummary() {
+  const modal = document.getElementById("product-modal");
+  const body = document.getElementById("product-modal-body");
+  const container = body?.querySelector(".modal-trust-summary");
+  if (container && modal?.classList.contains("active")) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = buildTrustSummaryHTML();
+    container.replaceWith(tmp.firstElementChild);
+  }
+}
+
 // Única fuente de verdad del número: se normaliza desde la configuración
 // del negocio (configuracion/whatsapp → phone). Maneja el prefijo 504 de
 // Honduras sin duplicarlo: 9 dígitos (0XXXXXXXX) → 504XXXXXXXX,
@@ -1831,11 +1860,7 @@ function renderModalContent() {
             </button>
           </div>
 
-          <div class="modal-trust-summary">
-            <div class="trust-summary-item"><span class="trust-icon-mini">✓</span><span><strong>Garantía escrita</strong><small>90 días de respaldo</small></span></div>
-            <div class="trust-summary-item"><span class="trust-icon-mini">↗</span><span><strong>Envíos nacionales</strong><small>Rápido Cargo desde Choluteca</small></span></div>
-            <div class="trust-summary-item"><span class="trust-icon-mini">◇</span><span><strong>Compra segura</strong><small>Equipo revisado antes del envío</small></span></div>
-          </div>
+          ${buildTrustSummaryHTML()}
         </section>
       </div>
 
@@ -3115,7 +3140,18 @@ function applyHomeSettings(home) {
   const heroSubtitle = document.getElementById("hero-subtitle");
   if (heroSubtitle && home.hero?.subtitle) heroSubtitle.textContent = home.hero.subtitle;
 
-  if (Array.isArray(home.cards)) renderTrustCards(home.cards);
+  if (Array.isArray(home.cards)) {
+    renderTrustCards(home.cards);
+    // El modal reutiliza estas mismas tarjetas (título + descripción).
+    const valid = home.cards.filter((c) => c && (c.title || c.description));
+    if (valid.length) {
+      trustSummaryItems = valid.slice(0, 3).map((c) => ({
+        title: String(c.title || "").trim(),
+        description: String(c.description || "").trim()
+      }));
+      refreshOpenModalTrustSummary();
+    }
+  }
   if (Array.isArray(home.stats)) renderStats(home.stats);
 }
 
